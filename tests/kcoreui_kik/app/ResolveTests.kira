@@ -96,20 +96,20 @@ function kcuMaterialRecord() -> CatalogRecord {
     var translucent = MaterialValue()
     translucent.layers.append(backdropBlurLayer(28.0))
     translucent.layers.append(saturationLayer(1.4))
-    translucent.layers.append(tintLayer(referenceColor("systemBackground"), 0.68, blendNormal()))
+    translucent.layers.append(tintLayer(referenceColor("systemBackground"), 0.68, .Normal))
     translucent.layers.append(borderLayer(referenceColor("separator"), 1.0))
 
     var opaque = MaterialValue()
-    opaque.layers.append(fillLayer(referenceColor("systemBackground"), 1.0, blendNormal()))
+    opaque.layers.append(fillLayer(referenceColor("systemBackground"), 1.0, .Normal))
 
     var resource = ResourceRecord()
     resource.name = "regular"
-    resource.kind = kindMaterial()
+    resource.kind = .Material
     var open = RenditionRecord()
     open.payload = encodeMaterial(translucent)
     resource.renditions.append(open)
     var reduced = RenditionRecord()
-    reduced.constraints.append(constrain(traitReduceTransparency(), flagValue(true)))
+    reduced.constraints.append(constrain(.ReduceTransparency, flagValue(true)))
     reduced.payload = encodeMaterial(opaque)
     resource.renditions.append(reduced)
     record.resources.append(resource)
@@ -176,7 +176,7 @@ construct KcuAGradientResolvesItsStops() extends Test {
 
         var resource = ResourceRecord()
         resource.name = "windowWash"
-        resource.kind = kindGradient()
+        resource.kind = .Gradient
         var rendition = RenditionRecord()
         rendition.payload = encodeGradient(gradient)
         resource.renditions.append(rendition)
@@ -204,7 +204,7 @@ construct KcuAnEffectResolvesItsOps() extends Test {
 
         var resource = ResourceRecord()
         resource.name = "cardShadow"
-        resource.kind = kindEffect()
+        resource.kind = .Effect
         var rendition = RenditionRecord()
         rendition.payload = encodeEffect(effect)
         resource.renditions.append(rendition)
@@ -236,7 +236,7 @@ construct KcuATextStyleResolvesItsMetrics() extends Test {
 
         var resource = ResourceRecord()
         resource.name = "body"
-        resource.kind = kindTypography()
+        resource.kind = .Typography
         var rendition = RenditionRecord()
         rendition.payload = encodeTypography(value)
         resource.renditions.append(rendition)

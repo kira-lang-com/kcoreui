@@ -33,12 +33,12 @@ function checkIntegrity(catalog: borrow Catalog) -> IntegrityReport {
     let colors = allColorNames()
     let materials = allMaterialNames()
     let textStyles = allTextStyleNames()
-    report.missingColors = missingNames(catalog, colors, kindColor())
-    report.missingMaterials = missingNames(catalog, materials, kindMaterial())
-    report.missingTextStyles = missingNames(catalog, textStyles, kindTypography())
-    report.undeclaredColors = undeclaredNames(catalog, colors, kindColor())
-    report.undeclaredMaterials = undeclaredNames(catalog, materials, kindMaterial())
-    report.undeclaredTextStyles = undeclaredNames(catalog, textStyles, kindTypography())
+    report.missingColors = missingNames(catalog, colors, .Color)
+    report.missingMaterials = missingNames(catalog, materials, .Material)
+    report.missingTextStyles = missingNames(catalog, textStyles, .Typography)
+    report.undeclaredColors = undeclaredNames(catalog, colors, .Color)
+    report.undeclaredMaterials = undeclaredNames(catalog, materials, .Material)
+    report.undeclaredTextStyles = undeclaredNames(catalog, textStyles, .Typography)
     return report
 }
 

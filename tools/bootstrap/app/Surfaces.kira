@@ -20,12 +20,12 @@ import KCoreUI
 function materialResource(name: borrow String, blurRadius: Float, tintOpacity: Float, hasBorder: Bool) -> ResourceRecord {
     var resource = ResourceRecord()
     resource.name = name
-    resource.kind = kindMaterial()
+    resource.kind = .Material
 
     var translucent = MaterialValue()
     translucent.layers.append(backdropBlurLayer(blurRadius))
     translucent.layers.append(saturationLayer(1.4))
-    translucent.layers.append(tintLayer(referenceColor(colorSystemBackground()), tintOpacity, blendNormal()))
+    translucent.layers.append(tintLayer(referenceColor(colorSystemBackground()), tintOpacity, .Normal))
     if hasBorder {
         translucent.layers.append(borderLayer(referenceColor(colorSeparator()), 1.0))
     }
@@ -34,12 +34,12 @@ function materialResource(name: borrow String, blurRadius: Float, tintOpacity: F
     resource.renditions.append(translucentRendition)
 
     var opaque = MaterialValue()
-    opaque.layers.append(fillLayer(referenceColor(colorSystemBackground()), 1.0, blendNormal()))
+    opaque.layers.append(fillLayer(referenceColor(colorSystemBackground()), 1.0, .Normal))
     if hasBorder {
         opaque.layers.append(borderLayer(referenceColor(colorSeparator()), 1.0))
     }
     var opaqueRendition = RenditionRecord()
-    opaqueRendition.constraints.append(constrain(traitReduceTransparency(), flagValue(true)))
+    opaqueRendition.constraints.append(constrain(.ReduceTransparency, flagValue(true)))
     opaqueRendition.payload = encodeMaterial(opaque)
     resource.renditions.append(opaqueRendition)
     return resource
@@ -68,7 +68,7 @@ function fontWeightBold() -> Int { return 700 }
 function textStyleResource(name: borrow String, size: Float, weight: Int, lineHeight: Float, tracking: Float) -> ResourceRecord {
     var resource = ResourceRecord()
     resource.name = name
-    resource.kind = kindTypography()
+    resource.kind = .Typography
 
     var value = TypographyValue()
     value.size = size

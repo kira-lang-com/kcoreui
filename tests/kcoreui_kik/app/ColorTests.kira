@@ -27,7 +27,7 @@ function kcuInkLayer(color: borrow Color, opacity: Float) -> ColorLayer {
 function kcuLayeredResource(name: borrow String, layers: borrow [ColorLayer]) -> ResourceRecord {
     var resource = ResourceRecord()
     resource.name = name
-    resource.kind = kindColor()
+    resource.kind = .Color
     var rendition = RenditionRecord()
     rendition.payload = kcuLayered(layers)
     resource.renditions.append(rendition)

@@ -107,7 +107,7 @@ function readTables(bytes: borrow [U8]) -> Catalog {
         var resource = CatalogResource()
         resource.nameOffset = readU32(bytes, base)
         resource.nameCount = readU32(bytes, base + 4)
-        resource.kind = readU32(bytes, base + 8)
+        resource.kind = resourceKindFromValue(readU32(bytes, base + 8))
         resource.firstRendition = readU32(bytes, base + 12)
         resource.renditionCount = readU32(bytes, base + 16)
         catalog.resources.append(resource)
@@ -130,7 +130,7 @@ function readTables(bytes: borrow [U8]) -> Catalog {
     while index < constraintCount {
         let base = constraintStart + index * blobConstraintEntrySize()
         var entry = CatalogConstraint()
-        entry.identifier = readU32(bytes, base)
+        entry.identifier = traitIdentifierFromValue(readU32(bytes, base))
         entry.value = readU32(bytes, base + 4)
         catalog.constraints.append(entry)
         index = index + 1
@@ -160,7 +160,7 @@ function namesAreCanonical(catalog: borrow Catalog) -> Bool {
             }
             // One name may carry several kinds, so equal names are ordered by
             // kind. Two entries equal in both are the same resource twice.
-            if order == 0 && previous.kind >= resource.kind {
+            if order == 0 && resourceKindValue(previous.kind) >= resourceKindValue(resource.kind) {
                 return false
             }
         }
@@ -217,7 +217,7 @@ function constraintsAreCanonical(catalog: borrow Catalog) -> Int {
             }
             if index > 0 {
                 let previous = catalog.constraints[rendition.firstConstraint + index - 1]
-                if previous.identifier >= entry.identifier {
+                if traitIdentifierValue(previous.identifier) >= traitIdentifierValue(entry.identifier) {
                     return 1
                 }
             }

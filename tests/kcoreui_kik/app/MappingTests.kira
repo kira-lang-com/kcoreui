@@ -1,0 +1,104 @@
+import Foundation
+import KCoreUI
+
+// The wire mappings of the closed vocabularies.
+//
+// A kind, a trait identifier and a blend mode live on the wire as bare
+// integers and in the program as enums. These cases pin the two facts that
+// make that safe: every named variant sits on the wire value the format
+// assigned it and no other, and the integer-to-enum direction is total, so a
+// value this build has no name for survives a round trip unchanged.
+
+// The named resource kinds sit on their assigned wire values.
+construct KcuResourceKindWireValuesAreFixed() extends Test {
+    test {
+        return resourceKindValue(.Color) == 1
+            && resourceKindValue(.Gradient) == 2
+            && resourceKindValue(.Material) == 3
+            && resourceKindValue(.Effect) == 4
+            && resourceKindValue(.Typography) == 5
+            && resourceKindValue(.Custom(resourceKindCustomBase())) == resourceKindCustomBase()
+            && resourceKindValue(.Unknown(9)) == 9
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// Integer to kind and back is the identity for every wire value, named or not,
+// and the custom range starts exactly at the base the format reserves.
+construct KcuResourceKindMappingIsTotal() extends Test {
+    test {
+        var value = 0
+        while value < 1100 {
+            if resourceKindValue(resourceKindFromValue(value)) != value { return false }
+            value = value + 1
+        }
+        return resourceKindsEqual(resourceKindFromValue(3), .Material)
+            && resourceKindsEqual(resourceKindFromValue(resourceKindCustomBase()), .Custom(resourceKindCustomBase()))
+            && resourceKindsEqual(resourceKindFromValue(resourceKindCustomBase() - 1), .Unknown(resourceKindCustomBase() - 1))
+            && resourceKindsEqual(resourceKindFromValue(0), .Unknown(0))
+            && !resourceKindIsKnown(resourceKindFromValue(0))
+            && resourceKindIsKnown(.Typography)
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// The named trait identifiers sit on their assigned wire values, ascending in
+// priority order, and the custom range starts at the reserved base.
+construct KcuTraitIdentifierWireValuesAreFixed() extends Test {
+    test {
+        return traitIdentifierValue(.Appearance) == 0
+            && traitIdentifierValue(.Contrast) == 1
+            && traitIdentifierValue(.Gamut) == 2
+            && traitIdentifierValue(.Scale) == 3
+            && traitIdentifierValue(.Idiom) == 4
+            && traitIdentifierValue(.Platform) == 5
+            && traitIdentifierValue(.LayoutDirection) == 6
+            && traitIdentifierValue(.HorizontalSizeClass) == 7
+            && traitIdentifierValue(.VerticalSizeClass) == 8
+            && traitIdentifierValue(.ReduceTransparency) == 9
+            && traitIdentifierValue(.ReduceMotion) == 10
+            && traitIdentifierValue(.InvertColors) == 11
+            && traitIdentifierValue(.DifferentiateWithoutColor) == 12
+            && traitIdentifierCustomBase() == 64
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// Integer to trait identifier and back is the identity across the built-in
+// range, the reserved gap and the custom range.
+construct KcuTraitIdentifierMappingIsTotal() extends Test {
+    test {
+        var value = 0
+        while value < 200 {
+            if traitIdentifierValue(traitIdentifierFromValue(value)) != value { return false }
+            value = value + 1
+        }
+        return traitIdentifiersEqual(traitIdentifierFromValue(12), .DifferentiateWithoutColor)
+            && traitIdentifiersEqual(traitIdentifierFromValue(13), .Unknown(13))
+            && traitIdentifiersEqual(traitIdentifierFromValue(63), .Unknown(63))
+            && traitIdentifiersEqual(traitIdentifierFromValue(64), .Custom(64))
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// The named blend modes sit on their assigned wire values and every other u8
+// value survives the round trip as itself.
+construct KcuBlendModeMappingIsTotal() extends Test {
+    test {
+        var value = 0
+        while value < 256 {
+            if blendModeValue(blendModeFromValue(value)) != value { return false }
+            value = value + 1
+        }
+        return blendModeValue(.Normal) == 0
+            && blendModeValue(.LinearDodge) == 1
+            && blendModeValue(.ColorDodge) == 2
+            && blendModeValue(.HardLight) == 3
+            && blendModeValue(.Overlay) == 4
+            && blendModeValue(.Lighten) == 5
+            && blendModeValue(.Darken) == 6
+            && blendModeValue(.Multiply) == 7
+            && blendModeValue(.Luminosity) == 8
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}

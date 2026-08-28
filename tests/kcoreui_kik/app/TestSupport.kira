@@ -126,7 +126,7 @@ function kcuColorsEqual(left: borrow Color, right: borrow Color) -> Bool {
 function kcuAdaptive(name: borrow String, light: borrow Color, dark: borrow Color) -> ResourceRecord {
     var resource = ResourceRecord()
     resource.name = name
-    resource.kind = kindColor()
+    resource.kind = .Color
 
     var lightRendition = RenditionRecord()
     lightRendition.constraints.append(whenAppearance(.Light))
@@ -144,7 +144,7 @@ function kcuAdaptive(name: borrow String, light: borrow Color, dark: borrow Colo
 function kcuFlat(name: borrow String, value: borrow Color) -> ResourceRecord {
     var resource = ResourceRecord()
     resource.name = name
-    resource.kind = kindColor()
+    resource.kind = .Color
     var rendition = RenditionRecord()
     rendition.payload = kcuAuthored(value)
     resource.renditions.append(rendition)
@@ -155,7 +155,7 @@ function kcuFlat(name: borrow String, value: borrow Color) -> ResourceRecord {
 function kcuAlias(name: borrow String, target: borrow String) -> ResourceRecord {
     var resource = ResourceRecord()
     resource.name = name
-    resource.kind = kindColor()
+    resource.kind = .Color
     var rendition = RenditionRecord()
     rendition.payload = encodeColorAlias(target)
     resource.renditions.append(rendition)
@@ -164,8 +164,8 @@ function kcuAlias(name: borrow String, target: borrow String) -> ResourceRecord 
 
 // A resource of a kind this build has no decoder for, carrying arbitrary bytes.
 // The round-trip cases use it to prove the container is agnostic about payload.
-function kcuUnknownKind() -> Int {
-    return kindCustomBase() + 7
+function kcuUnknownKind() -> ResourceKind {
+    return .Custom(resourceKindCustomBase() + 7)
 }
 
 function kcuOpaqueResource(name: borrow String) -> ResourceRecord {

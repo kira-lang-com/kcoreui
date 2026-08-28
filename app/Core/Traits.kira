@@ -12,30 +12,82 @@ import Foundation
 // Trait identifiers. A rendition constrains a subset of these; the ones it
 // leaves out match anything.
 //
-// The numbers are wire values and are never renumbered. Identifiers at or above
-// `traitCustomBase()` belong to whoever wrote the blob; KCoreUI carries them
-// through resolution by the same rules without knowing what they mean.
-function traitAppearance() -> Int { return 0 }
-function traitContrast() -> Int { return 1 }
-function traitGamut() -> Int { return 2 }
-function traitScale() -> Int { return 3 }
-function traitIdiom() -> Int { return 4 }
-function traitPlatform() -> Int { return 5 }
-function traitLayoutDirection() -> Int { return 6 }
-function traitHorizontalSizeClass() -> Int { return 7 }
-function traitVerticalSizeClass() -> Int { return 8 }
-function traitReduceTransparency() -> Int { return 9 }
-function traitReduceMotion() -> Int { return 10 }
-function traitInvertColors() -> Int { return 11 }
-function traitDifferentiateWithoutColor() -> Int { return 12 }
+// The wire values are u32, assigned in `traitIdentifierValue`, and never
+// renumbered. The mapping is total in both directions: `Custom` carries an
+// identifier in the producer-owned range at or above
+// `traitIdentifierCustomBase`, and `Unknown` carries any other identifier this
+// build has no name for. KCoreUI carries both through resolution by the same
+// rules without knowing what they mean.
 
-function traitBuiltinCount() -> Int { return 13 }
-function traitCustomBase() -> Int { return 64 }
+enum TraitIdentifier {
+    Appearance
+    Contrast
+    Gamut
+    Scale
+    Idiom
+    Platform
+    LayoutDirection
+    HorizontalSizeClass
+    VerticalSizeClass
+    ReduceTransparency
+    ReduceMotion
+    InvertColors
+    DifferentiateWithoutColor
+    Custom(Int)
+    Unknown(Int)
+}
+
+// The first trait identifier KCoreUI itself will never claim.
+function traitIdentifierCustomBase() -> Int { return 64 }
 
 // Trait identifier order is resolution priority order, highest first. A
 // rendition that pins `appearance` beats one that pins only `contrast`, and the
 // comparison walks identifiers ascending, so priority is a property of the wire
 // numbering rather than a table that could disagree with it.
+
+function traitIdentifierValue(identifier: borrow TraitIdentifier) -> Int {
+    match identifier {
+        Appearance -> return 0;
+        Contrast -> return 1;
+        Gamut -> return 2;
+        Scale -> return 3;
+        Idiom -> return 4;
+        Platform -> return 5;
+        LayoutDirection -> return 6;
+        HorizontalSizeClass -> return 7;
+        VerticalSizeClass -> return 8;
+        ReduceTransparency -> return 9;
+        ReduceMotion -> return 10;
+        InvertColors -> return 11;
+        DifferentiateWithoutColor -> return 12;
+        Custom(value) -> return value;
+        Unknown(value) -> return value;
+    }
+}
+
+function traitIdentifierFromValue(value: Int) -> TraitIdentifier {
+    if value == 0 { return .Appearance }
+    if value == 1 { return .Contrast }
+    if value == 2 { return .Gamut }
+    if value == 3 { return .Scale }
+    if value == 4 { return .Idiom }
+    if value == 5 { return .Platform }
+    if value == 6 { return .LayoutDirection }
+    if value == 7 { return .HorizontalSizeClass }
+    if value == 8 { return .VerticalSizeClass }
+    if value == 9 { return .ReduceTransparency }
+    if value == 10 { return .ReduceMotion }
+    if value == 11 { return .InvertColors }
+    if value == 12 { return .DifferentiateWithoutColor }
+    if value >= traitIdentifierCustomBase() { return .Custom(value) }
+    return .Unknown(value)
+}
+
+// Identifier identity is wire identity: the mapping is bijective, so two
+// identifiers name the same trait exactly when they share a wire value.
+function traitIdentifiersEqual(left: borrow TraitIdentifier, right: borrow TraitIdentifier) -> Bool {
+    return traitIdentifierValue(left) == traitIdentifierValue(right)
+}
 
 // The interface's colour scheme.
 enum Appearance {
@@ -105,7 +157,7 @@ enum SizeClass {
 
 // A trait this build of KCoreUI has no name for, carried by identifier.
 struct CustomTrait {
-    let identifier: Int = 0
+    let identifier: TraitIdentifier = .Custom(64)
     let value: Int = 0
 }
 
@@ -213,39 +265,39 @@ function flagValue(flag: Bool) -> Int {
     return flag ? 2 : 1
 }
 
-// The environment's value for one builtin trait, or zero when the identifier
-// names no builtin. A custom identifier is answered by `environmentTraitValue`.
-function environmentBuiltinValue(environment: borrow UIEnvironment, identifier: Int) -> Int {
-    if identifier == traitAppearance() { return appearanceValue(environment.appearance) }
-    if identifier == traitContrast() { return contrastValue(environment.contrast) }
-    if identifier == traitGamut() { return gamutValue(environment.gamut) }
-    if identifier == traitScale() { return scaleValue(environment.scale) }
-    if identifier == traitIdiom() { return idiomValue(environment.idiom) }
-    if identifier == traitPlatform() { return platformValue(environment.platform) }
-    if identifier == traitLayoutDirection() { return layoutDirectionValue(environment.layoutDirection) }
-    if identifier == traitHorizontalSizeClass() { return sizeClassValue(environment.horizontalSizeClass) }
-    if identifier == traitVerticalSizeClass() { return sizeClassValue(environment.verticalSizeClass) }
-    if identifier == traitReduceTransparency() { return flagValue(environment.reduceTransparency) }
-    if identifier == traitReduceMotion() { return flagValue(environment.reduceMotion) }
-    if identifier == traitInvertColors() { return flagValue(environment.invertColors) }
-    if identifier == traitDifferentiateWithoutColor() { return flagValue(environment.differentiateWithoutColor) }
-    return 0
-}
-
-// The environment's value for any trait, builtin or custom. Zero means the
-// environment says nothing about it, which makes every constraint on it fail:
-// a rendition asking for a trait the environment does not carry is not a match
-// for that environment.
-function environmentTraitValue(environment: borrow UIEnvironment, identifier: Int) -> Int {
-    if identifier < traitBuiltinCount() {
-        return environmentBuiltinValue(environment, identifier)
-    }
+// The environment's value for an identifier answered by the custom array,
+// looked up by wire value. Zero when the environment does not carry it.
+function environmentCustomValue(environment: borrow UIEnvironment, wire: Int) -> Int {
     for entry in environment.custom {
-        if entry.identifier == identifier {
+        if traitIdentifierValue(entry.identifier) == wire {
             return entry.value
         }
     }
     return 0
+}
+
+// The environment's value for any trait, builtin or not. Zero means the
+// environment says nothing about it, which makes every constraint on it fail:
+// a rendition asking for a trait the environment does not carry is not a match
+// for that environment.
+function environmentTraitValue(environment: borrow UIEnvironment, identifier: borrow TraitIdentifier) -> Int {
+    match identifier {
+        Appearance -> return appearanceValue(environment.appearance);
+        Contrast -> return contrastValue(environment.contrast);
+        Gamut -> return gamutValue(environment.gamut);
+        Scale -> return scaleValue(environment.scale);
+        Idiom -> return idiomValue(environment.idiom);
+        Platform -> return platformValue(environment.platform);
+        LayoutDirection -> return layoutDirectionValue(environment.layoutDirection);
+        HorizontalSizeClass -> return sizeClassValue(environment.horizontalSizeClass);
+        VerticalSizeClass -> return sizeClassValue(environment.verticalSizeClass);
+        ReduceTransparency -> return flagValue(environment.reduceTransparency);
+        ReduceMotion -> return flagValue(environment.reduceMotion);
+        InvertColors -> return flagValue(environment.invertColors);
+        DifferentiateWithoutColor -> return flagValue(environment.differentiateWithoutColor);
+        Custom(wire) -> return environmentCustomValue(environment, wire);
+        Unknown(wire) -> return environmentCustomValue(environment, wire);
+    }
 }
 
 // --- Cache keys ------------------------------------------------------------
@@ -276,7 +328,7 @@ function environmentKey(environment: borrow UIEnvironment) -> Int {
 function environmentCustomKey(environment: borrow UIEnvironment) -> Int {
     var fold = 0
     for entry in environment.custom {
-        var mixed = entry.identifier * 2654435761
+        var mixed = traitIdentifierValue(entry.identifier) * 2654435761
         mixed = mixed ^ (entry.value * 40503)
         mixed = mixed ^ (mixed >> 17)
         fold = fold + mixed

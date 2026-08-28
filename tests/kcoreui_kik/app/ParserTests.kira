@@ -110,7 +110,7 @@ construct KcuUnsortedConstraintsAreRefused() extends Test {
         var record = CatalogRecord()
         var resource = ResourceRecord()
         resource.name = "label"
-        resource.kind = kindColor()
+        resource.kind = .Color
         var rendition = RenditionRecord()
         rendition.constraints.append(whenAppearance(.Light))
         rendition.constraints.append(whenContrast(.High))
@@ -121,9 +121,9 @@ construct KcuUnsortedConstraintsAreRefused() extends Test {
         let bytes = writeCatalogRecord(record)
         // One resource, one rendition, two constraints. Reverse them in place.
         let constraintStart = blobHeaderSize() + blobResourceEntrySize() + blobRenditionEntrySize()
-        var reversed = kcuWithU32(bytes, constraintStart, traitContrast())
+        var reversed = kcuWithU32(bytes, constraintStart, traitIdentifierValue(TraitIdentifier.Contrast))
         reversed = kcuWithU32(reversed, constraintStart + 4, contrastValue(Contrast.High))
-        reversed = kcuWithU32(reversed, constraintStart + 8, traitAppearance())
+        reversed = kcuWithU32(reversed, constraintStart + 8, traitIdentifierValue(TraitIdentifier.Appearance))
         reversed = kcuWithU32(reversed, constraintStart + 12, appearanceValue(Appearance.Light))
         return kcuParseFailure(reversed)
     }
@@ -137,9 +137,9 @@ construct KcuAReservedTraitValueIsRefused() extends Test {
         var record = CatalogRecord()
         var resource = ResourceRecord()
         resource.name = "label"
-        resource.kind = kindColor()
+        resource.kind = .Color
         var rendition = RenditionRecord()
-        rendition.constraints.append(constrain(traitAppearance(), 0))
+        rendition.constraints.append(constrain(.Appearance, 0))
         rendition.payload = kcuAuthored(kcuColor(0.0, 0.0, 0.0, 1.0))
         resource.renditions.append(rendition)
         record.resources.append(resource)
@@ -156,7 +156,7 @@ construct KcuADuplicateRenditionIsRefused() extends Test {
         var record = CatalogRecord()
         var resource = ResourceRecord()
         resource.name = "label"
-        resource.kind = kindColor()
+        resource.kind = .Color
         var first = RenditionRecord()
         first.constraints.append(whenAppearance(.Light))
         first.payload = kcuAuthored(kcuColor(0.0, 0.0, 0.0, 1.0))

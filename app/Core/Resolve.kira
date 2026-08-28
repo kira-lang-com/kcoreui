@@ -38,7 +38,7 @@ function resolveSourceLinear(stack: borrow CatalogStack, source: borrow ColorSou
     if depth >= referenceDepthLimit() {
         return decodeColor(debugColor())
     }
-    let resolved = resolveResource(stack, source.reference, kindColor(), environment)
+    let resolved = resolveResource(stack, source.reference, .Color, environment)
     if !resolved.found {
         return decodeColor(debugColor())
     }
@@ -87,8 +87,8 @@ struct ColorResolution {
 function resolveColorChecked(stack: borrow CatalogStack, name: borrow String, environment: borrow UIEnvironment) -> ColorResolution {
     var resolution = ColorResolution()
     resolution.color = debugColor()
-    let resolved = resolveResource(stack, name, kindColor(), environment)
-    if !resolved.found || resolved.kind != kindColor() {
+    let resolved = resolveResource(stack, name, .Color, environment)
+    if !resolved.found || !resourceKindsEqual(resolved.kind, .Color) {
         return resolution
     }
     let read = decodeColorPayload(resolvedPayload(stack, resolved))
@@ -124,8 +124,8 @@ struct ResolvedGradient {
 
 function resolveGradient(stack: borrow CatalogStack, name: borrow String, environment: borrow UIEnvironment) -> ResolvedGradient {
     var gradient = ResolvedGradient()
-    let resolved = resolveResource(stack, name, kindGradient(), environment)
-    if !resolved.found || resolved.kind != kindGradient() {
+    let resolved = resolveResource(stack, name, .Gradient, environment)
+    if !resolved.found || !resourceKindsEqual(resolved.kind, .Gradient) {
         return gradient
     }
     let read = decodeGradient(resolvedPayload(stack, resolved))
@@ -155,7 +155,7 @@ struct ResolvedMaterialLayer {
     var amount: Float = 0.0
     var color: Color = Color()
     var opacity: Float = 1.0
-    var blend: Int = 0
+    var blend: BlendMode = .Normal
 }
 
 struct ResolvedMaterial {
@@ -165,8 +165,8 @@ struct ResolvedMaterial {
 
 function resolveMaterial(stack: borrow CatalogStack, name: borrow String, environment: borrow UIEnvironment) -> ResolvedMaterial {
     var material = ResolvedMaterial()
-    let resolved = resolveResource(stack, name, kindMaterial(), environment)
-    if !resolved.found || resolved.kind != kindMaterial() {
+    let resolved = resolveResource(stack, name, .Material, environment)
+    if !resolved.found || !resourceKindsEqual(resolved.kind, .Material) {
         return material
     }
     let read = decodeMaterial(resolvedPayload(stack, resolved))
@@ -216,8 +216,8 @@ struct ResolvedEffect {
 
 function resolveEffect(stack: borrow CatalogStack, name: borrow String, environment: borrow UIEnvironment) -> ResolvedEffect {
     var effect = ResolvedEffect()
-    let resolved = resolveResource(stack, name, kindEffect(), environment)
-    if !resolved.found || resolved.kind != kindEffect() {
+    let resolved = resolveResource(stack, name, .Effect, environment)
+    if !resolved.found || !resourceKindsEqual(resolved.kind, .Effect) {
         return effect
     }
     let read = decodeEffect(resolvedPayload(stack, resolved))
@@ -248,8 +248,8 @@ struct ResolvedTypography {
 
 function resolveTypography(stack: borrow CatalogStack, name: borrow String, environment: borrow UIEnvironment) -> ResolvedTypography {
     var typography = ResolvedTypography()
-    let resolved = resolveResource(stack, name, kindTypography(), environment)
-    if !resolved.found || resolved.kind != kindTypography() {
+    let resolved = resolveResource(stack, name, .Typography, environment)
+    if !resolved.found || !resourceKindsEqual(resolved.kind, .Typography) {
         return typography
     }
     let read = decodeTypography(resolvedPayload(stack, resolved))

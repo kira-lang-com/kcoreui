@@ -109,16 +109,16 @@ function typography(resources: borrow UIResources, name: borrow String) -> Resol
 // Why a name resolved the way it did, as text. The failure mode of a variant
 // system is a value that is right everywhere except one combination of traits,
 // and this is what finds it.
-function explain(resources: borrow UIResources, name: borrow String, kind: Int) -> String {
+function explain(resources: borrow UIResources, name: borrow String, kind: borrow ResourceKind) -> String {
     return traceText(traceResolution(resources.stack, name, kind, resources.environment))
 }
 
 function explainColor(resources: borrow UIResources, name: borrow String) -> String {
-    return explain(resources, name, kindColor())
+    return explain(resources, name, .Color)
 }
 
 function explainMaterial(resources: borrow UIResources, name: borrow String) -> String {
-    return explain(resources, name, kindMaterial())
+    return explain(resources, name, .Material)
 }
 
 // --- The catalog a program ships -------------------------------------------

@@ -9,23 +9,67 @@ import Foundation
 
 // --- Resource kinds --------------------------------------------------------
 //
-// Wire values, never renumbered. A kind KCoreUI does not know is carried
-// through load, resolution and write-back unchanged, which is what lets a blob
-// hold resources this build has no decoder for.
+// The wire values are u32, assigned in `resourceKindValue`, and never
+// renumbered. The mapping is total in both directions: `Custom` carries an
+// identifier in the producer-owned range at or above `resourceKindCustomBase`,
+// and `Unknown` carries any other identifier this build has no name for, so a
+// kind KCoreUI does not know is carried through load, resolution and
+// write-back unchanged. That is what lets a blob hold resources this build has
+// no decoder for.
 
-function kindColor() -> Int { return 1 }
-function kindGradient() -> Int { return 2 }
-function kindMaterial() -> Int { return 3 }
-function kindEffect() -> Int { return 4 }
-function kindTypography() -> Int { return 5 }
+enum ResourceKind {
+    Color
+    Gradient
+    Material
+    Effect
+    Typography
+    Custom(Int)
+    Unknown(Int)
+}
 
 // The first kind identifier KCoreUI itself will never claim.
-function kindCustomBase() -> Int { return 1024 }
+function resourceKindCustomBase() -> Int { return 1024 }
+
+function resourceKindValue(kind: borrow ResourceKind) -> Int {
+    match kind {
+        Color -> return 1;
+        Gradient -> return 2;
+        Material -> return 3;
+        Effect -> return 4;
+        Typography -> return 5;
+        Custom(value) -> return value;
+        Unknown(value) -> return value;
+    }
+}
+
+function resourceKindFromValue(value: Int) -> ResourceKind {
+    if value == 1 { return .Color }
+    if value == 2 { return .Gradient }
+    if value == 3 { return .Material }
+    if value == 4 { return .Effect }
+    if value == 5 { return .Typography }
+    if value >= resourceKindCustomBase() { return .Custom(value) }
+    return .Unknown(value)
+}
+
+// Kind identity is wire identity: the mapping is bijective, so two kinds are
+// the same resource kind exactly when they share a wire value.
+function resourceKindsEqual(left: borrow ResourceKind, right: borrow ResourceKind) -> Bool {
+    return resourceKindValue(left) == resourceKindValue(right)
+}
 
 // Whether this build carries a decoder for a kind. A resolver answers for any
 // kind; only the typed accessors care.
-function kindIsKnown(kind: Int) -> Bool {
-    return kind >= kindColor() && kind <= kindTypography()
+function resourceKindIsKnown(kind: borrow ResourceKind) -> Bool {
+    match kind {
+        Color -> return true;
+        Gradient -> return true;
+        Material -> return true;
+        Effect -> return true;
+        Typography -> return true;
+        Custom(value) -> return false;
+        Unknown(value) -> return false;
+    }
 }
 
 // --- Parsed catalog --------------------------------------------------------
@@ -34,7 +78,7 @@ function kindIsKnown(kind: Int) -> Bool {
 // identifier, which is what makes the specificity comparison a single merge
 // walk rather than a search.
 struct CatalogConstraint {
-    var identifier: Int = 0
+    var identifier: TraitIdentifier = .Appearance
     var value: Int = 0
 }
 
@@ -51,7 +95,7 @@ struct CatalogRendition {
 struct CatalogResource {
     var nameOffset: Int = 0
     var nameCount: Int = 0
-    var kind: Int = 0
+    var kind: ResourceKind = .Color
     var firstRendition: Int = 0
     var renditionCount: Int = 0
 }
@@ -91,7 +135,7 @@ struct RenditionRecord {
 
 struct ResourceRecord {
     var name: String = ""
-    var kind: Int = 0
+    var kind: ResourceKind = .Color
     var renditions: [RenditionRecord] = []
 }
 
@@ -110,7 +154,7 @@ struct ResolvedRendition {
     var catalogIndex: Int = 0
     var resourceIndex: Int = 0
     var renditionIndex: Int = 0
-    var kind: Int = 0
+    var kind: ResourceKind = .Color
     var payloadOffset: Int = 0
     var payloadCount: Int = 0
 }
@@ -156,7 +200,7 @@ function sortedConstraints(input: borrow [CatalogConstraint]) -> [CatalogConstra
     var index = 1
     while index < sorted.count {
         var position = index
-        while position > 0 && sorted[position - 1].identifier > sorted[position].identifier {
+        while position > 0 && traitIdentifierValue(sorted[position - 1].identifier) > traitIdentifierValue(sorted[position].identifier) {
             let held = sorted[position - 1]
             sorted[position - 1] = sorted[position]
             sorted[position] = held
@@ -182,23 +226,23 @@ function canonicalRendition(record: borrow RenditionRecord) -> RenditionRecord {
 }
 
 // A constraint, spelled the way a producer writes one.
-function constrain(identifier: Int, value: Int) -> CatalogConstraint {
+function constrain(identifier: borrow TraitIdentifier, value: Int) -> CatalogConstraint {
     return CatalogConstraint(identifier: identifier, value: value)
 }
 
 // The four builtin constraints an author reaches for most.
 function whenAppearance(appearance: borrow Appearance) -> CatalogConstraint {
-    return constrain(traitAppearance(), appearanceValue(appearance))
+    return constrain(.Appearance, appearanceValue(appearance))
 }
 
 function whenContrast(contrast: borrow Contrast) -> CatalogConstraint {
-    return constrain(traitContrast(), contrastValue(contrast))
+    return constrain(.Contrast, contrastValue(contrast))
 }
 
 function whenGamut(gamut: borrow DisplayGamut) -> CatalogConstraint {
-    return constrain(traitGamut(), gamutValue(gamut))
+    return constrain(.Gamut, gamutValue(gamut))
 }
 
 function whenPlatform(platform: borrow Platform) -> CatalogConstraint {
-    return constrain(traitPlatform(), platformValue(platform))
+    return constrain(.Platform, platformValue(platform))
 }

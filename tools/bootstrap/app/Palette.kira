@@ -33,7 +33,7 @@ function rgba(r: Float, g: Float, b: Float, a: Float) -> Color {
 function adaptiveColor(name: borrow String, light: borrow Color, dark: borrow Color) -> ResourceRecord {
     var resource = ResourceRecord()
     resource.name = name
-    resource.kind = kindColor()
+    resource.kind = .Color
 
     var lightRendition = RenditionRecord()
     lightRendition.constraints.append(whenAppearance(.Light))
@@ -72,7 +72,7 @@ function contrastingColor(name: borrow String, light: borrow Color, dark: borrow
 function aliasColor(name: borrow String, target: borrow String) -> ResourceRecord {
     var resource = ResourceRecord()
     resource.name = name
-    resource.kind = kindColor()
+    resource.kind = .Color
     var rendition = RenditionRecord()
     rendition.payload = encodeColorAlias(target)
     resource.renditions.append(rendition)

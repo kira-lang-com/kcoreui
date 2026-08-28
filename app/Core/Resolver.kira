@@ -48,8 +48,8 @@ function compareSpecificity(catalog: borrow Catalog, leftIndex: Int, rightIndex:
     var leftStep = 0
     var rightStep = 0
     while leftStep < left.constraintCount && rightStep < right.constraintCount {
-        let leftId = catalog.constraints[left.firstConstraint + leftStep].identifier
-        let rightId = catalog.constraints[right.firstConstraint + rightStep].identifier
+        let leftId = traitIdentifierValue(catalog.constraints[left.firstConstraint + leftStep].identifier)
+        let rightId = traitIdentifierValue(catalog.constraints[right.firstConstraint + rightStep].identifier)
         if leftId == rightId {
             leftStep = leftStep + 1
             rightStep = rightStep + 1
@@ -96,7 +96,7 @@ function resolveResourceRendition(catalog: borrow Catalog, resourceIndex: Int, e
 // the next catalog down is asked. That is what makes a partial override safe.
 // An override defining a colour for dark appearance only still lets the floor
 // answer in light.
-function resolveResource(stack: borrow CatalogStack, name: borrow String, kind: Int, environment: borrow UIEnvironment) -> ResolvedRendition {
+function resolveResource(stack: borrow CatalogStack, name: borrow String, kind: borrow ResourceKind, environment: borrow UIEnvironment) -> ResolvedRendition {
     var resolved = ResolvedRendition()
     for catalogIndex in 0..stack.catalogs.count {
         let catalog = stack.catalogs[catalogIndex]
@@ -134,10 +134,10 @@ struct ResolutionTrace {
     var candidatesConsidered: Int = 0
     var candidatesEligible: Int = 0
     var matchedConstraints: [CatalogConstraint] = []
-    var kind: Int = 0
+    var kind: ResourceKind = .Color
 }
 
-function traceResolution(stack: borrow CatalogStack, name: borrow String, kind: Int, environment: borrow UIEnvironment) -> ResolutionTrace {
+function traceResolution(stack: borrow CatalogStack, name: borrow String, kind: borrow ResourceKind, environment: borrow UIEnvironment) -> ResolutionTrace {
     var trace = ResolutionTrace()
     trace.name = name
     for catalogIndex in 0..stack.catalogs.count {
@@ -170,30 +170,36 @@ function traceResolution(stack: borrow CatalogStack, name: borrow String, kind: 
 // A trait identifier's name, for a trace a person reads. A custom identifier
 // has no name here on purpose: KCoreUI does not know what a producer's traits
 // mean and will not invent a word for one.
-function traitName(identifier: Int) -> String {
-    if identifier == traitAppearance() { return "appearance" }
-    if identifier == traitContrast() { return "contrast" }
-    if identifier == traitGamut() { return "gamut" }
-    if identifier == traitScale() { return "scale" }
-    if identifier == traitIdiom() { return "idiom" }
-    if identifier == traitPlatform() { return "platform" }
-    if identifier == traitLayoutDirection() { return "layoutDirection" }
-    if identifier == traitHorizontalSizeClass() { return "horizontalSizeClass" }
-    if identifier == traitVerticalSizeClass() { return "verticalSizeClass" }
-    if identifier == traitReduceTransparency() { return "reduceTransparency" }
-    if identifier == traitReduceMotion() { return "reduceMotion" }
-    if identifier == traitInvertColors() { return "invertColors" }
-    if identifier == traitDifferentiateWithoutColor() { return "differentiateWithoutColor" }
-    return "trait#" + String(identifier)
+function traitName(identifier: borrow TraitIdentifier) -> String {
+    match identifier {
+        Appearance -> return "appearance";
+        Contrast -> return "contrast";
+        Gamut -> return "gamut";
+        Scale -> return "scale";
+        Idiom -> return "idiom";
+        Platform -> return "platform";
+        LayoutDirection -> return "layoutDirection";
+        HorizontalSizeClass -> return "horizontalSizeClass";
+        VerticalSizeClass -> return "verticalSizeClass";
+        ReduceTransparency -> return "reduceTransparency";
+        ReduceMotion -> return "reduceMotion";
+        InvertColors -> return "invertColors";
+        DifferentiateWithoutColor -> return "differentiateWithoutColor";
+        Custom(value) -> return "trait#" + String(value);
+        Unknown(value) -> return "trait#" + String(value);
+    }
 }
 
-function kindName(kind: Int) -> String {
-    if kind == kindColor() { return "Color" }
-    if kind == kindGradient() { return "Gradient" }
-    if kind == kindMaterial() { return "Material" }
-    if kind == kindEffect() { return "Effect" }
-    if kind == kindTypography() { return "Typography" }
-    return "kind#" + String(kind)
+function kindName(kind: borrow ResourceKind) -> String {
+    match kind {
+        Color -> return "Color";
+        Gradient -> return "Gradient";
+        Material -> return "Material";
+        Effect -> return "Effect";
+        Typography -> return "Typography";
+        Custom(value) -> return "kind#" + String(value);
+        Unknown(value) -> return "kind#" + String(value);
+    }
 }
 
 // The trace as one block of text.

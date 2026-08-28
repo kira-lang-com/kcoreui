@@ -167,7 +167,7 @@ construct KcuRenditionOrderDoesNotChangeTheBytes() extends Test {
 
         var swapped = ResourceRecord()
         swapped.name = "label"
-        swapped.kind = kindColor()
+        swapped.kind = .Color
         var darkFirst = RenditionRecord()
         darkFirst.constraints.append(whenAppearance(.Dark))
         darkFirst.payload = kcuAuthored(kcuColor(0.9, 0.9, 0.9, 1.0))
@@ -192,7 +192,7 @@ construct KcuOneNameCarriesSeveralKinds() extends Test {
 
         var material = ResourceRecord()
         material.name = "regular"
-        material.kind = kindMaterial()
+        material.kind = .Material
         var recipe = MaterialValue()
         recipe.layers.append(backdropBlurLayer(28.0))
         var rendition = RenditionRecord()
@@ -201,8 +201,8 @@ construct KcuOneNameCarriesSeveralKinds() extends Test {
         record.resources.append(material)
 
         let catalog = kcuCatalogOf(record)
-        return catalogFindResource(catalog, "regular", kindColor()) >= 0
-            && catalogFindResource(catalog, "regular", kindMaterial()) >= 0
+        return catalogFindResource(catalog, "regular", .Color) >= 0
+            && catalogFindResource(catalog, "regular", .Material) >= 0
             && kcuRoundTrips(record)
     }
     expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }

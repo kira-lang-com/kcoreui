@@ -38,7 +38,7 @@ function saveCatalogFile(path: borrow String, catalog: borrow Catalog) -> Bool {
 //
 // The table is sorted by that pair, which the parser has already verified, so
 // this is a binary search: a catalog of thousands costs a dozen comparisons.
-function catalogFindResource(catalog: borrow Catalog, name: borrow String, kind: Int) -> Int {
+function catalogFindResource(catalog: borrow Catalog, name: borrow String, kind: borrow ResourceKind) -> Int {
     var low = 0
     var high = catalog.resources.count - 1
     while low <= high {
@@ -46,7 +46,7 @@ function catalogFindResource(catalog: borrow Catalog, name: borrow String, kind:
         let resource = catalog.resources[middle]
         var order = compareSliceToString(catalog.nameBytes, resource.nameOffset, resource.nameCount, name)
         if order == 0 {
-            order = resource.kind - kind
+            order = resourceKindValue(resource.kind) - resourceKindValue(kind)
         }
         if order == 0 {
             return middle
@@ -61,14 +61,14 @@ function catalogFindResource(catalog: borrow Catalog, name: borrow String, kind:
 }
 
 // Whether this catalog carries the resource at all, regardless of environment.
-function catalogHasResource(catalog: borrow Catalog, name: borrow String, kind: Int) -> Bool {
+function catalogHasResource(catalog: borrow Catalog, name: borrow String, kind: borrow ResourceKind) -> Bool {
     return catalogFindResource(catalog, name, kind) >= 0
 }
 
 // The kinds this catalog carries under one name. A name usually has exactly
 // one; an editor showing what a name means asks for all of them.
-function catalogKindsForName(catalog: borrow Catalog, name: borrow String) -> [Int] {
-    var kinds: [Int] = []
+function catalogKindsForName(catalog: borrow Catalog, name: borrow String) -> [ResourceKind] {
+    var kinds: [ResourceKind] = []
     var index = 0
     while index < catalog.resources.count {
         let resource = catalog.resources[index]

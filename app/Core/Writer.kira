@@ -17,8 +17,10 @@ function compareConstraintLists(left: borrow [CatalogConstraint], right: borrow 
     var index = 0
     let shorter = left.count < right.count ? left.count : right.count
     while index < shorter {
-        if left[index].identifier != right[index].identifier {
-            return left[index].identifier - right[index].identifier
+        let leftId = traitIdentifierValue(left[index].identifier)
+        let rightId = traitIdentifierValue(right[index].identifier)
+        if leftId != rightId {
+            return leftId - rightId
         }
         if left[index].value != right[index].value {
             return left[index].value - right[index].value
@@ -59,7 +61,7 @@ function compareResourceKeys(left: borrow ResourceRecord, right: borrow Resource
     if order != 0 {
         return order
     }
-    return left.kind - right.kind
+    return resourceKindValue(left.kind) - resourceKindValue(right.kind)
 }
 
 // Resources in canonical order: ascending by name bytes. Insertion sort keeps
@@ -152,7 +154,7 @@ function writeCatalogRecord(record: borrow CatalogRecord) -> [U8] {
     for resource in resources {
         appendU32(bytes, nameCursor)
         appendU32(bytes, resource.name.count)
-        appendU32(bytes, resource.kind)
+        appendU32(bytes, resourceKindValue(resource.kind))
         appendU32(bytes, renditionCursor)
         appendU32(bytes, resource.renditions.count)
         nameCursor = nameCursor + resource.name.count
@@ -175,7 +177,7 @@ function writeCatalogRecord(record: borrow CatalogRecord) -> [U8] {
     for resource in resources {
         for rendition in resource.renditions {
             for entry in rendition.constraints {
-                appendU32(bytes, entry.identifier)
+                appendU32(bytes, traitIdentifierValue(entry.identifier))
                 appendU32(bytes, entry.value)
             }
         }
@@ -234,7 +236,7 @@ function writeCatalog(catalog: borrow Catalog) -> [U8] {
     for resource in catalog.resources {
         appendU32(bytes, resource.nameOffset)
         appendU32(bytes, resource.nameCount)
-        appendU32(bytes, resource.kind)
+        appendU32(bytes, resourceKindValue(resource.kind))
         appendU32(bytes, resource.firstRendition)
         appendU32(bytes, resource.renditionCount)
     }
@@ -247,7 +249,7 @@ function writeCatalog(catalog: borrow Catalog) -> [U8] {
     }
 
     for entry in catalog.constraints {
-        appendU32(bytes, entry.identifier)
+        appendU32(bytes, traitIdentifierValue(entry.identifier))
         appendU32(bytes, entry.value)
     }
 

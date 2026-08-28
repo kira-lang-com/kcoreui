@@ -8,19 +8,54 @@ import Foundation
 // costs nothing to keep correct across appearances — the recipe never changes,
 // and the colours it names resolve against the same environment it did.
 //
-// The blend identifiers below are the compositor's own, so a resolved layer
-// hands its blend straight to the shader without a translation table in
-// between.
+// The blend identifiers are the compositor's own, so a resolved layer hands
+// its blend straight to the shader without a translation table in between.
+//
+// The wire values are u8, assigned in `blendModeValue`, and never renumbered.
+// The mapping is total in both directions: `Unknown` carries any identifier
+// this build has no name for, so a layer blending in a mode this build cannot
+// composite still round-trips through load and write-back unchanged.
 
-function blendNormal() -> Int { return 0 }
-function blendLinearDodge() -> Int { return 1 }
-function blendColorDodge() -> Int { return 2 }
-function blendHardLight() -> Int { return 3 }
-function blendOverlay() -> Int { return 4 }
-function blendLighten() -> Int { return 5 }
-function blendDarken() -> Int { return 6 }
-function blendMultiply() -> Int { return 7 }
-function blendLuminosity() -> Int { return 8 }
+enum BlendMode {
+    Normal
+    LinearDodge
+    ColorDodge
+    HardLight
+    Overlay
+    Lighten
+    Darken
+    Multiply
+    Luminosity
+    Unknown(Int)
+}
+
+function blendModeValue(blend: borrow BlendMode) -> Int {
+    match blend {
+        Normal -> return 0;
+        LinearDodge -> return 1;
+        ColorDodge -> return 2;
+        HardLight -> return 3;
+        Overlay -> return 4;
+        Lighten -> return 5;
+        Darken -> return 6;
+        Multiply -> return 7;
+        Luminosity -> return 8;
+        Unknown(value) -> return value;
+    }
+}
+
+function blendModeFromValue(value: Int) -> BlendMode {
+    if value == 0 { return .Normal }
+    if value == 1 { return .LinearDodge }
+    if value == 2 { return .ColorDodge }
+    if value == 3 { return .HardLight }
+    if value == 4 { return .Overlay }
+    if value == 5 { return .Lighten }
+    if value == 6 { return .Darken }
+    if value == 7 { return .Multiply }
+    if value == 8 { return .Luminosity }
+    return .Unknown(value)
+}
 
 // --- Materials -------------------------------------------------------------
 
@@ -61,7 +96,7 @@ struct MaterialLayer {
     var amount: Float = 0.0
     var color: ColorSource = ColorSource()
     var opacity: Float = 1.0
-    var blend: Int = 0
+    var blend: BlendMode = .Normal
 }
 
 struct MaterialValue {
@@ -82,7 +117,7 @@ function saturationLayer(amount: Float) -> MaterialLayer {
     return layer
 }
 
-function tintLayer(color: borrow ColorSource, opacity: Float, blend: Int) -> MaterialLayer {
+function tintLayer(color: borrow ColorSource, opacity: Float, blend: borrow BlendMode) -> MaterialLayer {
     var layer = MaterialLayer()
     layer.kind = .Tint
     layer.color = color
@@ -107,7 +142,7 @@ function borderLayer(color: borrow ColorSource, width: Float) -> MaterialLayer {
     return layer
 }
 
-function fillLayer(color: borrow ColorSource, opacity: Float, blend: Int) -> MaterialLayer {
+function fillLayer(color: borrow ColorSource, opacity: Float, blend: borrow BlendMode) -> MaterialLayer {
     var layer = MaterialLayer()
     layer.kind = .Fill
     layer.color = color
@@ -120,7 +155,7 @@ function appendMaterialLayer(bytes: borrow mut [U8], layer: borrow MaterialLayer
     appendU8(bytes, materialLayerValue(layer.kind))
     appendI32(bytes, fixedFromFloat(layer.amount))
     appendI32(bytes, fixedFromFloat(layer.opacity))
-    appendU8(bytes, layer.blend)
+    appendU8(bytes, blendModeValue(layer.blend))
     appendColorSource(bytes, layer.color)
 }
 
@@ -156,7 +191,7 @@ function decodeMaterial(bytes: borrow [U8]) -> MaterialRead {
         layer.kind = materialLayerFromValue(readU8(bytes, cursor))
         layer.amount = floatFromFixed(readI32(bytes, cursor + 1))
         layer.opacity = floatFromFixed(readI32(bytes, cursor + 5))
-        layer.blend = readU8(bytes, cursor + 9)
+        layer.blend = blendModeFromValue(readU8(bytes, cursor + 9))
         let colorRead = readColorSource(bytes, cursor + 10)
         if !colorRead.ok {
             return read

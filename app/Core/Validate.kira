@@ -68,60 +68,68 @@ function appendLayerReferences(names: borrow mut [String], value: borrow ColorVa
 // Every name one payload points at. A kind this build cannot decode has no
 // references as far as KCoreUI is concerned, which is the honest answer: the
 // format does not read a payload it has no decoder for, so it cannot know.
-function payloadReferences(kind: Int, bytes: borrow [U8]) -> [String] {
+function payloadReferences(kind: borrow ResourceKind, bytes: borrow [U8]) -> [String] {
     var names: [String] = []
-    if kind == kindColor() {
-        let read = decodeColorPayload(bytes)
-        if read.ok {
-            appendLayerReferences(names, read.value)
-        }
-        return names
-    }
-    if kind == kindGradient() {
-        let read = decodeGradient(bytes)
-        if read.ok {
-            for stop in read.value.stops {
-                appendReference(names, stop.color)
+    match kind {
+        Color -> {
+            let read = decodeColorPayload(bytes)
+            if read.ok {
+                appendLayerReferences(names, read.value)
             }
+            return names
         }
-        return names
-    }
-    if kind == kindMaterial() {
-        let read = decodeMaterial(bytes)
-        if read.ok {
-            for layer in read.value.layers {
-                appendReference(names, layer.color)
+        Gradient -> {
+            let read = decodeGradient(bytes)
+            if read.ok {
+                for stop in read.value.stops {
+                    appendReference(names, stop.color)
+                }
             }
+            return names
         }
-        return names
-    }
-    if kind == kindEffect() {
-        let read = decodeEffect(bytes)
-        if read.ok {
-            for op in read.value.ops {
-                appendReference(names, op.color)
+        Material -> {
+            let read = decodeMaterial(bytes)
+            if read.ok {
+                for layer in read.value.layers {
+                    appendReference(names, layer.color)
+                }
             }
+            return names
         }
-        return names
+        Effect -> {
+            let read = decodeEffect(bytes)
+            if read.ok {
+                for op in read.value.ops {
+                    appendReference(names, op.color)
+                }
+            }
+            return names
+        }
+        Typography -> return names;
+        Custom(value) -> return names;
+        Unknown(value) -> return names;
     }
-    return names
 }
 
-// Whether a payload decodes at all for its kind.
-function payloadDecodes(kind: Int, bytes: borrow [U8]) -> Bool {
-    if kind == kindColor() { return decodeColorPayload(bytes).ok }
-    if kind == kindGradient() { return decodeGradient(bytes).ok }
-    if kind == kindMaterial() { return decodeMaterial(bytes).ok }
-    if kind == kindEffect() { return decodeEffect(bytes).ok }
-    if kind == kindTypography() { return decodeTypography(bytes).ok }
-    return true
+// Whether a payload decodes at all for its kind. A kind this build has no
+// decoder for always does: the container is agnostic about payload.
+function payloadDecodes(kind: borrow ResourceKind, bytes: borrow [U8]) -> Bool {
+    match kind {
+        Color -> return decodeColorPayload(bytes).ok;
+        Gradient -> return decodeGradient(bytes).ok;
+        Material -> return decodeMaterial(bytes).ok;
+        Effect -> return decodeEffect(bytes).ok;
+        Typography -> return decodeTypography(bytes).ok;
+        Custom(value) -> return true;
+        Unknown(value) -> return true;
+    }
 }
 
 // --- Record checks ---------------------------------------------------------
 
-function recordIndexOf(record: borrow CatalogRecord, name: borrow String, kind: Int) -> Int {
+function recordIndexOf(record: borrow CatalogRecord, name: borrow String, kind: borrow ResourceKind) -> Int {
     for index in 0..record.resources.count {
-        if record.resources[index].kind == kind && compareStrings(record.resources[index].name, name) == 0 {
+        if resourceKindsEqual(record.resources[index].kind, kind) && compareStrings(record.resources[index].name, name) == 0 {
             return index
         }
     }
@@ -151,7 +159,7 @@ function referenceCycleFrom(record: borrow CatalogRecord, start: Int) -> Bool {
     var seen: [Int] = []
     var frontier: [Int] = []
     for name in recordResourceReferences(record, start) {
-        let next = recordIndexOf(record, name, kindColor())
+        let next = recordIndexOf(record, name, .Color)
         if next >= 0 {
             frontier.append(next)
         }
@@ -172,7 +180,7 @@ function referenceCycleFrom(record: borrow CatalogRecord, start: Int) -> Bool {
         if !alreadySeen {
             seen.append(current)
             for name in recordResourceReferences(record, current) {
-                let next = recordIndexOf(record, name, kindColor())
+                let next = recordIndexOf(record, name, .Color)
                 if next >= 0 {
                     frontier.append(next)
                 }
@@ -206,7 +214,7 @@ function validateRecord(record: borrow CatalogRecord) -> [ValidationIssue] {
                 issues.append(issue(.UndecodablePayload, resource.name, kindName(resource.kind)))
             }
             for name in payloadReferences(resource.kind, rendition.payload) {
-                if recordIndexOf(record, name, kindColor()) < 0 {
+                if recordIndexOf(record, name, .Color) < 0 {
                     issues.append(issue(.MissingReference, resource.name, name))
                 }
             }
@@ -249,7 +257,7 @@ function validationText(issues: borrow [ValidationIssue]) -> String {
 // name surface and a shipped catalog from drifting apart: a name declared in
 // `Names` with no resource behind it is a lookup that would fall through the
 // floor, and the floor is what makes resolution total.
-function missingNames(catalog: borrow Catalog, names: borrow [String], kind: Int) -> [String] {
+function missingNames(catalog: borrow Catalog, names: borrow [String], kind: borrow ResourceKind) -> [String] {
     var missing: [String] = []
     for name in names {
         if !catalogHasResource(catalog, name, kind) {
@@ -262,11 +270,11 @@ function missingNames(catalog: borrow Catalog, names: borrow [String], kind: Int
 // The reverse: what the catalog carries under one kind that the name surface
 // does not declare. Not an error — a catalog may hold resources for a consumer
 // this build does not contain — but an editor and a review want to see it.
-function undeclaredNames(catalog: borrow Catalog, names: borrow [String], kind: Int) -> [String] {
+function undeclaredNames(catalog: borrow Catalog, names: borrow [String], kind: borrow ResourceKind) -> [String] {
     var extra: [String] = []
     var index = 0
     while index < catalog.resources.count {
-        if catalog.resources[index].kind == kind {
+        if resourceKindsEqual(catalog.resources[index].kind, kind) {
             let present = catalogResourceName(catalog, index)
             var declared = false
             for name in names {

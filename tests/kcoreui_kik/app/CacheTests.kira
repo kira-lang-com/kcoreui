@@ -67,7 +67,7 @@ construct KcuTheKindIsPartOfTheKey() extends Test {
         var record = kcuCacheRecord()
         var material = ResourceRecord()
         material.name = "label"
-        material.kind = kindMaterial()
+        material.kind = .Material
         var recipe = MaterialValue()
         recipe.layers.append(backdropBlurLayer(12.0))
         var rendition = RenditionRecord()
@@ -78,10 +78,10 @@ construct KcuTheKindIsPartOfTheKey() extends Test {
         let stack = kcuStackOf(record)
         var cache = makeDefaultCache()
         let asColor = cachedColor(cache, stack, "label", kcuLight())
-        let asMaterial = cachedResolve(cache, stack, "label", kindMaterial(), kcuLight())
+        let asMaterial = cachedResolve(cache, stack, "label", .Material, kcuLight())
         return kcuColorsEqual(asColor, kcuColor(0.0, 0.0, 0.0, 1.0))
             && asMaterial.found
-            && asMaterial.kind == kindMaterial()
+            && resourceKindsEqual(asMaterial.kind, .Material)
     }
     expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
 }

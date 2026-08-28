@@ -87,10 +87,10 @@ construct KcuADeepChainIsNotACycle() extends Test {
 construct KcuACycleThroughAMaterialIsReported() extends Test {
     test {
         var recipe = MaterialValue()
-        recipe.layers.append(tintLayer(referenceColor("wash"), 0.5, blendNormal()))
+        recipe.layers.append(tintLayer(referenceColor("wash"), 0.5, .Normal))
         var material = ResourceRecord()
         material.name = "wash"
-        material.kind = kindColor()
+        material.kind = .Color
         var rendition = RenditionRecord()
         rendition.payload = encodeColorAlias("wash")
         material.renditions.append(rendition)
@@ -117,7 +117,7 @@ construct KcuTheSameNameUnderTwoKindsIsNotADuplicate() extends Test {
     test {
         var material = ResourceRecord()
         material.name = "regular"
-        material.kind = kindMaterial()
+        material.kind = .Material
         var recipe = MaterialValue()
         recipe.layers.append(backdropBlurLayer(28.0))
         var rendition = RenditionRecord()
@@ -136,7 +136,7 @@ construct KcuAResourceWithNoRenditionsIsReported() extends Test {
     test {
         var resource = ResourceRecord()
         resource.name = "label"
-        resource.kind = kindColor()
+        resource.kind = .Color
         var record = CatalogRecord()
         record.resources.append(resource)
         return kcuIssueCount(record, ValidationKind.NoRenditions)
@@ -148,9 +148,9 @@ construct KcuAReservedTraitValueIsReportedBeforeWriting() extends Test {
     test {
         var resource = ResourceRecord()
         resource.name = "label"
-        resource.kind = kindColor()
+        resource.kind = .Color
         var rendition = RenditionRecord()
-        rendition.constraints.append(constrain(traitContrast(), 0))
+        rendition.constraints.append(constrain(.Contrast, 0))
         rendition.payload = kcuAuthored(kcuColor(0.0, 0.0, 0.0, 1.0))
         resource.renditions.append(rendition)
         var record = CatalogRecord()
@@ -164,7 +164,7 @@ construct KcuTwoRenditionsPinningTheSameTraitsAreReported() extends Test {
     test {
         var resource = ResourceRecord()
         resource.name = "label"
-        resource.kind = kindColor()
+        resource.kind = .Color
         var first = RenditionRecord()
         first.constraints.append(whenAppearance(.Dark))
         first.payload = kcuAuthored(kcuColor(0.0, 0.0, 0.0, 1.0))
@@ -186,7 +186,7 @@ construct KcuAPayloadThatDoesNotMatchItsKindIsReported() extends Test {
     test {
         var resource = ResourceRecord()
         resource.name = "label"
-        resource.kind = kindColor()
+        resource.kind = .Color
         var rendition = RenditionRecord()
         var payload: [U8] = []
         appendU8(payload, 99)

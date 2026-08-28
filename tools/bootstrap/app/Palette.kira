@@ -1,0 +1,228 @@
+import Foundation
+import KCoreUI
+
+// The default catalog's colours.
+//
+// Values are KiraUI's own, transcribed from the tokens its `DefaultStyle`
+// already ships, so a toolkit reading colours from this catalog draws exactly
+// what it drew before. Where Apple's surface names something KiraUI had no
+// token for — the grey ladder, `quinary`, the grouped backgrounds — the value
+// is authored here rather than taken from a platform.
+//
+// A name that means the same thing as another is written as a reference, not as
+// a second copy of the numbers. `foreground` is `label`, and stays `label` in
+// dark appearance, in high contrast, and in whatever a future override says,
+// because the reference is resolved against the same environment the material
+// or the caller resolved against.
+
+function rgba(r: Float, g: Float, b: Float, a: Float) -> Color {
+    return Color(r: r, g: g, b: b, a: a)
+}
+
+// A colour with a light and a dark rendition, which is the shape almost every
+// resource in the catalog has.
+function adaptiveColor(name: borrow String, light: borrow Color, dark: borrow Color) -> ResourceRecord {
+    var resource = ResourceRecord()
+    resource.name = name
+    resource.kind = kindColor()
+
+    var lightRendition = RenditionRecord()
+    lightRendition.constraints.append(whenAppearance(.Light))
+    lightRendition.payload = encodeColor(light)
+    resource.renditions.append(lightRendition)
+
+    var darkRendition = RenditionRecord()
+    darkRendition.constraints.append(whenAppearance(.Dark))
+    darkRendition.payload = encodeColor(dark)
+    resource.renditions.append(darkRendition)
+    return resource
+}
+
+// The same, plus a pair for increased contrast. The contrast renditions pin two
+// traits, so they beat the appearance-only pair whenever contrast is high and
+// are invisible otherwise.
+function contrastingColor(name: borrow String, light: borrow Color, dark: borrow Color, lightHigh: borrow Color, darkHigh: borrow Color) -> ResourceRecord {
+    var resource = adaptiveColor(name, light, dark)
+
+    var lightRendition = RenditionRecord()
+    lightRendition.constraints.append(whenAppearance(.Light))
+    lightRendition.constraints.append(whenContrast(.High))
+    lightRendition.payload = encodeColor(lightHigh)
+    resource.renditions.append(lightRendition)
+
+    var darkRendition = RenditionRecord()
+    darkRendition.constraints.append(whenAppearance(.Dark))
+    darkRendition.constraints.append(whenContrast(.High))
+    darkRendition.payload = encodeColor(darkHigh)
+    resource.renditions.append(darkRendition)
+    return resource
+}
+
+// One name meaning another. No constraints, because an alias holds under every
+// environment: what varies is what it points at.
+function aliasColor(name: borrow String, target: borrow String) -> ResourceRecord {
+    var resource = ResourceRecord()
+    resource.name = name
+    resource.kind = kindColor()
+    var rendition = RenditionRecord()
+    rendition.payload = encodeColorAlias(target)
+    resource.renditions.append(rendition)
+    return resource
+}
+
+// --- The system palette ----------------------------------------------------
+
+function paletteResources() -> [ResourceRecord] {
+    var records: [ResourceRecord] = []
+    records.append(adaptiveColor(colorSystemRed(), rgba(1.0, 0.231, 0.188, 1.0), rgba(1.0, 0.271, 0.227, 1.0)))
+    records.append(adaptiveColor(colorSystemOrange(), rgba(1.0, 0.584, 0.0, 1.0), rgba(1.0, 0.624, 0.039, 1.0)))
+    records.append(adaptiveColor(colorSystemYellow(), rgba(1.0, 0.8, 0.0, 1.0), rgba(1.0, 0.839, 0.039, 1.0)))
+    records.append(adaptiveColor(colorSystemGreen(), rgba(0.204, 0.78, 0.349, 1.0), rgba(0.188, 0.82, 0.345, 1.0)))
+    records.append(adaptiveColor(colorSystemMint(), rgba(0.0, 0.78, 0.745, 1.0), rgba(0.388, 0.902, 0.886, 1.0)))
+    records.append(adaptiveColor(colorSystemTeal(), rgba(0.188, 0.69, 0.78, 1.0), rgba(0.251, 0.784, 0.878, 1.0)))
+    records.append(adaptiveColor(colorSystemCyan(), rgba(0.196, 0.678, 0.902, 1.0), rgba(0.392, 0.824, 1.0, 1.0)))
+    records.append(adaptiveColor(colorSystemBlue(), rgba(0.0, 0.478, 1.0, 1.0), rgba(0.039, 0.518, 1.0, 1.0)))
+    records.append(adaptiveColor(colorSystemIndigo(), rgba(0.345, 0.337, 0.839, 1.0), rgba(0.369, 0.361, 0.902, 1.0)))
+    records.append(adaptiveColor(colorSystemPurple(), rgba(0.686, 0.322, 0.871, 1.0), rgba(0.749, 0.353, 0.949, 1.0)))
+    records.append(adaptiveColor(colorSystemPink(), rgba(1.0, 0.176, 0.333, 1.0), rgba(1.0, 0.216, 0.373, 1.0)))
+    records.append(adaptiveColor(colorSystemBrown(), rgba(0.635, 0.518, 0.369, 1.0), rgba(0.675, 0.557, 0.408, 1.0)))
+
+    // A six-step grey ladder around KiraUI's single grey token, light stepping
+    // toward the canvas and dark stepping toward it from the other side.
+    records.append(adaptiveColor(colorSystemGray(), rgba(0.557, 0.557, 0.576, 1.0), rgba(0.557, 0.557, 0.576, 1.0)))
+    records.append(adaptiveColor(colorSystemGray2(), rgba(0.628, 0.628, 0.644, 1.0), rgba(0.482, 0.482, 0.502, 1.0)))
+    records.append(adaptiveColor(colorSystemGray3(), rgba(0.706, 0.706, 0.722, 1.0), rgba(0.392, 0.392, 0.412, 1.0)))
+    records.append(adaptiveColor(colorSystemGray4(), rgba(0.784, 0.784, 0.8, 1.0), rgba(0.318, 0.318, 0.337, 1.0)))
+    records.append(adaptiveColor(colorSystemGray5(), rgba(0.898, 0.898, 0.918, 1.0), rgba(0.231, 0.231, 0.259, 1.0)))
+    records.append(adaptiveColor(colorSystemGray6(), rgba(0.949, 0.949, 0.969, 1.0), rgba(0.141, 0.141, 0.161, 1.0)))
+    return records
+}
+
+// --- The content hierarchy -------------------------------------------------
+
+function labelResources() -> [ResourceRecord] {
+    var records: [ResourceRecord] = []
+    records.append(contrastingColor(colorLabel(),
+        rgba(0.08, 0.09, 0.12, 1.0), rgba(0.95, 0.96, 0.99, 1.0),
+        rgba(0.0, 0.0, 0.0, 1.0), rgba(1.0, 1.0, 1.0, 1.0)))
+    records.append(contrastingColor(colorSecondaryLabel(),
+        rgba(0.38, 0.4, 0.46, 1.0), rgba(0.68, 0.71, 0.78, 1.0),
+        rgba(0.24, 0.26, 0.31, 1.0), rgba(0.84, 0.86, 0.92, 1.0)))
+    records.append(contrastingColor(colorTertiaryLabel(),
+        rgba(0.5, 0.51, 0.55, 0.58), rgba(0.58, 0.6, 0.66, 0.58),
+        rgba(0.4, 0.41, 0.45, 0.82), rgba(0.72, 0.74, 0.8, 0.82)))
+    records.append(contrastingColor(colorQuaternaryLabel(),
+        rgba(0.5, 0.51, 0.55, 0.34), rgba(0.58, 0.6, 0.66, 0.34),
+        rgba(0.4, 0.41, 0.45, 0.6), rgba(0.72, 0.74, 0.8, 0.6)))
+    records.append(adaptiveColor(colorPlaceholderText(),
+        rgba(0.5, 0.51, 0.55, 0.46), rgba(0.58, 0.6, 0.66, 0.46)))
+
+    // Apple's hierarchical shape styles are the same ladder under shorter
+    // names, so they are references rather than a second set of numbers.
+    records.append(aliasColor(colorPrimary(), colorLabel()))
+    records.append(aliasColor(colorSecondary(), colorSecondaryLabel()))
+    records.append(aliasColor(colorTertiary(), colorTertiaryLabel()))
+    records.append(aliasColor(colorQuaternary(), colorQuaternaryLabel()))
+    records.append(adaptiveColor(colorQuinary(),
+        rgba(0.5, 0.51, 0.55, 0.2), rgba(0.58, 0.6, 0.66, 0.2)))
+    records.append(aliasColor(colorForeground(), colorLabel()))
+    records.append(aliasColor(colorPlaceholder(), colorPlaceholderText()))
+    return records
+}
+
+// --- Backgrounds, fills, separators ----------------------------------------
+
+function surfaceResources() -> [ResourceRecord] {
+    var records: [ResourceRecord] = []
+    records.append(adaptiveColor(colorSystemBackground(),
+        rgba(0.95, 0.96, 0.98, 1.0), rgba(0.035, 0.04, 0.065, 1.0)))
+    records.append(adaptiveColor(colorSecondarySystemBackground(),
+        rgba(1.0, 1.0, 1.0, 0.92), rgba(0.08, 0.1, 0.15, 0.92)))
+    records.append(adaptiveColor(colorTertiarySystemBackground(),
+        rgba(1.0, 1.0, 1.0, 0.98), rgba(0.12, 0.14, 0.2, 0.96)))
+    records.append(adaptiveColor(colorWindowBackground(),
+        rgba(0.96, 0.97, 1.0, 0.88), rgba(0.1, 0.12, 0.18, 0.88)))
+    records.append(aliasColor(colorBackground(), colorSystemBackground()))
+
+    // The grouped ladder is the plain one shifted a step: a grouped table sits
+    // its rows on the surface colour rather than on the canvas.
+    records.append(aliasColor(colorSystemGroupedBackground(), colorSystemBackground()))
+    records.append(aliasColor(colorSecondarySystemGroupedBackground(), colorSecondarySystemBackground()))
+    records.append(aliasColor(colorTertiarySystemGroupedBackground(), colorTertiarySystemBackground()))
+
+    records.append(adaptiveColor(colorSystemFill(),
+        rgba(0.91, 0.93, 0.98, 1.0), rgba(0.16, 0.18, 0.26, 1.0)))
+    records.append(adaptiveColor(colorSecondarySystemFill(),
+        rgba(0.08, 0.09, 0.12, 0.08), rgba(0.95, 0.96, 0.99, 0.08)))
+    records.append(adaptiveColor(colorTertiarySystemFill(),
+        rgba(0.08, 0.09, 0.12, 0.05), rgba(0.95, 0.96, 0.99, 0.05)))
+    records.append(adaptiveColor(colorQuaternarySystemFill(),
+        rgba(0.08, 0.09, 0.12, 0.03), rgba(0.95, 0.96, 0.99, 0.03)))
+    records.append(aliasColor(colorFill(), colorSystemFill()))
+
+    records.append(contrastingColor(colorSeparator(),
+        rgba(0.08, 0.1, 0.16, 0.1), rgba(1.0, 1.0, 1.0, 0.1),
+        rgba(0.08, 0.1, 0.16, 0.32), rgba(1.0, 1.0, 1.0, 0.32)))
+    records.append(adaptiveColor(colorOpaqueSeparator(),
+        rgba(0.78, 0.79, 0.82, 1.0), rgba(0.22, 0.24, 0.3, 1.0)))
+    return records
+}
+
+// --- Accents ---------------------------------------------------------------
+
+function accentResources() -> [ResourceRecord] {
+    var records: [ResourceRecord] = []
+    records.append(contrastingColor(colorTint(),
+        rgba(0.2, 0.45, 0.96, 1.0), rgba(0.43, 0.67, 1.0, 1.0),
+        rgba(0.09, 0.32, 0.86, 1.0), rgba(0.6, 0.78, 1.0, 1.0)))
+    records.append(adaptiveColor(colorSelection(),
+        rgba(0.2, 0.45, 0.96, 0.22), rgba(0.43, 0.67, 1.0, 0.22)))
+    records.append(aliasColor(colorAccentColor(), colorTint()))
+    records.append(aliasColor(colorLink(), colorSystemBlue()))
+    return records
+}
+
+// --- What Apple has no word for --------------------------------------------
+//
+// These are in the catalog and not in `app/Names`, which is the arrangement the
+// design intends. The declared surface is Apple's vocabulary and nothing else;
+// a catalog may carry more, and a consumer that needs a concept Apple never
+// named writes the name into a blob rather than asking permission from a file
+// of constants.
+//
+// A toolkit needs all four of these and Apple spells none of them: ink that
+// stays readable on a filled control, the three semantic intents a button asks
+// for by meaning rather than by hue, and the rungs of a border ladder above the
+// hairline `separator` already covers.
+
+function toolkitResources() -> [ResourceRecord] {
+    var records: [ResourceRecord] = []
+    records.append(adaptiveColor("inverseLabel",
+        rgba(0.98, 0.98, 1.0, 1.0), rgba(0.06, 0.07, 0.1, 1.0)))
+
+    records.append(adaptiveColor("success",
+        rgba(0.12, 0.58, 0.3, 1.0), rgba(0.34, 0.85, 0.52, 1.0)))
+    records.append(adaptiveColor("warning",
+        rgba(0.78, 0.48, 0.06, 1.0), rgba(0.98, 0.75, 0.25, 1.0)))
+    records.append(adaptiveColor("danger",
+        rgba(0.82, 0.12, 0.18, 1.0), rgba(0.96, 0.31, 0.37, 1.0)))
+
+    records.append(adaptiveColor("standardBorder",
+        rgba(0.08, 0.1, 0.16, 0.18), rgba(1.0, 1.0, 1.0, 0.18)))
+    records.append(adaptiveColor("strongBorder",
+        rgba(0.08, 0.1, 0.16, 0.32), rgba(1.0, 1.0, 1.0, 0.32)))
+    records.append(adaptiveColor("focusRing",
+        rgba(0.2, 0.45, 0.96, 0.86), rgba(0.43, 0.67, 1.0, 0.9)))
+    return records
+}
+
+// Every colour the default catalog defines.
+function defaultColorResources() -> [ResourceRecord] {
+    var records: [ResourceRecord] = []
+    for record in paletteResources() { records.append(record) }
+    for record in labelResources() { records.append(record) }
+    for record in surfaceResources() { records.append(record) }
+    for record in accentResources() { records.append(record) }
+    for record in toolkitResources() { records.append(record) }
+    return records
+}

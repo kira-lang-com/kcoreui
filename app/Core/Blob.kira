@@ -1,0 +1,58 @@
+import Foundation
+
+// The `.kcui` container.
+//
+// Six sections, each a flat array of fixed-width little-endian entries, laid
+// out in one order and never another. The layout is canonical: for any blob the
+// parser accepts, writing the parsed catalog back reproduces the original bytes
+// exactly. That is not a nicety — an editor that opens a catalog, changes one
+// colour and saves must not perturb anything else in it, including resources it
+// has no decoder for.
+//
+//   header
+//   resources     sorted ascending by name bytes
+//   renditions    grouped by resource, sorted by constraint list
+//   constraints   grouped by rendition, sorted ascending by identifier
+//   names         concatenated in resource order, so the table is sorted
+//   payloads      concatenated in rendition order, bytes the format never reads
+//
+// Payload bytes are opaque here. A resource kind this build does not know
+// survives load and write-back untouched, because nothing between the two ever
+// looks inside.
+
+function blobMagic0() -> Int { return 75 }
+function blobMagic1() -> Int { return 67 }
+function blobMagic2() -> Int { return 85 }
+function blobMagic3() -> Int { return 73 }
+
+// A major bump means a reader of the old version must refuse the blob. A minor
+// bump means new information a reader may ignore, so an old reader loads it.
+function blobMajorVersion() -> Int { return 1 }
+function blobMinorVersion() -> Int { return 0 }
+
+function blobHeaderSize() -> Int { return 56 }
+function blobResourceEntrySize() -> Int { return 20 }
+function blobRenditionEntrySize() -> Int { return 16 }
+function blobConstraintEntrySize() -> Int { return 8 }
+
+// Header field offsets.
+function blobOffsetMagic() -> Int { return 0 }
+function blobOffsetMajor() -> Int { return 4 }
+function blobOffsetMinor() -> Int { return 6 }
+function blobOffsetFlags() -> Int { return 8 }
+function blobOffsetResourceCount() -> Int { return 12 }
+function blobOffsetResourceStart() -> Int { return 16 }
+function blobOffsetRenditionCount() -> Int { return 20 }
+function blobOffsetRenditionStart() -> Int { return 24 }
+function blobOffsetConstraintCount() -> Int { return 28 }
+function blobOffsetConstraintStart() -> Int { return 32 }
+function blobOffsetNameStart() -> Int { return 36 }
+function blobOffsetNameCount() -> Int { return 40 }
+function blobOffsetPayloadStart() -> Int { return 44 }
+function blobOffsetPayloadCount() -> Int { return 48 }
+function blobOffsetTotalSize() -> Int { return 52 }
+
+// The default file name a catalog is shipped under.
+function blobFileExtension() -> String {
+    return ".kcui"
+}

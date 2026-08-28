@@ -1,0 +1,14 @@
+.kira/
+.kira-build/
+**/generated/
+kira.lock
+
+*.kbc
+*.khm
+*.o
+*.obj
+*.lib
+*.dll
+*.exe
+
+.DS_Store

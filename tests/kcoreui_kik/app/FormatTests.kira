@@ -1,0 +1,209 @@
+import Foundation
+import KCoreUI
+
+// The container: byte helpers, fixed point, text, and the round-trip property
+// the whole design rests on.
+
+// --- Byte helpers ----------------------------------------------------------
+
+construct KcuLittleEndianWordsRoundTrip() extends Test {
+    test {
+        var bytes: [U8] = []
+        appendU16(bytes, 0xBEEF)
+        appendU32(bytes, 0x12345678)
+        return readU16(bytes, 0) == 0xBEEF && readU32(bytes, 2) == 0x12345678
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+construct KcuSignedWordsSignExtend() extends Test {
+    test {
+        var bytes: [U8] = []
+        appendI32(bytes, 0 - 1)
+        appendI32(bytes, 0 - 2147483648)
+        return readI32(bytes, 0) == 0 - 1 && readI32(bytes, 4) == 0 - 2147483648
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+construct KcuReadingPastTheEndAnswersZeroRatherThanTrapping() extends Test {
+    test {
+        var bytes: [U8] = []
+        appendU8(bytes, 9)
+        return readU32(bytes, 40) == 0 && readU8(bytes, 0 - 3) == 0
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// --- Fixed point -----------------------------------------------------------
+
+construct KcuFixedPointRoundTripsAValueItCanRepresent() extends Test {
+    test {
+        return floatFromFixed(fixedFromFloat(0.5)) == 0.5
+            && floatFromFixed(fixedFromFloat(0.0 - 0.25)) == 0.0 - 0.25
+            && floatFromFixed(fixedFromFloat(28.0)) == 28.0
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// A channel is stored to 1/65536, so a value authored in thousandths comes back
+// within half a unit of the scale rather than exactly.
+construct KcuFixedPointKeepsAuthoredChannelsWithinOneUnit() extends Test {
+    test {
+        let authored = 0.231
+        let recovered = floatFromFixed(fixedFromFloat(authored))
+        let error = recovered - authored
+        return abs(error) < 0.00002
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+construct KcuFixedPointRoundsAwayFromZeroOnBothSigns() extends Test {
+    test {
+        let positive = fixedFromFloat(1.5 / Float(fixedScale()))
+        let negative = fixedFromFloat((0.0 - 1.5) / Float(fixedScale()))
+        return positive == 2 && negative == 0 - 2
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// --- Text ------------------------------------------------------------------
+
+construct KcuTextSurvivesTheByteRoundTrip() extends Test {
+    test {
+        let original = "systemGroupedBackground"
+        return compareStrings(stringFromBytes(stringBytes(original)), original) == 0
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+construct KcuMultiByteTextSurvivesTheByteRoundTrip() extends Test {
+    test {
+        let original = "café 中文 😀"
+        return compareStrings(stringFromBytes(stringBytes(original)), original) == 0
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+construct KcuNamesCompareAsBytesWithoutBeingRebuilt() extends Test {
+    test {
+        let bytes = stringBytes("separator")
+        return compareSliceToString(bytes, 0, bytes.count, "separator") == 0
+            && compareSliceToString(bytes, 0, bytes.count, "separatorX") < 0
+            && compareSliceToString(bytes, 0, bytes.count, "sepa") > 0
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// --- Round trip ------------------------------------------------------------
+
+function kcuMixedRecord() -> CatalogRecord {
+    var record = CatalogRecord()
+    record.resources.append(kcuAdaptive("label", kcuColor(0.1, 0.1, 0.1, 1.0), kcuColor(0.9, 0.9, 0.9, 1.0)))
+    record.resources.append(kcuFlat("separator", kcuColor(0.0, 0.0, 0.0, 0.1)))
+    record.resources.append(kcuAlias("foreground", "label"))
+    return record
+}
+
+construct KcuWritingAndReadingBackReproducesTheBytes() extends Test {
+    test { return kcuRoundTrips(kcuMixedRecord()) }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+construct KcuAnEmptyCatalogRoundTrips() extends Test {
+    test { return kcuRoundTrips(CatalogRecord()) }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// The property that makes an editor safe: a resource whose kind this build has
+// no decoder for is carried through load and write-back untouched.
+construct KcuAnUndecodableKindSurvivesTheRoundTrip() extends Test {
+    test {
+        var record = kcuMixedRecord()
+        record.resources.append(kcuOpaqueResource("somethingElse"))
+        return kcuRoundTrips(record)
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+construct KcuAnUndecodableKindKeepsItsPayloadBytes() extends Test {
+    test {
+        var record = CatalogRecord()
+        record.resources.append(kcuOpaqueResource("somethingElse"))
+        let catalog = kcuCatalogOf(record)
+        let index = catalogFindResource(catalog, "somethingElse", kcuUnknownKind())
+        if index < 0 {
+            return false
+        }
+        let stored = catalogRenditionPayload(catalog, catalog.resources[index].firstRendition)
+        return kcuBytesEqual(stored, kcuOpaqueResource("x").renditions[0].payload)
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// Canonical output: the same resources given in a different order produce the
+// same file, so two producers cannot disagree about the bytes.
+construct KcuResourceOrderDoesNotChangeTheBytes() extends Test {
+    test {
+        var forward = CatalogRecord()
+        forward.resources.append(kcuFlat("alpha", kcuColor(1.0, 0.0, 0.0, 1.0)))
+        forward.resources.append(kcuFlat("beta", kcuColor(0.0, 1.0, 0.0, 1.0)))
+        forward.resources.append(kcuFlat("gamma", kcuColor(0.0, 0.0, 1.0, 1.0)))
+
+        var backward = CatalogRecord()
+        backward.resources.append(kcuFlat("gamma", kcuColor(0.0, 0.0, 1.0, 1.0)))
+        backward.resources.append(kcuFlat("beta", kcuColor(0.0, 1.0, 0.0, 1.0)))
+        backward.resources.append(kcuFlat("alpha", kcuColor(1.0, 0.0, 0.0, 1.0)))
+
+        return kcuBytesEqual(writeCatalogRecord(forward), writeCatalogRecord(backward))
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+construct KcuRenditionOrderDoesNotChangeTheBytes() extends Test {
+    test {
+        var forward = CatalogRecord()
+        forward.resources.append(kcuAdaptive("label", kcuColor(0.1, 0.1, 0.1, 1.0), kcuColor(0.9, 0.9, 0.9, 1.0)))
+
+        var swapped = ResourceRecord()
+        swapped.name = "label"
+        swapped.kind = kindColor()
+        var darkFirst = RenditionRecord()
+        darkFirst.constraints.append(whenAppearance(.Dark))
+        darkFirst.payload = encodeColor(kcuColor(0.9, 0.9, 0.9, 1.0))
+        swapped.renditions.append(darkFirst)
+        var lightSecond = RenditionRecord()
+        lightSecond.constraints.append(whenAppearance(.Light))
+        lightSecond.payload = encodeColor(kcuColor(0.1, 0.1, 0.1, 1.0))
+        swapped.renditions.append(lightSecond)
+
+        var backward = CatalogRecord()
+        backward.resources.append(swapped)
+        return kcuBytesEqual(writeCatalogRecord(forward), writeCatalogRecord(backward))
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// One name may carry several kinds, because a resource is keyed by both.
+construct KcuOneNameCarriesSeveralKinds() extends Test {
+    test {
+        var record = CatalogRecord()
+        record.resources.append(kcuFlat("regular", kcuColor(0.5, 0.5, 0.5, 1.0)))
+
+        var material = ResourceRecord()
+        material.name = "regular"
+        material.kind = kindMaterial()
+        var recipe = MaterialValue()
+        recipe.layers.append(backdropBlurLayer(28.0))
+        var rendition = RenditionRecord()
+        rendition.payload = encodeMaterial(recipe)
+        material.renditions.append(rendition)
+        record.resources.append(material)
+
+        let catalog = kcuCatalogOf(record)
+        return catalogFindResource(catalog, "regular", kindColor()) >= 0
+            && catalogFindResource(catalog, "regular", kindMaterial()) >= 0
+            && kcuRoundTrips(record)
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}

@@ -1,0 +1,256 @@
+import Foundation
+import KCoreUI
+
+// References, recipes and the typed surface.
+//
+// The reference is what makes the design pay: a material's tint names a colour
+// instead of copying one, so the recipe is authored once and is still correct
+// in an appearance nobody had in mind when it was written. These cases prove
+// that, and prove a reference chain cannot run away.
+
+function kcuInk() -> Color { return kcuColor(0.1, 0.1, 0.1, 1.0) }
+function kcuPaper() -> Color { return kcuColor(0.95, 0.95, 0.95, 1.0) }
+
+function kcuReferenceRecord() -> CatalogRecord {
+    var record = CatalogRecord()
+    record.resources.append(kcuAdaptive("label", kcuInk(), kcuPaper()))
+    record.resources.append(kcuAlias("foreground", "label"))
+    record.resources.append(kcuAlias("primary", "foreground"))
+    return record
+}
+
+// --- References ------------------------------------------------------------
+
+construct KcuAnAliasResolvesToWhatItNames() extends Test {
+    test {
+        let stack = kcuStackOf(kcuReferenceRecord())
+        return kcuColorsEqual(resolveColor(stack, "foreground", kcuLight()), kcuInk())
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// The reference is followed against the *caller's* environment, which is why an
+// alias needs no renditions of its own to stay correct in dark appearance.
+construct KcuAnAliasFollowsTheEnvironmentRatherThanACopy() extends Test {
+    test {
+        let stack = kcuStackOf(kcuReferenceRecord())
+        return kcuColorsEqual(resolveColor(stack, "foreground", kcuDark()), kcuPaper())
+            && kcuColorsEqual(resolveColor(stack, "foreground", kcuLight()), kcuInk())
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+construct KcuAChainOfAliasesResolves() extends Test {
+    test {
+        let stack = kcuStackOf(kcuReferenceRecord())
+        return kcuColorsEqual(resolveColor(stack, "primary", kcuDark()), kcuPaper())
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// An override of the target moves everything pointing at it, with no second
+// edit anywhere.
+construct KcuOverridingATargetMovesEveryAliasPointingAtIt() extends Test {
+    test {
+        var overlay = CatalogRecord()
+        overlay.resources.append(kcuFlat("label", kcuColor(1.0, 0.0, 0.0, 1.0)))
+        let stack = catalogStackOverride(kcuStackOf(kcuReferenceRecord()), kcuCatalogOf(overlay))
+        return kcuColorsEqual(resolveColor(stack, "primary", kcuLight()), kcuColor(1.0, 0.0, 0.0, 1.0))
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// A reference to a name nothing defines is the debug colour rather than a trap
+// or a silent black.
+construct KcuADanglingReferenceIsTheDebugColour() extends Test {
+    test {
+        var record = CatalogRecord()
+        record.resources.append(kcuAlias("foreground", "nothingDefinesThis"))
+        let stack = kcuStackOf(record)
+        return kcuColorsEqual(resolveColor(stack, "foreground", kcuLight()), debugColor())
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// The validator rejects cycles before a blob is written; this proves the
+// runtime backstop for a blob that arrived from somewhere else stops rather
+// than recurring forever.
+construct KcuAReferenceCycleStopsAtTheDepthLimit() extends Test {
+    test {
+        var record = CatalogRecord()
+        record.resources.append(kcuAlias("a", "b"))
+        record.resources.append(kcuAlias("b", "a"))
+        let stack = kcuStackOf(record)
+        return kcuColorsEqual(resolveColor(stack, "a", kcuLight()), debugColor())
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// --- Materials -------------------------------------------------------------
+
+function kcuMaterialRecord() -> CatalogRecord {
+    var record = CatalogRecord()
+    record.resources.append(kcuAdaptive("systemBackground", kcuPaper(), kcuInk()))
+    record.resources.append(kcuFlat("separator", kcuColor(0.0, 0.0, 0.0, 0.1)))
+
+    var translucent = MaterialValue()
+    translucent.layers.append(backdropBlurLayer(28.0))
+    translucent.layers.append(saturationLayer(1.4))
+    translucent.layers.append(tintLayer(referenceColor("systemBackground"), 0.68, blendNormal()))
+    translucent.layers.append(borderLayer(referenceColor("separator"), 1.0))
+
+    var opaque = MaterialValue()
+    opaque.layers.append(fillLayer(referenceColor("systemBackground"), 1.0, blendNormal()))
+
+    var resource = ResourceRecord()
+    resource.name = "regular"
+    resource.kind = kindMaterial()
+    var open = RenditionRecord()
+    open.payload = encodeMaterial(translucent)
+    resource.renditions.append(open)
+    var reduced = RenditionRecord()
+    reduced.constraints.append(constrain(traitReduceTransparency(), flagValue(true)))
+    reduced.payload = encodeMaterial(opaque)
+    resource.renditions.append(reduced)
+    record.resources.append(resource)
+    return record
+}
+
+construct KcuAMaterialResolvesItsWholeRecipe() extends Test {
+    test {
+        let resolved = resolveMaterial(kcuStackOf(kcuMaterialRecord()), "regular", kcuLight())
+        return resolved.found
+            && resolved.layers.count == 4
+            && materialBlurRadius(resolved) == 28.0
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// The recipe is one authored thing; only what its references resolve to moves.
+construct KcuAMaterialTintFollowsTheAppearanceWithoutASecondRecipe() extends Test {
+    test {
+        let stack = kcuStackOf(kcuMaterialRecord())
+        let light = resolveMaterial(stack, "regular", kcuLight())
+        let dark = resolveMaterial(stack, "regular", kcuDark())
+        if light.layers.count != dark.layers.count {
+            return false
+        }
+        return kcuColorsEqual(light.layers[2].color, kcuPaper())
+            && kcuColorsEqual(dark.layers[2].color, kcuInk())
+            && light.layers[0].amount == dark.layers[0].amount
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// Reduced transparency is a different recipe, not the same one turned down,
+// and the catalog is where that is decided rather than in a compositor.
+construct KcuReducedTransparencySelectsTheOpaqueRecipe() extends Test {
+    test {
+        let stack = kcuStackOf(kcuMaterialRecord())
+        let reduced = resolveMaterial(stack, "regular", kcuReducedTransparency())
+        return reduced.found
+            && reduced.layers.count == 1
+            && materialBlurRadius(reduced) == 0.0
+            && kcuColorsEqual(reduced.layers[0].color, kcuInk())
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+construct KcuAskingForAMaterialByTheWrongKindFindsNothing() extends Test {
+    test { return resolveMaterial(kcuStackOf(kcuMaterialRecord()), "separator", kcuLight()).found }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(false); return e }
+}
+
+// --- Gradients -------------------------------------------------------------
+
+construct KcuAGradientResolvesItsStops() extends Test {
+    test {
+        var gradient = GradientValue()
+        gradient.kind = .Radial
+        gradient.startX = 0.5
+        gradient.startY = 0.5
+        gradient.endX = 1.0
+        gradient.endY = 0.5
+        gradient.stops.append(GradientStop(position: 0.0, color: referenceColor("systemBackground")))
+        gradient.stops.append(GradientStop(position: 1.0, color: literalColor(kcuColor(0.0, 0.0, 0.0, 0.0))))
+
+        var resource = ResourceRecord()
+        resource.name = "windowWash"
+        resource.kind = kindGradient()
+        var rendition = RenditionRecord()
+        rendition.payload = encodeGradient(gradient)
+        resource.renditions.append(rendition)
+
+        var record = kcuMaterialRecord()
+        record.resources.append(resource)
+
+        let resolved = resolveGradient(kcuStackOf(record), "windowWash", kcuDark())
+        return resolved.found
+            && resolved.kind == .Radial
+            && resolved.stops.count == 2
+            && resolved.startX == 0.5
+            && kcuColorsEqual(resolved.stops[0].color, kcuInk())
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// --- Effects ---------------------------------------------------------------
+
+construct KcuAnEffectResolvesItsOps() extends Test {
+    test {
+        var effect = EffectValue()
+        effect.ops.append(shadowOp(referenceColor("separator"), 0.0, 2.0, 8.0, 0.0))
+        effect.ops.append(opacityOp(0.8))
+
+        var resource = ResourceRecord()
+        resource.name = "cardShadow"
+        resource.kind = kindEffect()
+        var rendition = RenditionRecord()
+        rendition.payload = encodeEffect(effect)
+        resource.renditions.append(rendition)
+
+        var record = kcuMaterialRecord()
+        record.resources.append(resource)
+
+        let resolved = resolveEffect(kcuStackOf(record), "cardShadow", kcuLight())
+        return resolved.found
+            && resolved.ops.count == 2
+            && resolved.ops[0].kind == .Shadow
+            && resolved.ops[0].offsetY == 2.0
+            && resolved.ops[0].radius == 8.0
+            && kcuNear(resolved.ops[1].amount, 0.8)
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// --- Typography ------------------------------------------------------------
+
+construct KcuATextStyleResolvesItsMetrics() extends Test {
+    test {
+        var value = TypographyValue()
+        value.family = "Kira Sans"
+        value.size = 15.0
+        value.weight = 400
+        value.lineHeight = 21.0
+        value.tracking = 0.0 - 0.3
+
+        var resource = ResourceRecord()
+        resource.name = "body"
+        resource.kind = kindTypography()
+        var rendition = RenditionRecord()
+        rendition.payload = encodeTypography(value)
+        resource.renditions.append(rendition)
+
+        var record = CatalogRecord()
+        record.resources.append(resource)
+
+        let resolved = resolveTypography(kcuStackOf(record), "body", kcuLight())
+        return resolved.found
+            && resolved.value.size == 15.0
+            && resolved.value.weight == 400
+            && resolved.value.lineHeight == 21.0
+            && kcuNear(resolved.value.tracking, 0.0 - 0.3)
+            && compareStrings(resolved.value.family, "Kira Sans") == 0
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}

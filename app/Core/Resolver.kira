@@ -1,0 +1,219 @@
+import Foundation
+
+// Semantic name plus environment plus catalog stack, in; one rendition, out.
+//
+// Two rules decide everything, and both are total:
+//
+// **Eligibility.** A rendition is eligible when every trait it pins equals the
+// environment's value for that trait. A trait it leaves out matches anything. A
+// trait the environment does not carry matches nothing, so a rendition pinning
+// a custom trait is invisible to an environment that never heard of it.
+//
+// **Specificity.** Among eligible renditions, the winner is decided by walking
+// trait identifiers ascending and preferring the rendition that pins the first
+// identifier the other leaves out. Identifier order therefore *is* priority
+// order, which is why the numbering in `Traits.kira` is a wire fact rather than
+// a table that could disagree with it.
+//
+// The comparison is a total order and the parser has already refused a catalog
+// containing two renditions with the same constraint list, so "best match" here
+// means one rendition, deterministically, on every backend.
+
+// Whether a rendition can serve this environment at all.
+function renditionIsEligible(catalog: borrow Catalog, renditionIndex: Int, environment: borrow UIEnvironment) -> Bool {
+    if renditionIndex < 0 || renditionIndex >= catalog.renditions.count {
+        return false
+    }
+    let rendition = catalog.renditions[renditionIndex]
+    var index = 0
+    while index < rendition.constraintCount {
+        let entry = catalog.constraints[rendition.firstConstraint + index]
+        if environmentTraitValue(environment, entry.identifier) != entry.value {
+            return false
+        }
+        index = index + 1
+    }
+    return true
+}
+
+// The specificity order over two eligible renditions of one resource.
+//
+// A merge walk over two lists already sorted by identifier: the first
+// identifier only one of them pins decides it, and if neither ever does, the
+// one that pins more wins. Answers a negative number when the left rendition
+// is more specific.
+function compareSpecificity(catalog: borrow Catalog, leftIndex: Int, rightIndex: Int) -> Int {
+    let left = catalog.renditions[leftIndex]
+    let right = catalog.renditions[rightIndex]
+    var leftStep = 0
+    var rightStep = 0
+    while leftStep < left.constraintCount && rightStep < right.constraintCount {
+        let leftId = catalog.constraints[left.firstConstraint + leftStep].identifier
+        let rightId = catalog.constraints[right.firstConstraint + rightStep].identifier
+        if leftId == rightId {
+            leftStep = leftStep + 1
+            rightStep = rightStep + 1
+        } else if leftId < rightId {
+            return 0 - 1
+        } else {
+            return 1
+        }
+    }
+    if leftStep < left.constraintCount {
+        return 0 - 1
+    }
+    if rightStep < right.constraintCount {
+        return 1
+    }
+    return 0
+}
+
+// The best rendition of one resource for this environment, or -1 when the
+// resource has none it can serve.
+function resolveResourceRendition(catalog: borrow Catalog, resourceIndex: Int, environment: borrow UIEnvironment) -> Int {
+    if resourceIndex < 0 || resourceIndex >= catalog.resources.count {
+        return 0 - 1
+    }
+    let resource = catalog.resources[resourceIndex]
+    var best = 0 - 1
+    var index = 0
+    while index < resource.renditionCount {
+        let candidate = resource.firstRendition + index
+        if renditionIsEligible(catalog, candidate, environment) {
+            if best < 0 || compareSpecificity(catalog, candidate, best) < 0 {
+                best = candidate
+            }
+        }
+        index = index + 1
+    }
+    return best
+}
+
+// The whole lookup.
+//
+// Catalogs are consulted highest first, and a catalog that names the resource
+// but has no rendition eligible for this environment does not stop the search:
+// the next catalog down is asked. That is what makes a partial override safe.
+// An override defining a colour for dark appearance only still lets the floor
+// answer in light.
+function resolveResource(stack: borrow CatalogStack, name: borrow String, kind: Int, environment: borrow UIEnvironment) -> ResolvedRendition {
+    var resolved = ResolvedRendition()
+    for catalogIndex in 0..stack.catalogs.count {
+        let catalog = stack.catalogs[catalogIndex]
+        let resourceIndex = catalogFindResource(catalog, name, kind)
+        if resourceIndex >= 0 {
+            let renditionIndex = resolveResourceRendition(catalog, resourceIndex, environment)
+            if renditionIndex >= 0 {
+                let rendition = catalog.renditions[renditionIndex]
+                resolved.found = true
+                resolved.catalogIndex = catalogIndex
+                resolved.resourceIndex = resourceIndex
+                resolved.renditionIndex = renditionIndex
+                resolved.kind = catalog.resources[resourceIndex].kind
+                resolved.payloadOffset = rendition.payloadOffset
+                resolved.payloadCount = rendition.payloadCount
+                return resolved
+            }
+        }
+    }
+    return resolved
+}
+
+// --- Explaining a resolution ----------------------------------------------
+//
+// What the rendition debugger prints. Answering "why this one" is worth more
+// than an editor once a catalog is large, because the failure mode of a
+// variant system is a value that is right everywhere except one combination of
+// traits nobody thought to look at.
+
+struct ResolutionTrace {
+    var name: String = ""
+    var found: Bool = false
+    var catalogIndex: Int = 0
+    var catalogsSearched: Int = 0
+    var candidatesConsidered: Int = 0
+    var candidatesEligible: Int = 0
+    var matchedConstraints: [CatalogConstraint] = []
+    var kind: Int = 0
+}
+
+function traceResolution(stack: borrow CatalogStack, name: borrow String, kind: Int, environment: borrow UIEnvironment) -> ResolutionTrace {
+    var trace = ResolutionTrace()
+    trace.name = name
+    for catalogIndex in 0..stack.catalogs.count {
+        trace.catalogsSearched = trace.catalogsSearched + 1
+        let catalog = stack.catalogs[catalogIndex]
+        let resourceIndex = catalogFindResource(catalog, name, kind)
+        if resourceIndex >= 0 {
+            let resource = catalog.resources[resourceIndex]
+            var index = 0
+            while index < resource.renditionCount {
+                trace.candidatesConsidered = trace.candidatesConsidered + 1
+                if renditionIsEligible(catalog, resource.firstRendition + index, environment) {
+                    trace.candidatesEligible = trace.candidatesEligible + 1
+                }
+                index = index + 1
+            }
+            let renditionIndex = resolveResourceRendition(catalog, resourceIndex, environment)
+            if renditionIndex >= 0 {
+                trace.found = true
+                trace.catalogIndex = catalogIndex
+                trace.kind = resource.kind
+                trace.matchedConstraints = renditionConstraints(catalog, renditionIndex)
+                return trace
+            }
+        }
+    }
+    return trace
+}
+
+// A trait identifier's name, for a trace a person reads. A custom identifier
+// has no name here on purpose: KCoreUI does not know what a producer's traits
+// mean and will not invent a word for one.
+function traitName(identifier: Int) -> String {
+    if identifier == traitAppearance() { return "appearance" }
+    if identifier == traitContrast() { return "contrast" }
+    if identifier == traitGamut() { return "gamut" }
+    if identifier == traitScale() { return "scale" }
+    if identifier == traitIdiom() { return "idiom" }
+    if identifier == traitPlatform() { return "platform" }
+    if identifier == traitLayoutDirection() { return "layoutDirection" }
+    if identifier == traitHorizontalSizeClass() { return "horizontalSizeClass" }
+    if identifier == traitVerticalSizeClass() { return "verticalSizeClass" }
+    if identifier == traitReduceTransparency() { return "reduceTransparency" }
+    if identifier == traitReduceMotion() { return "reduceMotion" }
+    if identifier == traitInvertColors() { return "invertColors" }
+    if identifier == traitDifferentiateWithoutColor() { return "differentiateWithoutColor" }
+    return "trait#" + String(identifier)
+}
+
+function kindName(kind: Int) -> String {
+    if kind == kindColor() { return "Color" }
+    if kind == kindGradient() { return "Gradient" }
+    if kind == kindMaterial() { return "Material" }
+    if kind == kindEffect() { return "Effect" }
+    if kind == kindTypography() { return "Typography" }
+    return "kind#" + String(kind)
+}
+
+// The trace as one block of text.
+function traceText(trace: borrow ResolutionTrace) -> String {
+    var text = "requested: " + trace.name + "\n"
+    if !trace.found {
+        text = text + "matched:   nothing in " + String(trace.catalogsSearched) + " catalog(s)\n"
+        return text
+    }
+    text = text + "kind:      " + kindName(trace.kind) + "\n"
+    text = text + "catalog:   " + String(trace.catalogIndex) + " of " + String(trace.catalogsSearched) + " searched\n"
+    text = text + "eligible:  " + String(trace.candidatesEligible) + " of " + String(trace.candidatesConsidered) + " rendition(s)\n"
+    if trace.matchedConstraints.count == 0 {
+        text = text + "matched:   the unconstrained rendition\n"
+        return text
+    }
+    text = text + "matched:"
+    for entry in trace.matchedConstraints {
+        text = text + " " + traitName(entry.identifier) + "=" + String(entry.value)
+    }
+    text = text + "\n"
+    return text
+}

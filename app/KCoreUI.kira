@@ -1,0 +1,122 @@
+import Foundation
+
+// KCoreUI: the compiled visual resource system underneath a UI toolkit.
+//
+// A toolkit names what something means. KCoreUI decides what that name means in
+// the current environment. A renderer draws the result and never learns the
+// name existed.
+//
+//     Editor ─┐
+//             ├──▶ writer ──▶ .kcui ──▶ parser ──▶ catalog stack ──▶ resolver
+//     .kira ──┘                                                          │
+//                                                                        ▼
+//                                                    colour, material, typeface
+//
+// The writer and the parser are the framework's only entry point. An editor and
+// a program building records in Kira are peers above them; neither is
+// privileged, and a blob one writes is a blob the other opens. What a producer
+// supplies is names, kinds, constraints and payload bytes. Everything else —
+// canonical order, section layout, the specificity rule — belongs to the
+// framework.
+//
+// Two properties hold everything else up:
+//
+// **Round-trip is byte-exact.** The parser accepts exactly the canonical form
+// the writer emits, so opening a catalog, changing one colour and saving cannot
+// perturb anything else in it, including resources this build has no decoder
+// for.
+//
+// **Resolution is total.** The lowest catalog on the stack is complete, an
+// integrity check proves it against the declared name surface, and a lookup
+// therefore always answers. Nothing above has to carry a failure path for a
+// colour.
+//
+// This file is the facade. `app/Core` is the framework and knows no names;
+// `app/Names` is Apple's vocabulary and knows no format.
+
+// Everything a consumer needs to answer a lookup: what catalogs are in effect,
+// what the environment currently is, and the cache between them.
+//
+// Held by the toolkit, one per window or one per application. The cache is
+// keyed by environment, so a value cached under light appearance is still there
+// after a change to dark and back, and nothing is invalidated when the
+// appearance changes.
+struct UIResources {
+    var stack: CatalogStack = CatalogStack()
+    var environment: UIEnvironment = UIEnvironment()
+    var cache: ResolutionCache = ResolutionCache()
+}
+
+// Resources over one catalog, which becomes the floor.
+function makeResources(base: borrow Catalog, environment: borrow UIEnvironment) -> UIResources {
+    var resources = UIResources()
+    resources.stack = catalogStackOf(base)
+    resources.environment = environment
+    resources.cache = makeDefaultCache()
+    return resources
+}
+
+// Put a catalog above the ones already in effect. This is how a theme, a
+// package's resources and an application's own arrive: as blobs at different
+// heights, not as an override API.
+//
+// The cache is dropped, because a new catalog can change what any name means.
+function pushCatalog(resources: borrow mut UIResources, overlay: borrow Catalog) {
+    resources.stack = catalogStackOverride(resources.stack, overlay)
+    clearCache(resources.cache)
+}
+
+// Change the environment. Nothing is invalidated: the environment is part of
+// every cache key, so the new one simply fills different slots.
+function setEnvironment(resources: borrow mut UIResources, environment: borrow UIEnvironment) {
+    resources.environment = environment
+}
+
+// The appearance alone, which is the trait that changes most and the one a
+// platform hands a toolkit on its own.
+function setAppearance(resources: borrow mut UIResources, appearance: borrow Appearance) {
+    resources.environment.appearance = appearance
+}
+
+// --- Lookups ---------------------------------------------------------------
+
+// The colour a name means right now. Cached at both levels, so a repeat within
+// a frame is a probe and a comparison.
+function color(resources: borrow mut UIResources, name: borrow String) -> Color {
+    return cachedColor(resources.cache, resources.stack, name, resources.environment)
+}
+
+// The material recipe a name means right now, with every colour reference
+// already followed against this environment.
+function material(resources: borrow UIResources, name: borrow String) -> ResolvedMaterial {
+    return resolveMaterial(resources.stack, name, resources.environment)
+}
+
+function gradient(resources: borrow UIResources, name: borrow String) -> ResolvedGradient {
+    return resolveGradient(resources.stack, name, resources.environment)
+}
+
+function effect(resources: borrow UIResources, name: borrow String) -> ResolvedEffect {
+    return resolveEffect(resources.stack, name, resources.environment)
+}
+
+function typography(resources: borrow UIResources, name: borrow String) -> ResolvedTypography {
+    return resolveTypography(resources.stack, name, resources.environment)
+}
+
+// --- Diagnostics -----------------------------------------------------------
+
+// Why a name resolved the way it did, as text. The failure mode of a variant
+// system is a value that is right everywhere except one combination of traits,
+// and this is what finds it.
+function explain(resources: borrow UIResources, name: borrow String, kind: Int) -> String {
+    return traceText(traceResolution(resources.stack, name, kind, resources.environment))
+}
+
+function explainColor(resources: borrow UIResources, name: borrow String) -> String {
+    return explain(resources, name, kindColor())
+}
+
+function explainMaterial(resources: borrow UIResources, name: borrow String) -> String {
+    return explain(resources, name, kindMaterial())
+}

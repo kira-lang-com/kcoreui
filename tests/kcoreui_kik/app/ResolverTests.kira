@@ -1,0 +1,299 @@
+import Foundation
+import KCoreUI
+
+// The matching rules.
+//
+// Eligibility and specificity are the whole resolver, and both have to be total
+// and deterministic or a catalog resolves one way on the VM and another under
+// LLVM. Each case here pins one clause of those two rules.
+
+function kcuRendition(color: borrow Color) -> RenditionRecord {
+    var rendition = RenditionRecord()
+    rendition.payload = encodeColor(color)
+    return rendition
+}
+
+function kcuConstrained(color: borrow Color, constraints: borrow [CatalogConstraint]) -> RenditionRecord {
+    var rendition = kcuRendition(color)
+    for entry in constraints {
+        rendition.constraints.append(entry)
+    }
+    return rendition
+}
+
+function kcuOne(entry: borrow CatalogConstraint) -> [CatalogConstraint] {
+    var list: [CatalogConstraint] = []
+    list.append(entry)
+    return list
+}
+
+function kcuTwo(first: borrow CatalogConstraint, second: borrow CatalogConstraint) -> [CatalogConstraint] {
+    var list = kcuOne(first)
+    list.append(second)
+    return list
+}
+
+function kcuRed() -> Color { return kcuColor(1.0, 0.0, 0.0, 1.0) }
+function kcuGreen() -> Color { return kcuColor(0.0, 1.0, 0.0, 1.0) }
+function kcuBlue() -> Color { return kcuColor(0.0, 0.0, 1.0, 1.0) }
+function kcuWhite() -> Color { return kcuColor(1.0, 1.0, 1.0, 1.0) }
+
+// --- Eligibility -----------------------------------------------------------
+
+construct KcuTheAppearanceSelectsTheRendition() extends Test {
+    test {
+        var record = CatalogRecord()
+        record.resources.append(kcuAdaptive("label", kcuRed(), kcuBlue()))
+        let stack = kcuStackOf(record)
+        return kcuColorsEqual(resolveColor(stack, "label", kcuLight()), kcuRed())
+            && kcuColorsEqual(resolveColor(stack, "label", kcuDark()), kcuBlue())
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// A rendition that pins nothing matches every environment, which is what makes
+// a single-value resource possible.
+construct KcuAnUnconstrainedRenditionServesEveryEnvironment() extends Test {
+    test {
+        var record = CatalogRecord()
+        record.resources.append(kcuFlat("separator", kcuGreen()))
+        let stack = kcuStackOf(record)
+        return kcuColorsEqual(resolveColor(stack, "separator", kcuLight()), kcuGreen())
+            && kcuColorsEqual(resolveColor(stack, "separator", kcuDark()), kcuGreen())
+            && kcuColorsEqual(resolveColor(stack, "separator", kcuLightHighContrast()), kcuGreen())
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// --- Specificity -----------------------------------------------------------
+
+// A rendition pinning two traits beats one pinning a subset of them, whenever
+// both are eligible.
+construct KcuMoreConstraintsWinWhenBothAreEligible() extends Test {
+    test {
+        var resource = ResourceRecord()
+        resource.name = "label"
+        resource.kind = kindColor()
+        resource.renditions.append(kcuConstrained(kcuRed(), kcuOne(whenAppearance(.Light))))
+        resource.renditions.append(kcuConstrained(kcuGreen(), kcuTwo(whenAppearance(.Light), whenContrast(.High))))
+        var record = CatalogRecord()
+        record.resources.append(resource)
+
+        let stack = kcuStackOf(record)
+        return kcuColorsEqual(resolveColor(stack, "label", kcuLightHighContrast()), kcuGreen())
+            && kcuColorsEqual(resolveColor(stack, "label", kcuLight()), kcuRed())
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// Priority is the trait numbering. Appearance is identifier zero, so a
+// rendition pinning it beats one pinning only contrast even though both pin
+// exactly one trait and both are eligible.
+construct KcuTheLowerTraitIdentifierWinsAtEqualCount() extends Test {
+    test {
+        var resource = ResourceRecord()
+        resource.name = "label"
+        resource.kind = kindColor()
+        resource.renditions.append(kcuConstrained(kcuRed(), kcuOne(whenAppearance(.Light))))
+        resource.renditions.append(kcuConstrained(kcuBlue(), kcuOne(whenContrast(.Standard))))
+        var record = CatalogRecord()
+        record.resources.append(resource)
+
+        let stack = kcuStackOf(record)
+        return kcuColorsEqual(resolveColor(stack, "label", kcuLight()), kcuRed())
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// The order renditions were authored in cannot change the answer, because the
+// writer sorts them into one canonical arrangement.
+construct KcuAuthoringOrderDoesNotChangeTheWinner() extends Test {
+    test {
+        var forward = ResourceRecord()
+        forward.name = "label"
+        forward.kind = kindColor()
+        forward.renditions.append(kcuConstrained(kcuRed(), kcuOne(whenAppearance(.Light))))
+        forward.renditions.append(kcuConstrained(kcuGreen(), kcuTwo(whenAppearance(.Light), whenContrast(.High))))
+
+        var backward = ResourceRecord()
+        backward.name = "label"
+        backward.kind = kindColor()
+        backward.renditions.append(kcuConstrained(kcuGreen(), kcuTwo(whenAppearance(.Light), whenContrast(.High))))
+        backward.renditions.append(kcuConstrained(kcuRed(), kcuOne(whenAppearance(.Light))))
+
+        var first = CatalogRecord()
+        first.resources.append(forward)
+        var second = CatalogRecord()
+        second.resources.append(backward)
+
+        let left = resolveColor(kcuStackOf(first), "label", kcuLightHighContrast())
+        let right = resolveColor(kcuStackOf(second), "label", kcuLightHighContrast())
+        return kcuColorsEqual(left, right) && kcuColorsEqual(left, kcuGreen())
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// --- Custom traits ---------------------------------------------------------
+
+function kcuBrandTrait() -> Int { return traitCustomBase() + 3 }
+
+function kcuBrandedEnvironment(value: Int) -> UIEnvironment {
+    var environment = kcuLight()
+    environment.custom.append(CustomTrait(identifier: kcuBrandTrait(), value: value))
+    return environment
+}
+
+function kcuBrandedRecord() -> CatalogRecord {
+    var resource = ResourceRecord()
+    resource.name = "tint"
+    resource.kind = kindColor()
+    resource.renditions.append(kcuRendition(kcuBlue()))
+    resource.renditions.append(kcuConstrained(kcuRed(), kcuOne(constrain(kcuBrandTrait(), 2))))
+    var record = CatalogRecord()
+    record.resources.append(resource)
+    return record
+}
+
+// A rendition pinning a trait the environment does not carry is not a match.
+// That is what keeps a producer's own traits from leaking into an environment
+// that never heard of them.
+construct KcuACustomTraitIsInvisibleToAnEnvironmentWithoutIt() extends Test {
+    test {
+        let stack = kcuStackOf(kcuBrandedRecord())
+        return kcuColorsEqual(resolveColor(stack, "tint", kcuLight()), kcuBlue())
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+construct KcuACustomTraitSelectsWhenTheEnvironmentCarriesIt() extends Test {
+    test {
+        let stack = kcuStackOf(kcuBrandedRecord())
+        return kcuColorsEqual(resolveColor(stack, "tint", kcuBrandedEnvironment(2)), kcuRed())
+            && kcuColorsEqual(resolveColor(stack, "tint", kcuBrandedEnvironment(9)), kcuBlue())
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// Custom traits are part of the cache key, so two environments differing only
+// in one do not share an answer.
+construct KcuCustomTraitsChangeTheEnvironmentKey() extends Test {
+    test {
+        return environmentCustomKey(kcuBrandedEnvironment(2)) != environmentCustomKey(kcuBrandedEnvironment(9))
+            && environmentCustomKey(kcuLight()) == 0
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// --- Stacks ----------------------------------------------------------------
+
+function kcuFloorRecord() -> CatalogRecord {
+    var record = CatalogRecord()
+    record.resources.append(kcuAdaptive("label", kcuRed(), kcuBlue()))
+    record.resources.append(kcuFlat("separator", kcuGreen()))
+    return record
+}
+
+construct KcuAnOverlayOverridesTheFloor() extends Test {
+    test {
+        var overlay = CatalogRecord()
+        overlay.resources.append(kcuFlat("label", kcuWhite()))
+        let stack = catalogStackOverride(kcuStackOf(kcuFloorRecord()), kcuCatalogOf(overlay))
+        return kcuColorsEqual(resolveColor(stack, "label", kcuLight()), kcuWhite())
+            && kcuColorsEqual(resolveColor(stack, "separator", kcuLight()), kcuGreen())
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// The whole override story: a partial blob names three colours and changes
+// three colours. Nothing else in the catalog moves, and no override API exists.
+construct KcuAPartialOverlayLeavesEverythingElseAlone() extends Test {
+    test {
+        var overlay = CatalogRecord()
+        overlay.resources.append(kcuFlat("separator", kcuWhite()))
+        let stack = catalogStackOverride(kcuStackOf(kcuFloorRecord()), kcuCatalogOf(overlay))
+        return kcuColorsEqual(resolveColor(stack, "separator", kcuDark()), kcuWhite())
+            && kcuColorsEqual(resolveColor(stack, "label", kcuDark()), kcuBlue())
+            && catalogStackDepth(stack) == 2
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// An overlay that names a resource but has no rendition eligible for this
+// environment does not stop the search. Overriding dark alone is safe.
+construct KcuAnOverlayThatCannotAnswerFallsThroughToTheFloor() extends Test {
+    test {
+        var resource = ResourceRecord()
+        resource.name = "label"
+        resource.kind = kindColor()
+        resource.renditions.append(kcuConstrained(kcuWhite(), kcuOne(whenAppearance(.Dark))))
+        var overlay = CatalogRecord()
+        overlay.resources.append(resource)
+
+        let stack = catalogStackOverride(kcuStackOf(kcuFloorRecord()), kcuCatalogOf(overlay))
+        return kcuColorsEqual(resolveColor(stack, "label", kcuDark()), kcuWhite())
+            && kcuColorsEqual(resolveColor(stack, "label", kcuLight()), kcuRed())
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// A resource of another kind under the same name does not shadow, because a
+// resource is keyed by name and kind together.
+construct KcuAnotherKindUnderTheSameNameDoesNotShadow() extends Test {
+    test {
+        var material = ResourceRecord()
+        material.name = "label"
+        material.kind = kindMaterial()
+        var recipe = MaterialValue()
+        recipe.layers.append(backdropBlurLayer(10.0))
+        var rendition = RenditionRecord()
+        rendition.payload = encodeMaterial(recipe)
+        material.renditions.append(rendition)
+
+        var overlay = CatalogRecord()
+        overlay.resources.append(material)
+        let stack = catalogStackOverride(kcuStackOf(kcuFloorRecord()), kcuCatalogOf(overlay))
+        return kcuColorsEqual(resolveColor(stack, "label", kcuLight()), kcuRed())
+            && material(makeResources(kcuCatalogOf(overlay), kcuLight()), "label").found
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// --- Absence ---------------------------------------------------------------
+
+construct KcuAnUnknownNameResolvesToTheDebugColour() extends Test {
+    test {
+        let stack = kcuStackOf(kcuFloorRecord())
+        let resolution = resolveColorChecked(stack, "noSuchThing", kcuLight())
+        return !resolution.found && kcuColorsEqual(resolution.color, debugColor())
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// --- Tracing ---------------------------------------------------------------
+
+construct KcuATraceReportsWhichRenditionWon() extends Test {
+    test {
+        var resource = ResourceRecord()
+        resource.name = "label"
+        resource.kind = kindColor()
+        resource.renditions.append(kcuConstrained(kcuRed(), kcuOne(whenAppearance(.Light))))
+        resource.renditions.append(kcuConstrained(kcuGreen(), kcuTwo(whenAppearance(.Light), whenContrast(.High))))
+        var record = CatalogRecord()
+        record.resources.append(resource)
+
+        let trace = traceResolution(kcuStackOf(record), "label", kindColor(), kcuLightHighContrast())
+        return trace.found
+            && trace.candidatesConsidered == 2
+            && trace.candidatesEligible == 2
+            && trace.matchedConstraints.count == 2
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+construct KcuATraceOfAnAbsentNameReportsNothingMatched() extends Test {
+    test {
+        let trace = traceResolution(kcuStackOf(kcuFloorRecord()), "noSuchThing", kindColor(), kcuLight())
+        return !trace.found && trace.catalogsSearched == 1
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}

@@ -1,0 +1,222 @@
+import Foundation
+import KCoreUI
+
+// Builders the cases share. Names use the kcu / Kcu prefix.
+
+// Parsing answers a `Result`, and a case that wants the catalog rather than the
+// failure unwraps it here so the nine-armed handler is written once.
+function kcuParseOrEmpty(bytes: borrow [U8]) -> Catalog {
+    attempt {
+        let catalog = try parseCatalog(bytes)
+        return catalog
+    } handle {
+        NotKira { return Catalog() }
+        UnsupportedVersion { return Catalog() }
+        TruncatedHeader { return Catalog() }
+        TruncatedTable { return Catalog() }
+        OffsetOutOfRange { return Catalog() }
+        NamesUnsorted { return Catalog() }
+        ConstraintsUnsorted { return Catalog() }
+        DuplicateRendition { return Catalog() }
+        ReservedTraitValue { return Catalog() }
+    }
+}
+
+// Whether a blob parses at all. The rejection cases ask only this.
+function kcuParses(bytes: borrow [U8]) -> Bool {
+    attempt {
+        let catalog = try parseCatalog(bytes)
+        return catalog.majorVersion > 0
+    } handle {
+        NotKira { return false }
+        UnsupportedVersion { return false }
+        TruncatedHeader { return false }
+        TruncatedTable { return false }
+        OffsetOutOfRange { return false }
+        NamesUnsorted { return false }
+        ConstraintsUnsorted { return false }
+        DuplicateRendition { return false }
+        ReservedTraitValue { return false }
+    }
+}
+
+// The failure a blob is refused with, as its text. A case that cares *why* a
+// blob was refused compares this.
+function kcuParseFailure(bytes: borrow [U8]) -> String {
+    attempt {
+        let catalog = try parseCatalog(bytes)
+        return "accepted " + String(catalog.resources.count)
+    } handle {
+        NotKira { return catalogErrorText(CatalogError.NotKira) }
+        UnsupportedVersion { return catalogErrorText(CatalogError.UnsupportedVersion) }
+        TruncatedHeader { return catalogErrorText(CatalogError.TruncatedHeader) }
+        TruncatedTable { return catalogErrorText(CatalogError.TruncatedTable) }
+        OffsetOutOfRange { return catalogErrorText(CatalogError.OffsetOutOfRange) }
+        NamesUnsorted { return catalogErrorText(CatalogError.NamesUnsorted) }
+        ConstraintsUnsorted { return catalogErrorText(CatalogError.ConstraintsUnsorted) }
+        DuplicateRendition { return catalogErrorText(CatalogError.DuplicateRendition) }
+        ReservedTraitValue { return catalogErrorText(CatalogError.ReservedTraitValue) }
+    }
+}
+
+function kcuBytesEqual(left: borrow [U8], right: borrow [U8]) -> Bool {
+    if left.count != right.count {
+        return false
+    }
+    var index = 0
+    while index < left.count {
+        let a: Int = left[index]
+        let b: Int = right[index]
+        if a != b {
+            return false
+        }
+        index = index + 1
+    }
+    return true
+}
+
+// Writing a record, parsing it back and writing it again must reproduce the
+// first bytes exactly. Every format case ends up asking this.
+function kcuRoundTrips(record: borrow CatalogRecord) -> Bool {
+    let bytes = writeCatalogRecord(record)
+    let catalog = kcuParseOrEmpty(bytes)
+    if catalog.resources.count == 0 && record.resources.count > 0 {
+        return false
+    }
+    return kcuBytesEqual(bytes, writeCatalog(catalog))
+}
+
+function kcuColor(r: Float, g: Float, b: Float, a: Float) -> Color {
+    return Color(r: r, g: g, b: b, a: a)
+}
+
+// A channel is stored to one part in 65536, so a value authored in thousandths
+// comes back near what was written rather than identical to it. Comparing
+// within one unit of the scale is what the format actually promises; exact
+// float equality would be asserting a precision it never claimed.
+function kcuNear(left: Float, right: Float) -> Bool {
+    return abs(left - right) < 2.0 / Float(fixedScale())
+}
+
+function kcuColorsEqual(left: borrow Color, right: borrow Color) -> Bool {
+    return kcuNear(left.r, right.r) && kcuNear(left.g, right.g)
+        && kcuNear(left.b, right.b) && kcuNear(left.a, right.a)
+}
+
+// A colour resource with one rendition per appearance.
+function kcuAdaptive(name: borrow String, light: borrow Color, dark: borrow Color) -> ResourceRecord {
+    var resource = ResourceRecord()
+    resource.name = name
+    resource.kind = kindColor()
+
+    var lightRendition = RenditionRecord()
+    lightRendition.constraints.append(whenAppearance(.Light))
+    lightRendition.payload = encodeColor(light)
+    resource.renditions.append(lightRendition)
+
+    var darkRendition = RenditionRecord()
+    darkRendition.constraints.append(whenAppearance(.Dark))
+    darkRendition.payload = encodeColor(dark)
+    resource.renditions.append(darkRendition)
+    return resource
+}
+
+// A colour resource with a single unconstrained rendition.
+function kcuFlat(name: borrow String, value: borrow Color) -> ResourceRecord {
+    var resource = ResourceRecord()
+    resource.name = name
+    resource.kind = kindColor()
+    var rendition = RenditionRecord()
+    rendition.payload = encodeColor(value)
+    resource.renditions.append(rendition)
+    return resource
+}
+
+// A colour resource that is a reference to another name.
+function kcuAlias(name: borrow String, target: borrow String) -> ResourceRecord {
+    var resource = ResourceRecord()
+    resource.name = name
+    resource.kind = kindColor()
+    var rendition = RenditionRecord()
+    rendition.payload = encodeColorAlias(target)
+    resource.renditions.append(rendition)
+    return resource
+}
+
+// A resource of a kind this build has no decoder for, carrying arbitrary bytes.
+// The round-trip cases use it to prove the container is agnostic about payload.
+function kcuUnknownKind() -> Int {
+    return kindCustomBase() + 7
+}
+
+function kcuOpaqueResource(name: borrow String) -> ResourceRecord {
+    var resource = ResourceRecord()
+    resource.name = name
+    resource.kind = kcuUnknownKind()
+    var rendition = RenditionRecord()
+    var payload: [U8] = []
+    var index = 0
+    while index < 32 {
+        payload.append((index * 7 + 3) & 255)
+        index = index + 1
+    }
+    rendition.payload = payload
+    resource.renditions.append(rendition)
+    return resource
+}
+
+// --- Environments ----------------------------------------------------------
+
+function kcuLight() -> UIEnvironment {
+    var environment = UIEnvironment()
+    environment.appearance = .Light
+    return environment
+}
+
+function kcuDark() -> UIEnvironment {
+    var environment = UIEnvironment()
+    environment.appearance = .Dark
+    return environment
+}
+
+function kcuLightHighContrast() -> UIEnvironment {
+    var environment = kcuLight()
+    environment.contrast = .High
+    return environment
+}
+
+function kcuReducedTransparency() -> UIEnvironment {
+    var environment = kcuDark()
+    environment.reduceTransparency = true
+    return environment
+}
+
+// --- Stacks ----------------------------------------------------------------
+
+function kcuCatalogOf(record: borrow CatalogRecord) -> Catalog {
+    return kcuParseOrEmpty(writeCatalogRecord(record))
+}
+
+function kcuStackOf(record: borrow CatalogRecord) -> CatalogStack {
+    return catalogStackOf(kcuCatalogOf(record))
+}
+
+// The catalog this repository ships, read from disk. The cases that assert what
+// the default catalog contains read it through the same path an application
+// would.
+//
+// A relative path resolves against the directory `kira` was invoked from, which
+// is the repository root for `kira test tests/kcoreui_kik` and the package
+// directory for a run started inside it. Both are tried so a case reports what
+// is wrong with the catalog rather than that it could not find one.
+function kcuDefaultCatalogPath() -> String {
+    if fileExists("Resources/Default.kcui") {
+        return "Resources/Default.kcui"
+    }
+    return "../../Resources/Default.kcui"
+}
+
+function kcuDefaultCatalog() -> Catalog {
+    let size: Int = fileSize(kcuDefaultCatalogPath())
+    return kcuParseOrEmpty(readFileRange(kcuDefaultCatalogPath(), 0, size))
+}

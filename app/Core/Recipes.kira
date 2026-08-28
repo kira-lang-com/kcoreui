@@ -1,0 +1,353 @@
+import Foundation
+
+// Materials, effects and typography.
+//
+// A material is not pixels. It is a recipe: an ordered stack of layers a
+// compositor applies bottom to top, each carrying numbers and, where it needs a
+// colour, a reference rather than a copy. That is the whole reason a material
+// costs nothing to keep correct across appearances — the recipe never changes,
+// and the colours it names resolve against the same environment it did.
+//
+// The blend identifiers below are the compositor's own, so a resolved layer
+// hands its blend straight to the shader without a translation table in
+// between.
+
+function blendNormal() -> Int { return 0 }
+function blendLinearDodge() -> Int { return 1 }
+function blendColorDodge() -> Int { return 2 }
+function blendHardLight() -> Int { return 3 }
+function blendOverlay() -> Int { return 4 }
+function blendLighten() -> Int { return 5 }
+function blendDarken() -> Int { return 6 }
+function blendMultiply() -> Int { return 7 }
+function blendLuminosity() -> Int { return 8 }
+
+// --- Materials -------------------------------------------------------------
+
+enum MaterialLayerKind {
+    BackdropBlur
+    Saturation
+    Tint
+    Noise
+    Border
+    Fill
+}
+
+function materialLayerValue(kind: borrow MaterialLayerKind) -> Int {
+    match kind {
+        BackdropBlur -> return 1;
+        Saturation -> return 2;
+        Tint -> return 3;
+        Noise -> return 4;
+        Border -> return 5;
+        Fill -> return 6;
+    }
+}
+
+function materialLayerFromValue(value: Int) -> MaterialLayerKind {
+    if value == 2 { return .Saturation }
+    if value == 3 { return .Tint }
+    if value == 4 { return .Noise }
+    if value == 5 { return .Border }
+    if value == 6 { return .Fill }
+    return .BackdropBlur
+}
+
+// One layer. Which fields carry meaning is decided by `kind`: `amount` is a
+// blur radius, a saturation multiplier, a noise level or a border width, and
+// `color`, `opacity` and `blend` are read only by the layers that composite.
+struct MaterialLayer {
+    var kind: MaterialLayerKind = .Fill
+    var amount: Float = 0.0
+    var color: ColorValue = ColorValue()
+    var opacity: Float = 1.0
+    var blend: Int = 0
+}
+
+struct MaterialValue {
+    var layers: [MaterialLayer] = []
+}
+
+function backdropBlurLayer(radius: Float) -> MaterialLayer {
+    var layer = MaterialLayer()
+    layer.kind = .BackdropBlur
+    layer.amount = radius
+    return layer
+}
+
+function saturationLayer(amount: Float) -> MaterialLayer {
+    var layer = MaterialLayer()
+    layer.kind = .Saturation
+    layer.amount = amount
+    return layer
+}
+
+function tintLayer(color: borrow ColorValue, opacity: Float, blend: Int) -> MaterialLayer {
+    var layer = MaterialLayer()
+    layer.kind = .Tint
+    layer.color = color
+    layer.opacity = opacity
+    layer.blend = blend
+    return layer
+}
+
+function noiseLayer(amount: Float) -> MaterialLayer {
+    var layer = MaterialLayer()
+    layer.kind = .Noise
+    layer.amount = amount
+    return layer
+}
+
+function borderLayer(color: borrow ColorValue, width: Float) -> MaterialLayer {
+    var layer = MaterialLayer()
+    layer.kind = .Border
+    layer.color = color
+    layer.amount = width
+    layer.opacity = 1.0
+    return layer
+}
+
+function fillLayer(color: borrow ColorValue, opacity: Float, blend: Int) -> MaterialLayer {
+    var layer = MaterialLayer()
+    layer.kind = .Fill
+    layer.color = color
+    layer.opacity = opacity
+    layer.blend = blend
+    return layer
+}
+
+function appendMaterialLayer(bytes: borrow mut [U8], layer: borrow MaterialLayer) {
+    appendU8(bytes, materialLayerValue(layer.kind))
+    appendI32(bytes, fixedFromFloat(layer.amount))
+    appendI32(bytes, fixedFromFloat(layer.opacity))
+    appendU8(bytes, layer.blend)
+    appendColorValue(bytes, layer.color)
+}
+
+function encodeMaterial(material: borrow MaterialValue) -> [U8] {
+    var bytes: [U8] = []
+    appendU8(bytes, payloadVersion())
+    appendU16(bytes, material.layers.count)
+    for layer in material.layers {
+        appendMaterialLayer(bytes, layer)
+    }
+    return bytes
+}
+
+struct MaterialRead {
+    var value: MaterialValue = MaterialValue()
+    var ok: Bool = false
+}
+
+function decodeMaterial(bytes: borrow [U8]) -> MaterialRead {
+    var read = MaterialRead()
+    if bytes.count < 3 || readU8(bytes, 0) != payloadVersion() {
+        return read
+    }
+    let layerCount = readU16(bytes, 1)
+    var material = MaterialValue()
+    var cursor = 3
+    var index = 0
+    while index < layerCount {
+        if cursor + 10 > bytes.count {
+            return read
+        }
+        var layer = MaterialLayer()
+        layer.kind = materialLayerFromValue(readU8(bytes, cursor))
+        layer.amount = floatFromFixed(readI32(bytes, cursor + 1))
+        layer.opacity = floatFromFixed(readI32(bytes, cursor + 5))
+        layer.blend = readU8(bytes, cursor + 9)
+        let colorRead = readColorValue(bytes, cursor + 10)
+        if !colorRead.ok {
+            return read
+        }
+        layer.color = colorRead.value
+        material.layers.append(layer)
+        cursor = colorRead.next
+        index = index + 1
+    }
+    read.value = material
+    read.ok = true
+    return read
+}
+
+// --- Effects ---------------------------------------------------------------
+
+enum EffectOpKind {
+    Blur
+    Shadow
+    InnerShadow
+    Opacity
+}
+
+function effectOpValue(kind: borrow EffectOpKind) -> Int {
+    match kind {
+        Blur -> return 1;
+        Shadow -> return 2;
+        InnerShadow -> return 3;
+        Opacity -> return 4;
+    }
+}
+
+function effectOpFromValue(value: Int) -> EffectOpKind {
+    if value == 2 { return .Shadow }
+    if value == 3 { return .InnerShadow }
+    if value == 4 { return .Opacity }
+    return .Blur
+}
+
+struct EffectOp {
+    var kind: EffectOpKind = .Blur
+    var radius: Float = 0.0
+    var offsetX: Float = 0.0
+    var offsetY: Float = 0.0
+    var spread: Float = 0.0
+    var amount: Float = 1.0
+    var color: ColorValue = ColorValue()
+}
+
+struct EffectValue {
+    var ops: [EffectOp] = []
+}
+
+function blurOp(radius: Float) -> EffectOp {
+    var op = EffectOp()
+    op.kind = .Blur
+    op.radius = radius
+    return op
+}
+
+function shadowOp(color: borrow ColorValue, offsetX: Float, offsetY: Float, radius: Float, spread: Float) -> EffectOp {
+    var op = EffectOp()
+    op.kind = .Shadow
+    op.color = color
+    op.offsetX = offsetX
+    op.offsetY = offsetY
+    op.radius = radius
+    op.spread = spread
+    return op
+}
+
+function innerShadowOp(color: borrow ColorValue, offsetX: Float, offsetY: Float, radius: Float, spread: Float) -> EffectOp {
+    var op = shadowOp(color, offsetX, offsetY, radius, spread)
+    op.kind = .InnerShadow
+    return op
+}
+
+function opacityOp(amount: Float) -> EffectOp {
+    var op = EffectOp()
+    op.kind = .Opacity
+    op.amount = amount
+    return op
+}
+
+function encodeEffect(effect: borrow EffectValue) -> [U8] {
+    var bytes: [U8] = []
+    appendU8(bytes, payloadVersion())
+    appendU16(bytes, effect.ops.count)
+    for op in effect.ops {
+        appendU8(bytes, effectOpValue(op.kind))
+        appendI32(bytes, fixedFromFloat(op.radius))
+        appendI32(bytes, fixedFromFloat(op.offsetX))
+        appendI32(bytes, fixedFromFloat(op.offsetY))
+        appendI32(bytes, fixedFromFloat(op.spread))
+        appendI32(bytes, fixedFromFloat(op.amount))
+        appendColorValue(bytes, op.color)
+    }
+    return bytes
+}
+
+struct EffectRead {
+    var value: EffectValue = EffectValue()
+    var ok: Bool = false
+}
+
+function decodeEffect(bytes: borrow [U8]) -> EffectRead {
+    var read = EffectRead()
+    if bytes.count < 3 || readU8(bytes, 0) != payloadVersion() {
+        return read
+    }
+    let opCount = readU16(bytes, 1)
+    var effect = EffectValue()
+    var cursor = 3
+    var index = 0
+    while index < opCount {
+        if cursor + 21 > bytes.count {
+            return read
+        }
+        var op = EffectOp()
+        op.kind = effectOpFromValue(readU8(bytes, cursor))
+        op.radius = floatFromFixed(readI32(bytes, cursor + 1))
+        op.offsetX = floatFromFixed(readI32(bytes, cursor + 5))
+        op.offsetY = floatFromFixed(readI32(bytes, cursor + 9))
+        op.spread = floatFromFixed(readI32(bytes, cursor + 13))
+        op.amount = floatFromFixed(readI32(bytes, cursor + 17))
+        let colorRead = readColorValue(bytes, cursor + 21)
+        if !colorRead.ok {
+            return read
+        }
+        op.color = colorRead.value
+        effect.ops.append(op)
+        cursor = colorRead.next
+        index = index + 1
+    }
+    read.value = effect
+    read.ok = true
+    return read
+}
+
+// --- Typography ------------------------------------------------------------
+
+// Weight is the CSS/OpenType numeric axis, 100 to 900, because that is what
+// every shaper and every platform font API already speaks. Slant is degrees.
+// Size, tracking and line height are all points, so a text style carries the
+// same three numbers a font implementation already does and nothing has to be
+// multiplied out at the boundary.
+struct TypographyValue {
+    var family: String = ""
+    var size: Float = 0.0
+    var weight: Int = 400
+    var slant: Float = 0.0
+    var tracking: Float = 0.0
+    var lineHeight: Float = 0.0
+}
+
+function encodeTypography(typography: borrow TypographyValue) -> [U8] {
+    var bytes: [U8] = []
+    appendU8(bytes, payloadVersion())
+    appendU16(bytes, typography.family.count)
+    appendStringBytes(bytes, typography.family)
+    appendI32(bytes, fixedFromFloat(typography.size))
+    appendU16(bytes, typography.weight)
+    appendI32(bytes, fixedFromFloat(typography.slant))
+    appendI32(bytes, fixedFromFloat(typography.tracking))
+    appendI32(bytes, fixedFromFloat(typography.lineHeight))
+    return bytes
+}
+
+struct TypographyRead {
+    var value: TypographyValue = TypographyValue()
+    var ok: Bool = false
+}
+
+function decodeTypography(bytes: borrow [U8]) -> TypographyRead {
+    var read = TypographyRead()
+    if bytes.count < 3 || readU8(bytes, 0) != payloadVersion() {
+        return read
+    }
+    let familyLength = readU16(bytes, 1)
+    let tail = 3 + familyLength
+    if tail + 18 > bytes.count {
+        return read
+    }
+    var typography = TypographyValue()
+    typography.family = stringFromBytes(sliceBytes(bytes, 3, familyLength))
+    typography.size = floatFromFixed(readI32(bytes, tail))
+    typography.weight = readU16(bytes, tail + 4)
+    typography.slant = floatFromFixed(readI32(bytes, tail + 6))
+    typography.tracking = floatFromFixed(readI32(bytes, tail + 10))
+    typography.lineHeight = floatFromFixed(readI32(bytes, tail + 14))
+    read.value = typography
+    read.ok = true
+    return read
+}

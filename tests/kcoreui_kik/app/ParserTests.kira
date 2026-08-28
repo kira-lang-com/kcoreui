@@ -1,0 +1,180 @@
+import Foundation
+import KCoreUI
+
+// What the parser refuses, and why.
+//
+// Every case starts from a blob the writer produced and damages it in exactly
+// one way, so a rejection is attributable to the damage rather than to the
+// construction. Strictness here is what buys byte-exact write-back everywhere
+// else: the accepted set is the canonical set, so a catalog that loaded can
+// only have been laid out one way.
+
+function kcuGoodBytes() -> [U8] {
+    var record = CatalogRecord()
+    record.resources.append(kcuAdaptive("label", kcuColor(0.1, 0.1, 0.1, 1.0), kcuColor(0.9, 0.9, 0.9, 1.0)))
+    record.resources.append(kcuFlat("separator", kcuColor(0.0, 0.0, 0.0, 0.1)))
+    return writeCatalogRecord(record)
+}
+
+function kcuWithByte(bytes: borrow [U8], offset: Int, value: Int) -> [U8] {
+    var copied: [U8] = []
+    var index = 0
+    while index < bytes.count {
+        if index == offset {
+            copied.append(value & 255)
+        } else {
+            copied.append(bytes[index])
+        }
+        index = index + 1
+    }
+    return copied
+}
+
+function kcuWithU32(bytes: borrow [U8], offset: Int, value: Int) -> [U8] {
+    var copied = kcuWithByte(bytes, offset, value)
+    copied = kcuWithByte(copied, offset + 1, value >> 8)
+    copied = kcuWithByte(copied, offset + 2, value >> 16)
+    copied = kcuWithByte(copied, offset + 3, value >> 24)
+    return copied
+}
+
+function kcuTruncated(bytes: borrow [U8], count: Int) -> [U8] {
+    return sliceBytes(bytes, 0, count)
+}
+
+construct KcuAGoodBlobParses() extends Test {
+    test { return kcuParses(kcuGoodBytes()) }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+construct KcuWrongMagicIsRefused() extends Test {
+    test { return kcuParseFailure(kcuWithByte(kcuGoodBytes(), 0, 88)) }
+    expect { let e: Result<String, TestFailure> = Result.Ok("not a KCoreUI catalog: wrong magic"); return e }
+}
+
+construct KcuANewerMajorVersionIsRefused() extends Test {
+    test { return kcuParseFailure(kcuWithByte(kcuGoodBytes(), blobOffsetMajor(), blobMajorVersion() + 1)) }
+    expect { let e: Result<String, TestFailure> = Result.Ok("catalog major version is newer than this build"); return e }
+}
+
+construct KcuAShortHeaderIsRefused() extends Test {
+    test { return kcuParseFailure(kcuTruncated(kcuGoodBytes(), 12)) }
+    expect { let e: Result<String, TestFailure> = Result.Ok("catalog is shorter than its header"); return e }
+}
+
+// Truncating the body leaves the header claiming a size the buffer does not
+// have, which is a layout the writer could not have produced.
+construct KcuATruncatedBodyIsRefused() extends Test {
+    test { return kcuParses(kcuTruncated(kcuGoodBytes(), blobHeaderSize() + 8)) }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(false); return e }
+}
+
+// Slack between sections would write back as a different file, so a header
+// pointing anywhere but the canonical position is refused even though every
+// offset it names is inside the buffer.
+construct KcuANonCanonicalLayoutIsRefused() extends Test {
+    test {
+        let bytes = kcuGoodBytes()
+        let moved = kcuWithU32(bytes, blobOffsetResourceStart(), blobHeaderSize() + 4)
+        return kcuParseFailure(moved)
+    }
+    expect { let e: Result<String, TestFailure> = Result.Ok("a catalog entry points outside the blob"); return e }
+}
+
+construct KcuATotalSizeThatDisagreesWithTheBufferIsRefused() extends Test {
+    test {
+        let bytes = kcuGoodBytes()
+        return kcuParses(kcuWithU32(bytes, blobOffsetTotalSize(), bytes.count + 16))
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(false); return e }
+}
+
+// The name table is what a lookup binary-searches, so a table out of order is a
+// catalog whose lookups would silently miss.
+construct KcuAnUnsortedNameTableIsRefused() extends Test {
+    test {
+        let bytes = kcuGoodBytes()
+        // Two resources, `label` then `separator`. Pointing the first entry's
+        // name span at the second name puts the table out of order.
+        let firstEntry = blobHeaderSize()
+        let swapped = kcuWithU32(kcuWithU32(bytes, firstEntry, 5), firstEntry + 4, 9)
+        return kcuParseFailure(swapped)
+    }
+    expect { let e: Result<String, TestFailure> = Result.Ok("the name table is not in byte order"); return e }
+}
+
+// Constraints are stored ascending by identifier because the specificity
+// comparison is a merge walk over that order.
+construct KcuUnsortedConstraintsAreRefused() extends Test {
+    test {
+        var record = CatalogRecord()
+        var resource = ResourceRecord()
+        resource.name = "label"
+        resource.kind = kindColor()
+        var rendition = RenditionRecord()
+        rendition.constraints.append(whenAppearance(.Light))
+        rendition.constraints.append(whenContrast(.High))
+        rendition.payload = encodeColor(kcuColor(0.0, 0.0, 0.0, 1.0))
+        resource.renditions.append(rendition)
+        record.resources.append(resource)
+
+        let bytes = writeCatalogRecord(record)
+        // One resource, one rendition, two constraints. Reverse them in place.
+        let constraintStart = blobHeaderSize() + blobResourceEntrySize() + blobRenditionEntrySize()
+        var reversed = kcuWithU32(bytes, constraintStart, traitContrast())
+        reversed = kcuWithU32(reversed, constraintStart + 4, contrastValue(Contrast.High))
+        reversed = kcuWithU32(reversed, constraintStart + 8, traitAppearance())
+        reversed = kcuWithU32(reversed, constraintStart + 12, appearanceValue(Appearance.Light))
+        return kcuParseFailure(reversed)
+    }
+    expect { let e: Result<String, TestFailure> = Result.Ok("a rendition's constraints are not in identifier order"); return e }
+}
+
+// Zero is reserved on every trait: a constraint carrying it would be
+// indistinguishable from no constraint at all.
+construct KcuAReservedTraitValueIsRefused() extends Test {
+    test {
+        var record = CatalogRecord()
+        var resource = ResourceRecord()
+        resource.name = "label"
+        resource.kind = kindColor()
+        var rendition = RenditionRecord()
+        rendition.constraints.append(constrain(traitAppearance(), 0))
+        rendition.payload = encodeColor(kcuColor(0.0, 0.0, 0.0, 1.0))
+        resource.renditions.append(rendition)
+        record.resources.append(resource)
+        return kcuParseFailure(writeCatalogRecord(record))
+    }
+    expect { let e: Result<String, TestFailure> = Result.Ok("a constraint carries the reserved value zero"); return e }
+}
+
+// Two renditions pinning the same traits have no defined winner. Refusing at
+// load is what lets the resolver promise one answer rather than an arbitrary
+// one.
+construct KcuADuplicateRenditionIsRefused() extends Test {
+    test {
+        var record = CatalogRecord()
+        var resource = ResourceRecord()
+        resource.name = "label"
+        resource.kind = kindColor()
+        var first = RenditionRecord()
+        first.constraints.append(whenAppearance(.Light))
+        first.payload = encodeColor(kcuColor(0.0, 0.0, 0.0, 1.0))
+        resource.renditions.append(first)
+        var second = RenditionRecord()
+        second.constraints.append(whenAppearance(.Light))
+        second.payload = encodeColor(kcuColor(1.0, 1.0, 1.0, 1.0))
+        resource.renditions.append(second)
+        record.resources.append(resource)
+        return kcuParseFailure(writeCatalogRecord(record))
+    }
+    expect { let e: Result<String, TestFailure> = Result.Ok("two renditions of one resource pin the same traits"); return e }
+}
+
+construct KcuAnEmptyBufferIsRefusedRatherThanTrapping() extends Test {
+    test {
+        var empty: [U8] = []
+        return kcuParses(empty)
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(false); return e }
+}

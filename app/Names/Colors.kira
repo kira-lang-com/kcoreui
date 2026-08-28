@@ -1,0 +1,160 @@
+import Foundation
+
+// Apple's colour vocabulary, in SwiftUI's spelling.
+//
+// These are names, not values. Nothing here says what `label` looks like; a
+// catalog does, and a different catalog says something else. Swapping the whole
+// vocabulary is a different blob and no code change, which is what keeps this
+// file a cheap decision rather than a permanent one.
+//
+// Nothing in `app/Core` may import this. The format, the parser and the
+// resolver never learn a single name, which is what lets them carry a
+// vocabulary they have never heard of.
+//
+// AppKit's spelling is not carried alongside UIKit's. Apple ships the same
+// concept twice — `labelColor` against `label`, `controlBackgroundColor`
+// against `systemBackground` — and two names for one resource is two chances
+// for a catalog to define only one of them.
+//
+// The Kira identifiers are prefixed; the resource names they answer are flat,
+// exactly as Apple writes them.
+
+// --- Hierarchical styles ---------------------------------------------------
+
+function colorPrimary() -> String { return "primary" }
+function colorSecondary() -> String { return "secondary" }
+function colorTertiary() -> String { return "tertiary" }
+function colorQuaternary() -> String { return "quaternary" }
+function colorQuinary() -> String { return "quinary" }
+
+// --- Labels ----------------------------------------------------------------
+
+function colorLabel() -> String { return "label" }
+function colorSecondaryLabel() -> String { return "secondaryLabel" }
+function colorTertiaryLabel() -> String { return "tertiaryLabel" }
+function colorQuaternaryLabel() -> String { return "quaternaryLabel" }
+function colorPlaceholderText() -> String { return "placeholderText" }
+function colorPlaceholder() -> String { return "placeholder" }
+
+// --- Fills -----------------------------------------------------------------
+
+function colorSystemFill() -> String { return "systemFill" }
+function colorSecondarySystemFill() -> String { return "secondarySystemFill" }
+function colorTertiarySystemFill() -> String { return "tertiarySystemFill" }
+function colorQuaternarySystemFill() -> String { return "quaternarySystemFill" }
+function colorFill() -> String { return "fill" }
+
+// --- Backgrounds -----------------------------------------------------------
+
+function colorSystemBackground() -> String { return "systemBackground" }
+function colorSecondarySystemBackground() -> String { return "secondarySystemBackground" }
+function colorTertiarySystemBackground() -> String { return "tertiarySystemBackground" }
+function colorSystemGroupedBackground() -> String { return "systemGroupedBackground" }
+function colorSecondarySystemGroupedBackground() -> String { return "secondarySystemGroupedBackground" }
+function colorTertiarySystemGroupedBackground() -> String { return "tertiarySystemGroupedBackground" }
+function colorBackground() -> String { return "background" }
+function colorWindowBackground() -> String { return "windowBackground" }
+
+// --- Separators and links --------------------------------------------------
+
+function colorSeparator() -> String { return "separator" }
+function colorOpaqueSeparator() -> String { return "opaqueSeparator" }
+function colorLink() -> String { return "link" }
+
+// --- Shape styles ----------------------------------------------------------
+
+function colorForeground() -> String { return "foreground" }
+function colorSelection() -> String { return "selection" }
+function colorTint() -> String { return "tint" }
+function colorAccentColor() -> String { return "accentColor" }
+
+// --- The system palette ----------------------------------------------------
+
+function colorSystemRed() -> String { return "systemRed" }
+function colorSystemOrange() -> String { return "systemOrange" }
+function colorSystemYellow() -> String { return "systemYellow" }
+function colorSystemGreen() -> String { return "systemGreen" }
+function colorSystemMint() -> String { return "systemMint" }
+function colorSystemTeal() -> String { return "systemTeal" }
+function colorSystemCyan() -> String { return "systemCyan" }
+function colorSystemBlue() -> String { return "systemBlue" }
+function colorSystemIndigo() -> String { return "systemIndigo" }
+function colorSystemPurple() -> String { return "systemPurple" }
+function colorSystemPink() -> String { return "systemPink" }
+function colorSystemBrown() -> String { return "systemBrown" }
+
+function colorSystemGray() -> String { return "systemGray" }
+function colorSystemGray2() -> String { return "systemGray2" }
+function colorSystemGray3() -> String { return "systemGray3" }
+function colorSystemGray4() -> String { return "systemGray4" }
+function colorSystemGray5() -> String { return "systemGray5" }
+function colorSystemGray6() -> String { return "systemGray6" }
+
+// --- The whole surface -----------------------------------------------------
+
+// Every colour name this build declares.
+//
+// The integrity check walks this list against the default catalog, which is
+// what stops the hardcoded surface and the shipped blob from drifting: a name
+// here with no resource behind it is a lookup that would fall through the floor,
+// and the floor is what makes resolution total.
+function allColorNames() -> [String] {
+    var names: [String] = []
+    names.append(colorPrimary())
+    names.append(colorSecondary())
+    names.append(colorTertiary())
+    names.append(colorQuaternary())
+    names.append(colorQuinary())
+
+    names.append(colorLabel())
+    names.append(colorSecondaryLabel())
+    names.append(colorTertiaryLabel())
+    names.append(colorQuaternaryLabel())
+    names.append(colorPlaceholderText())
+    names.append(colorPlaceholder())
+
+    names.append(colorSystemFill())
+    names.append(colorSecondarySystemFill())
+    names.append(colorTertiarySystemFill())
+    names.append(colorQuaternarySystemFill())
+    names.append(colorFill())
+
+    names.append(colorSystemBackground())
+    names.append(colorSecondarySystemBackground())
+    names.append(colorTertiarySystemBackground())
+    names.append(colorSystemGroupedBackground())
+    names.append(colorSecondarySystemGroupedBackground())
+    names.append(colorTertiarySystemGroupedBackground())
+    names.append(colorBackground())
+    names.append(colorWindowBackground())
+
+    names.append(colorSeparator())
+    names.append(colorOpaqueSeparator())
+    names.append(colorLink())
+
+    names.append(colorForeground())
+    names.append(colorSelection())
+    names.append(colorTint())
+    names.append(colorAccentColor())
+
+    names.append(colorSystemRed())
+    names.append(colorSystemOrange())
+    names.append(colorSystemYellow())
+    names.append(colorSystemGreen())
+    names.append(colorSystemMint())
+    names.append(colorSystemTeal())
+    names.append(colorSystemCyan())
+    names.append(colorSystemBlue())
+    names.append(colorSystemIndigo())
+    names.append(colorSystemPurple())
+    names.append(colorSystemPink())
+    names.append(colorSystemBrown())
+
+    names.append(colorSystemGray())
+    names.append(colorSystemGray2())
+    names.append(colorSystemGray3())
+    names.append(colorSystemGray4())
+    names.append(colorSystemGray5())
+    names.append(colorSystemGray6())
+    return names
+}

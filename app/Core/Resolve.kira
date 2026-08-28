@@ -1,0 +1,227 @@
+import Foundation
+
+// The typed surface a consumer actually calls.
+//
+// Everything here answers a concrete value with every reference already
+// followed, so a caller receives numbers and never a name. That is the boundary
+// the design turns on: KiraUI names what something means, KCoreUI decides what
+// it means here, and the renderer below receives blur radii and RGBA and has
+// never heard the word "sidebar".
+//
+// Resolution is total. A name no catalog on the stack answers for produces the
+// debug colour rather than a failure a paint loop would have to thread through
+// every call site. The floor catalog is required to be complete and the
+// integrity check proves it, so a debug colour on screen means the stack was
+// assembled wrong, not that a lookup is allowed to fail.
+
+// How many references a chain may follow before it is treated as a cycle.
+//
+// The catalog validator rejects cycles before a blob is written, so this is a
+// backstop for a blob that arrived from somewhere else, not the mechanism.
+function referenceDepthLimit() -> Int { return 16 }
+
+// --- Colours ---------------------------------------------------------------
+
+// A colour value with its references followed against the same environment.
+function resolveColorValue(stack: borrow CatalogStack, value: borrow ColorValue, environment: borrow UIEnvironment, depth: Int) -> Color {
+    if !value.isReference {
+        return value.color
+    }
+    if depth >= referenceDepthLimit() {
+        return debugColor()
+    }
+    let resolved = resolveResource(stack, value.reference, kindColor(), environment)
+    if !resolved.found || resolved.kind != kindColor() {
+        return debugColor()
+    }
+    let payload = resolvedPayload(stack, resolved)
+    let read = decodeColorPayload(payload)
+    if !read.ok {
+        return debugColor()
+    }
+    return resolveColorValue(stack, read.value, environment, depth + 1)
+}
+
+// Whether a colour resolved, alongside the colour. For a debugger and for the
+// integrity check; ordinary drawing code wants `resolveColor`.
+struct ColorResolution {
+    var color: Color = Color()
+    var found: Bool = false
+}
+
+function resolveColorChecked(stack: borrow CatalogStack, name: borrow String, environment: borrow UIEnvironment) -> ColorResolution {
+    var resolution = ColorResolution()
+    resolution.color = debugColor()
+    let resolved = resolveResource(stack, name, kindColor(), environment)
+    if !resolved.found || resolved.kind != kindColor() {
+        return resolution
+    }
+    let read = decodeColorPayload(resolvedPayload(stack, resolved))
+    if !read.ok {
+        return resolution
+    }
+    resolution.color = resolveColorValue(stack, read.value, environment, 0)
+    resolution.found = true
+    return resolution
+}
+
+// The colour a semantic name means in this environment.
+function resolveColor(stack: borrow CatalogStack, name: borrow String, environment: borrow UIEnvironment) -> Color {
+    return resolveColorChecked(stack, name, environment).color
+}
+
+// --- Gradients -------------------------------------------------------------
+
+struct ResolvedGradientStop {
+    var position: Float = 0.0
+    var color: Color = Color()
+}
+
+struct ResolvedGradient {
+    var found: Bool = false
+    var kind: GradientKind = .Linear
+    var startX: Float = 0.0
+    var startY: Float = 0.0
+    var endX: Float = 0.0
+    var endY: Float = 1.0
+    var stops: [ResolvedGradientStop] = []
+}
+
+function resolveGradient(stack: borrow CatalogStack, name: borrow String, environment: borrow UIEnvironment) -> ResolvedGradient {
+    var gradient = ResolvedGradient()
+    let resolved = resolveResource(stack, name, kindGradient(), environment)
+    if !resolved.found || resolved.kind != kindGradient() {
+        return gradient
+    }
+    let read = decodeGradient(resolvedPayload(stack, resolved))
+    if !read.ok {
+        return gradient
+    }
+    gradient.found = true
+    gradient.kind = read.value.kind
+    gradient.startX = read.value.startX
+    gradient.startY = read.value.startY
+    gradient.endX = read.value.endX
+    gradient.endY = read.value.endY
+    for stop in read.value.stops {
+        var resolvedStop = ResolvedGradientStop()
+        resolvedStop.position = stop.position
+        resolvedStop.color = resolveColorValue(stack, stop.color, environment, 0)
+        gradient.stops.append(resolvedStop)
+    }
+    return gradient
+}
+
+// --- Materials -------------------------------------------------------------
+
+// A layer with nothing left to look up. This is what a compositor is handed.
+struct ResolvedMaterialLayer {
+    var kind: MaterialLayerKind = .Fill
+    var amount: Float = 0.0
+    var color: Color = Color()
+    var opacity: Float = 1.0
+    var blend: Int = 0
+}
+
+struct ResolvedMaterial {
+    var found: Bool = false
+    var layers: [ResolvedMaterialLayer] = []
+}
+
+function resolveMaterial(stack: borrow CatalogStack, name: borrow String, environment: borrow UIEnvironment) -> ResolvedMaterial {
+    var material = ResolvedMaterial()
+    let resolved = resolveResource(stack, name, kindMaterial(), environment)
+    if !resolved.found || resolved.kind != kindMaterial() {
+        return material
+    }
+    let read = decodeMaterial(resolvedPayload(stack, resolved))
+    if !read.ok {
+        return material
+    }
+    material.found = true
+    for layer in read.value.layers {
+        var resolvedLayer = ResolvedMaterialLayer()
+        resolvedLayer.kind = layer.kind
+        resolvedLayer.amount = layer.amount
+        resolvedLayer.opacity = layer.opacity
+        resolvedLayer.blend = layer.blend
+        resolvedLayer.color = resolveColorValue(stack, layer.color, environment, 0)
+        material.layers.append(resolvedLayer)
+    }
+    return material
+}
+
+// The blur radius a material asks for, or zero. A surface that needs one number
+// rather than the whole recipe asks for it here instead of walking the layers.
+function materialBlurRadius(material: borrow ResolvedMaterial) -> Float {
+    for layer in material.layers {
+        if layer.kind == .BackdropBlur {
+            return layer.amount
+        }
+    }
+    return 0.0
+}
+
+// --- Effects ---------------------------------------------------------------
+
+struct ResolvedEffectOp {
+    var kind: EffectOpKind = .Blur
+    var radius: Float = 0.0
+    var offsetX: Float = 0.0
+    var offsetY: Float = 0.0
+    var spread: Float = 0.0
+    var amount: Float = 1.0
+    var color: Color = Color()
+}
+
+struct ResolvedEffect {
+    var found: Bool = false
+    var ops: [ResolvedEffectOp] = []
+}
+
+function resolveEffect(stack: borrow CatalogStack, name: borrow String, environment: borrow UIEnvironment) -> ResolvedEffect {
+    var effect = ResolvedEffect()
+    let resolved = resolveResource(stack, name, kindEffect(), environment)
+    if !resolved.found || resolved.kind != kindEffect() {
+        return effect
+    }
+    let read = decodeEffect(resolvedPayload(stack, resolved))
+    if !read.ok {
+        return effect
+    }
+    effect.found = true
+    for op in read.value.ops {
+        var resolvedOp = ResolvedEffectOp()
+        resolvedOp.kind = op.kind
+        resolvedOp.radius = op.radius
+        resolvedOp.offsetX = op.offsetX
+        resolvedOp.offsetY = op.offsetY
+        resolvedOp.spread = op.spread
+        resolvedOp.amount = op.amount
+        resolvedOp.color = resolveColorValue(stack, op.color, environment, 0)
+        effect.ops.append(resolvedOp)
+    }
+    return effect
+}
+
+// --- Typography ------------------------------------------------------------
+
+struct ResolvedTypography {
+    var found: Bool = false
+    var value: TypographyValue = TypographyValue()
+}
+
+function resolveTypography(stack: borrow CatalogStack, name: borrow String, environment: borrow UIEnvironment) -> ResolvedTypography {
+    var typography = ResolvedTypography()
+    let resolved = resolveResource(stack, name, kindTypography(), environment)
+    if !resolved.found || resolved.kind != kindTypography() {
+        return typography
+    }
+    let read = decodeTypography(resolvedPayload(stack, resolved))
+    if !read.ok {
+        return typography
+    }
+    typography.found = true
+    typography.value = read.value
+    return typography
+}

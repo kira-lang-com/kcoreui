@@ -1,0 +1,233 @@
+import Foundation
+
+// Typed payloads for the kinds KCoreUI knows.
+//
+// A payload is bytes the container never inspects, so these encoders are a
+// convenience for producers and these decoders a convenience for consumers.
+// Neither is privileged: a producer may write its own bytes under its own kind
+// and the catalog will carry, resolve and write them back correctly without
+// this file being involved.
+//
+// Every payload opens with a one-byte version. A decoder that meets a version
+// it does not know answers `ok: false` rather than reading the bytes as if it
+// did.
+
+function payloadVersion() -> Int { return 1 }
+
+// --- Colour values ---------------------------------------------------------
+//
+// A colour in a payload is either literal channels or the name of another
+// resource. The reference is what makes a material's tint follow the colour it
+// names: nothing is copied at author time, so a tint written against
+// `separator` is still right in dark appearance and in high contrast, because
+// the reference is resolved against the same environment as the material.
+
+function colorValueLiteral() -> Int { return 1 }
+function colorValueReference() -> Int { return 2 }
+
+struct ColorValue {
+    var isReference: Bool = false
+    var color: Color = Color()
+    var reference: String = ""
+}
+
+// The colour a resolver answers with when a name is absent from every catalog
+// on the stack, or when a reference chain does not terminate. Deliberately
+// loud: the floor catalog is required to be complete and an integrity test
+// proves it, so seeing this on screen means the stack was built wrong.
+function debugColor() -> Color {
+    return Color(r: 1.0, g: 0.0, b: 1.0, a: 1.0)
+}
+
+function literalColor(color: borrow Color) -> ColorValue {
+    var value = ColorValue()
+    value.isReference = false
+    value.color = color
+    return value
+}
+
+function referenceColor(name: borrow String) -> ColorValue {
+    var value = ColorValue()
+    value.isReference = true
+    value.reference = name
+    return value
+}
+
+function appendColorValue(bytes: borrow mut [U8], value: borrow ColorValue) {
+    if value.isReference {
+        appendU8(bytes, colorValueReference())
+        appendU16(bytes, value.reference.count)
+        appendStringBytes(bytes, value.reference)
+    } else {
+        appendU8(bytes, colorValueLiteral())
+        appendI32(bytes, fixedFromFloat(value.color.r))
+        appendI32(bytes, fixedFromFloat(value.color.g))
+        appendI32(bytes, fixedFromFloat(value.color.b))
+        appendI32(bytes, fixedFromFloat(value.color.a))
+    }
+}
+
+// A decoded value and where reading it ended. Kira has no tuples, so a reader
+// that advances a cursor answers one of these.
+struct ColorValueRead {
+    var value: ColorValue = ColorValue()
+    var next: Int = 0
+    var ok: Bool = false
+}
+
+function readColorValue(bytes: borrow [U8], offset: Int) -> ColorValueRead {
+    var read = ColorValueRead()
+    read.next = offset
+    if offset < 0 || offset >= bytes.count {
+        return read
+    }
+    let tag = readU8(bytes, offset)
+    if tag == colorValueLiteral() {
+        if offset + 17 > bytes.count {
+            return read
+        }
+        var color = Color()
+        color.r = floatFromFixed(readI32(bytes, offset + 1))
+        color.g = floatFromFixed(readI32(bytes, offset + 5))
+        color.b = floatFromFixed(readI32(bytes, offset + 9))
+        color.a = floatFromFixed(readI32(bytes, offset + 13))
+        read.value = literalColor(color)
+        read.next = offset + 17
+        read.ok = true
+        return read
+    }
+    if tag == colorValueReference() {
+        let length = readU16(bytes, offset + 1)
+        if offset + 3 + length > bytes.count {
+            return read
+        }
+        let slice = sliceBytes(bytes, offset + 3, length)
+        read.value = referenceColor(stringFromBytes(slice))
+        read.next = offset + 3 + length
+        read.ok = true
+        return read
+    }
+    return read
+}
+
+// --- Colour resource -------------------------------------------------------
+
+function encodeColorPayload(value: borrow ColorValue) -> [U8] {
+    var bytes: [U8] = []
+    appendU8(bytes, payloadVersion())
+    appendColorValue(bytes, value)
+    return bytes
+}
+
+// The common case: a literal colour with no variants of its own.
+function encodeColor(color: borrow Color) -> [U8] {
+    return encodeColorPayload(literalColor(color))
+}
+
+// An alias: this colour is whatever that one resolves to.
+function encodeColorAlias(name: borrow String) -> [U8] {
+    return encodeColorPayload(referenceColor(name))
+}
+
+function decodeColorPayload(bytes: borrow [U8]) -> ColorValueRead {
+    var read = ColorValueRead()
+    if bytes.count < 1 || readU8(bytes, 0) != payloadVersion() {
+        return read
+    }
+    return readColorValue(bytes, 1)
+}
+
+// --- Gradients -------------------------------------------------------------
+
+enum GradientKind {
+    Linear
+    Radial
+    Angular
+}
+
+function gradientKindValue(kind: borrow GradientKind) -> Int {
+    match kind {
+        Linear -> return 1;
+        Radial -> return 2;
+        Angular -> return 3;
+    }
+}
+
+function gradientKindFromValue(value: Int) -> GradientKind {
+    if value == 2 { return .Radial }
+    if value == 3 { return .Angular }
+    return .Linear
+}
+
+// One stop, at a position along the gradient's own 0-to-1 axis.
+struct GradientStop {
+    var position: Float = 0.0
+    var color: ColorValue = ColorValue()
+}
+
+// Start and end are in the resource's unit space: a linear gradient runs from
+// start to end, a radial one is centred on start with end fixing its radius,
+// and an angular one sweeps around start beginning at the angle to end.
+struct GradientValue {
+    var kind: GradientKind = .Linear
+    var startX: Float = 0.0
+    var startY: Float = 0.0
+    var endX: Float = 0.0
+    var endY: Float = 1.0
+    var stops: [GradientStop] = []
+}
+
+function encodeGradient(gradient: borrow GradientValue) -> [U8] {
+    var bytes: [U8] = []
+    appendU8(bytes, payloadVersion())
+    appendU8(bytes, gradientKindValue(gradient.kind))
+    appendI32(bytes, fixedFromFloat(gradient.startX))
+    appendI32(bytes, fixedFromFloat(gradient.startY))
+    appendI32(bytes, fixedFromFloat(gradient.endX))
+    appendI32(bytes, fixedFromFloat(gradient.endY))
+    appendU16(bytes, gradient.stops.count)
+    for stop in gradient.stops {
+        appendI32(bytes, fixedFromFloat(stop.position))
+        appendColorValue(bytes, stop.color)
+    }
+    return bytes
+}
+
+struct GradientRead {
+    var value: GradientValue = GradientValue()
+    var ok: Bool = false
+}
+
+function decodeGradient(bytes: borrow [U8]) -> GradientRead {
+    var read = GradientRead()
+    if bytes.count < 20 || readU8(bytes, 0) != payloadVersion() {
+        return read
+    }
+    var gradient = GradientValue()
+    gradient.kind = gradientKindFromValue(readU8(bytes, 1))
+    gradient.startX = floatFromFixed(readI32(bytes, 2))
+    gradient.startY = floatFromFixed(readI32(bytes, 6))
+    gradient.endX = floatFromFixed(readI32(bytes, 10))
+    gradient.endY = floatFromFixed(readI32(bytes, 14))
+    let stopCount = readU16(bytes, 18)
+    var cursor = 20
+    var index = 0
+    while index < stopCount {
+        if cursor + 4 > bytes.count {
+            return read
+        }
+        var stop = GradientStop()
+        stop.position = floatFromFixed(readI32(bytes, cursor))
+        let colorRead = readColorValue(bytes, cursor + 4)
+        if !colorRead.ok {
+            return read
+        }
+        stop.color = colorRead.value
+        gradient.stops.append(stop)
+        cursor = colorRead.next
+        index = index + 1
+    }
+    read.value = gradient
+    read.ok = true
+    return read
+}

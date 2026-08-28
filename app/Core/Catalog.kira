@@ -1,0 +1,171 @@
+import Foundation
+
+// Loading a catalog, finding a name in one, and stacking several.
+//
+// A name is found by binary search over the resource table, comparing the
+// caller's string against the name bytes where they sit. Nothing is rebuilt
+// into a string to be searched for, which is why loading a catalog costs a
+// buffer copy and no parsing of text at all.
+
+// Load from bytes.
+function loadCatalog(bytes: borrow [U8]) -> Result<Catalog, CatalogError> {
+    return parseCatalog(bytes)
+}
+
+// Load from a file. A file that is not there reads as an empty buffer, which
+// fails the magic check, so a missing catalog and a corrupt one are told apart
+// by the caller checking for the file rather than by two error paths here.
+function loadCatalogFile(path: borrow String) -> Result<Catalog, CatalogError> {
+    let size: Int = fileSize(path)
+    let bytes = readFileRange(path, 0, size)
+    return parseCatalog(bytes)
+}
+
+// Write a catalog to a file, byte-exact.
+function saveCatalogFile(path: borrow String, catalog: borrow Catalog) -> Bool {
+    let bytes = writeCatalog(catalog)
+    return writeBytesFile(path, bytes)
+}
+
+// --- Lookup ----------------------------------------------------------------
+
+// The index of the resource named `name` with kind `kind`, or -1.
+//
+// A resource is keyed by name *and* kind. The surface KCoreUI ships already
+// spells a material `regular`, and a colour of that name is a resource a
+// producer is entitled to add; keying by name alone would make those two the
+// same entry and hand a paint pass the wrong one.
+//
+// The table is sorted by that pair, which the parser has already verified, so
+// this is a binary search: a catalog of thousands costs a dozen comparisons.
+function catalogFindResource(catalog: borrow Catalog, name: borrow String, kind: Int) -> Int {
+    var low = 0
+    var high = catalog.resources.count - 1
+    while low <= high {
+        let middle = low + (high - low) / 2
+        let resource = catalog.resources[middle]
+        var order = compareSliceToString(catalog.nameBytes, resource.nameOffset, resource.nameCount, name)
+        if order == 0 {
+            order = resource.kind - kind
+        }
+        if order == 0 {
+            return middle
+        }
+        if order < 0 {
+            low = middle + 1
+        } else {
+            high = middle - 1
+        }
+    }
+    return 0 - 1
+}
+
+// Whether this catalog carries the resource at all, regardless of environment.
+function catalogHasResource(catalog: borrow Catalog, name: borrow String, kind: Int) -> Bool {
+    return catalogFindResource(catalog, name, kind) >= 0
+}
+
+// The kinds this catalog carries under one name. A name usually has exactly
+// one; an editor showing what a name means asks for all of them.
+function catalogKindsForName(catalog: borrow Catalog, name: borrow String) -> [Int] {
+    var kinds: [Int] = []
+    var index = 0
+    while index < catalog.resources.count {
+        let resource = catalog.resources[index]
+        if compareSliceToString(catalog.nameBytes, resource.nameOffset, resource.nameCount, name) == 0 {
+            kinds.append(resource.kind)
+        }
+        index = index + 1
+    }
+    return kinds
+}
+
+// A resource's name, rebuilt. Costs a UTF-8 decode, so it belongs in a
+// debugger or an editor rather than on a paint path.
+function catalogResourceName(catalog: borrow Catalog, index: Int) -> String {
+    if index < 0 || index >= catalog.resources.count {
+        return ""
+    }
+    let resource = catalog.resources[index]
+    let slice = sliceBytes(catalog.nameBytes, resource.nameOffset, resource.nameCount)
+    return stringFromBytes(slice)
+}
+
+// Every name in the catalog, in byte order. For the integrity check that
+// proves a name surface and a catalog agree, and for an editor's outline.
+function catalogResourceNames(catalog: borrow Catalog) -> [String] {
+    var names: [String] = []
+    var index = 0
+    while index < catalog.resources.count {
+        names.append(catalogResourceName(catalog, index))
+        index = index + 1
+    }
+    return names
+}
+
+// The payload bytes of one rendition.
+function catalogRenditionPayload(catalog: borrow Catalog, renditionIndex: Int) -> [U8] {
+    if renditionIndex < 0 || renditionIndex >= catalog.renditions.count {
+        var empty: [U8] = []
+        return empty
+    }
+    let rendition = catalog.renditions[renditionIndex]
+    return sliceBytes(catalog.payload, rendition.payloadOffset, rendition.payloadCount)
+}
+
+// The payload a resolution landed on.
+function resolvedPayload(stack: borrow CatalogStack, resolved: borrow ResolvedRendition) -> [U8] {
+    var empty: [U8] = []
+    if !resolved.found {
+        return empty
+    }
+    if resolved.catalogIndex < 0 || resolved.catalogIndex >= stack.catalogs.count {
+        return empty
+    }
+    return sliceBytes(stack.catalogs[resolved.catalogIndex].payload, resolved.payloadOffset, resolved.payloadCount)
+}
+
+// --- Stacks ----------------------------------------------------------------
+
+// A stack of one. The lowest catalog is the floor and is expected to name
+// every resource the program asks for, which is what makes resolution total.
+function catalogStackOf(base: borrow Catalog) -> CatalogStack {
+    var stack = CatalogStack()
+    var copied = Catalog()
+    copied.majorVersion = base.majorVersion
+    copied.minorVersion = base.minorVersion
+    copied.flags = base.flags
+    copied.nameBytes = copy base.nameBytes
+    copied.resources = copy base.resources
+    copied.renditions = copy base.renditions
+    copied.constraints = copy base.constraints
+    copied.payload = copy base.payload
+    stack.catalogs.append(copied)
+    return stack
+}
+
+// Put a catalog above everything already on the stack. An override is a blob,
+// so a theme, a package's resources and an application's own are the same kind
+// of thing arriving at different heights.
+function catalogStackOverride(stack: borrow CatalogStack, overlay: borrow Catalog) -> CatalogStack {
+    var raised = CatalogStack()
+    var copied = Catalog()
+    copied.majorVersion = overlay.majorVersion
+    copied.minorVersion = overlay.minorVersion
+    copied.flags = overlay.flags
+    copied.nameBytes = copy overlay.nameBytes
+    copied.resources = copy overlay.resources
+    copied.renditions = copy overlay.renditions
+    copied.constraints = copy overlay.constraints
+    copied.payload = copy overlay.payload
+    raised.catalogs.append(copied)
+    for existing in stack.catalogs {
+        raised.catalogs.append(existing)
+    }
+    return raised
+}
+
+// How many catalogs a lookup would consult.
+function catalogStackDepth(stack: borrow CatalogStack) -> Int {
+    return stack.catalogs.count
+}

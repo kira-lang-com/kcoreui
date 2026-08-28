@@ -1,0 +1,64 @@
+import Foundation
+
+// Apple's material and text-style vocabularies, in SwiftUI's spelling.
+//
+// The material ladder is `ultraThin` through `ultraThick` plus `bar`. Two
+// entries are worth naming because existing Kira code disagrees with them:
+// KiraUIFoundation spells the ladder `Ultrathin, Thin, Regular, Thick, Chrome`,
+// which is `bar` under another name and is missing `ultraThick` entirely. This
+// file is the spelling; a catalog is what fills it in.
+//
+// The text styles are Apple's `Font.TextStyle` set. Apple names no gradients
+// and no effects semantically, so this build declares none: inventing a name
+// Apple does not have would be inventing surface, and a producer that needs one
+// writes it into a blob without asking permission from this file.
+
+// --- Materials -------------------------------------------------------------
+
+function materialUltraThin() -> String { return "ultraThin" }
+function materialThin() -> String { return "thin" }
+function materialRegular() -> String { return "regular" }
+function materialThick() -> String { return "thick" }
+function materialUltraThick() -> String { return "ultraThick" }
+function materialBar() -> String { return "bar" }
+
+function allMaterialNames() -> [String] {
+    var names: [String] = []
+    names.append(materialUltraThin())
+    names.append(materialThin())
+    names.append(materialRegular())
+    names.append(materialThick())
+    names.append(materialUltraThick())
+    names.append(materialBar())
+    return names
+}
+
+// --- Text styles -----------------------------------------------------------
+
+function textLargeTitle() -> String { return "largeTitle" }
+function textTitle() -> String { return "title" }
+function textTitle2() -> String { return "title2" }
+function textTitle3() -> String { return "title3" }
+function textHeadline() -> String { return "headline" }
+function textSubheadline() -> String { return "subheadline" }
+function textBody() -> String { return "body" }
+function textCallout() -> String { return "callout" }
+function textFootnote() -> String { return "footnote" }
+function textCaption() -> String { return "caption" }
+function textCaption2() -> String { return "caption2" }
+
+function allTextStyleNames() -> [String] {
+    var names: [String] = []
+    names.append(textLargeTitle())
+    names.append(textTitle())
+    names.append(textTitle2())
+    names.append(textTitle3())
+    names.append(textHeadline())
+    names.append(textSubheadline())
+    names.append(textBody())
+    names.append(textCallout())
+    names.append(textFootnote())
+    names.append(textCaption())
+    names.append(textCaption2())
+    return names
+}

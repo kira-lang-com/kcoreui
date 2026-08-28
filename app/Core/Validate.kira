@@ -1,0 +1,277 @@
+import Foundation
+
+// What a producer's records are checked for before they become a blob.
+//
+// The parser refuses a malformed *container*. This refuses a malformed
+// *catalog*: a reference to a name nothing defines, a reference chain that
+// comes back to where it started, two resources with the same name. Those are
+// authoring mistakes, and the place to catch them is the moment a producer asks
+// for bytes, not the moment a compositor asks for a colour.
+//
+// Cycle detection is deliberately conservative. References resolve per
+// environment, so a chain that closes only under one combination of traits is
+// still reported: an author who needs an appearance-dependent alias graph is
+// describing something a resolver cannot promise to terminate, and the report
+// is the right answer.
+
+enum ValidationKind {
+    DuplicateName
+    MissingReference
+    ReferenceCycle
+    ReservedTraitValue
+    DuplicateRendition
+    NoRenditions
+    UndecodablePayload
+}
+
+struct ValidationIssue {
+    var kind: ValidationKind = .DuplicateName
+    var name: String = ""
+    var detail: String = ""
+}
+
+function validationKindText(kind: borrow ValidationKind) -> String {
+    match kind {
+        DuplicateName -> return "duplicate name";
+        MissingReference -> return "reference to an undefined name";
+        ReferenceCycle -> return "reference cycle";
+        ReservedTraitValue -> return "constraint carries the reserved value zero";
+        DuplicateRendition -> return "two renditions pin the same traits";
+        NoRenditions -> return "resource has no renditions";
+        UndecodablePayload -> return "payload does not decode for its kind";
+    }
+}
+
+function issue(kind: borrow ValidationKind, name: borrow String, detail: borrow String) -> ValidationIssue {
+    var made = ValidationIssue()
+    made.kind = kind
+    made.name = name
+    made.detail = detail
+    return made
+}
+
+// --- Reference extraction --------------------------------------------------
+
+function appendReference(names: borrow mut [String], value: borrow ColorValue) {
+    if value.isReference {
+        names.append(value.reference)
+    }
+}
+
+// Every name one payload points at. A kind this build cannot decode has no
+// references as far as KCoreUI is concerned, which is the honest answer: the
+// format does not read a payload it has no decoder for, so it cannot know.
+function payloadReferences(kind: Int, bytes: borrow [U8]) -> [String] {
+    var names: [String] = []
+    if kind == kindColor() {
+        let read = decodeColorPayload(bytes)
+        if read.ok {
+            appendReference(names, read.value)
+        }
+        return names
+    }
+    if kind == kindGradient() {
+        let read = decodeGradient(bytes)
+        if read.ok {
+            for stop in read.value.stops {
+                appendReference(names, stop.color)
+            }
+        }
+        return names
+    }
+    if kind == kindMaterial() {
+        let read = decodeMaterial(bytes)
+        if read.ok {
+            for layer in read.value.layers {
+                appendReference(names, layer.color)
+            }
+        }
+        return names
+    }
+    if kind == kindEffect() {
+        let read = decodeEffect(bytes)
+        if read.ok {
+            for op in read.value.ops {
+                appendReference(names, op.color)
+            }
+        }
+        return names
+    }
+    return names
+}
+
+// Whether a payload decodes at all for its kind.
+function payloadDecodes(kind: Int, bytes: borrow [U8]) -> Bool {
+    if kind == kindColor() { return decodeColorPayload(bytes).ok }
+    if kind == kindGradient() { return decodeGradient(bytes).ok }
+    if kind == kindMaterial() { return decodeMaterial(bytes).ok }
+    if kind == kindEffect() { return decodeEffect(bytes).ok }
+    if kind == kindTypography() { return decodeTypography(bytes).ok }
+    return true
+}
+
+// --- Record checks ---------------------------------------------------------
+
+function recordIndexOf(record: borrow CatalogRecord, name: borrow String, kind: Int) -> Int {
+    for index in 0..record.resources.count {
+        if record.resources[index].kind == kind && compareStrings(record.resources[index].name, name) == 0 {
+            return index
+        }
+    }
+    return 0 - 1
+}
+
+// Every name reachable from one resource, one hop.
+function recordResourceReferences(record: borrow CatalogRecord, index: Int) -> [String] {
+    var names: [String] = []
+    if index < 0 || index >= record.resources.count {
+        return names
+    }
+    let resource = record.resources[index]
+    for rendition in resource.renditions {
+        for name in payloadReferences(resource.kind, rendition.payload) {
+            names.append(name)
+        }
+    }
+    return names
+}
+
+// Whether following references out of `start` ever arrives back at it.
+//
+// A breadth-first walk with an explicit frontier rather than recursion, so the
+// bound is the resource count and a malformed graph cannot exhaust the stack.
+function referenceCycleFrom(record: borrow CatalogRecord, start: Int) -> Bool {
+    var seen: [Int] = []
+    var frontier: [Int] = []
+    for name in recordResourceReferences(record, start) {
+        let next = recordIndexOf(record, name, kindColor())
+        if next >= 0 {
+            frontier.append(next)
+        }
+    }
+    var cursor = 0
+    while cursor < frontier.count {
+        let current = frontier[cursor]
+        cursor = cursor + 1
+        if current == start {
+            return true
+        }
+        var alreadySeen = false
+        for entry in seen {
+            if entry == current {
+                alreadySeen = true
+            }
+        }
+        if !alreadySeen {
+            seen.append(current)
+            for name in recordResourceReferences(record, current) {
+                let next = recordIndexOf(record, name, kindColor())
+                if next >= 0 {
+                    frontier.append(next)
+                }
+            }
+        }
+    }
+    return false
+}
+
+// Everything wrong with a set of records, in the order the resources were given.
+function validateRecord(record: borrow CatalogRecord) -> [ValidationIssue] {
+    var issues: [ValidationIssue] = []
+    var index = 0
+    while index < record.resources.count {
+        let resource = record.resources[index]
+
+        if recordIndexOf(record, resource.name, resource.kind) != index {
+            issues.append(issue(.DuplicateName, resource.name, ""))
+        }
+        if resource.renditions.count == 0 {
+            issues.append(issue(.NoRenditions, resource.name, ""))
+        }
+
+        for rendition in resource.renditions {
+            for entry in rendition.constraints {
+                if entry.value == 0 {
+                    issues.append(issue(.ReservedTraitValue, resource.name, traitName(entry.identifier)))
+                }
+            }
+            if !payloadDecodes(resource.kind, rendition.payload) {
+                issues.append(issue(.UndecodablePayload, resource.name, kindName(resource.kind)))
+            }
+            for name in payloadReferences(resource.kind, rendition.payload) {
+                if recordIndexOf(record, name, kindColor()) < 0 {
+                    issues.append(issue(.MissingReference, resource.name, name))
+                }
+            }
+        }
+
+        let sorted = sortedRenditions(resource.renditions)
+        var position = 1
+        while position < sorted.count {
+            if compareConstraintLists(sorted[position - 1].constraints, sorted[position].constraints) == 0 {
+                issues.append(issue(.DuplicateRendition, resource.name, ""))
+            }
+            position = position + 1
+        }
+
+        if referenceCycleFrom(record, index) {
+            issues.append(issue(.ReferenceCycle, resource.name, ""))
+        }
+
+        index = index + 1
+    }
+    return issues
+}
+
+// The issues as text, one per line.
+function validationText(issues: borrow [ValidationIssue]) -> String {
+    var text = ""
+    for entry in issues {
+        text = text + validationKindText(entry.kind) + ": " + entry.name
+        if entry.detail.count > 0 {
+            text = text + " (" + entry.detail + ")"
+        }
+        text = text + "\n"
+    }
+    return text
+}
+
+// --- Integrity -------------------------------------------------------------
+
+// The names a catalog does not define. This is the check that keeps a hardcoded
+// name surface and a shipped catalog from drifting apart: a name declared in
+// `Names` with no resource behind it is a lookup that would fall through the
+// floor, and the floor is what makes resolution total.
+function missingNames(catalog: borrow Catalog, names: borrow [String], kind: Int) -> [String] {
+    var missing: [String] = []
+    for name in names {
+        if !catalogHasResource(catalog, name, kind) {
+            missing.append(name)
+        }
+    }
+    return missing
+}
+
+// The reverse: what the catalog carries under one kind that the name surface
+// does not declare. Not an error — a catalog may hold resources for a consumer
+// this build does not contain — but an editor and a review want to see it.
+function undeclaredNames(catalog: borrow Catalog, names: borrow [String], kind: Int) -> [String] {
+    var extra: [String] = []
+    var index = 0
+    while index < catalog.resources.count {
+        if catalog.resources[index].kind == kind {
+            let present = catalogResourceName(catalog, index)
+            var declared = false
+            for name in names {
+                if compareStrings(present, name) == 0 {
+                    declared = true
+                }
+            }
+            if !declared {
+                extra.append(present)
+            }
+        }
+        index = index + 1
+    }
+    return extra
+}

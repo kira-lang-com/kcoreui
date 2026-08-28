@@ -1,0 +1,265 @@
+import Foundation
+import KCoreUI
+
+// The catalog this repository ships.
+//
+// These cases read `Resources/Default.kcui` off disk, through the same parser
+// an application uses. The integrity case is the load-bearing one: it is what
+// lets the rest of the framework promise that resolution is total, because it
+// proves the floor answers for every name the hardcoded surface declares.
+
+construct KcuTheDefaultCatalogLoads() extends Test {
+    test { return kcuDefaultCatalog().resources.count > 0 }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// The shipped blob is canonical, so an editor that opens and saves it without
+// changing anything writes the same file back.
+construct KcuTheDefaultCatalogWritesBackByteForByte() extends Test {
+    test {
+        let size: Int = fileSize(kcuDefaultCatalogPath())
+        let bytes = readFileRange(kcuDefaultCatalogPath(), 0, size)
+        return kcuBytesEqual(bytes, writeCatalog(kcuDefaultCatalog()))
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// The contract between the hardcoded name surface and the shipped catalog. A
+// name declared with nothing behind it would resolve through the floor and
+// paint the debug colour.
+construct KcuTheDefaultCatalogCoversEveryDeclaredName() extends Test {
+    test { return integrityHolds(checkIntegrity(kcuDefaultCatalog())) }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+construct KcuTheDefaultCatalogDeclaresNothingItDoesNotCarry() extends Test {
+    test {
+        let report = checkIntegrity(kcuDefaultCatalog())
+        return report.missingColors.count + report.missingMaterials.count + report.missingTextStyles.count
+    }
+    expect { let e: Result<Int, TestFailure> = Result.Ok(0); return e }
+}
+
+// Every declared colour answers in both appearances and in high contrast. This
+// is the case that would catch a rendition set that covers light and forgets
+// dark.
+construct KcuEveryDeclaredColourResolvesInEveryAppearance() extends Test {
+    test {
+        let stack = catalogStackOf(kcuDefaultCatalog())
+        var complete = true
+        for name in allColorNames() {
+            if !resolveColorChecked(stack, name, kcuLight()).found { complete = false }
+            if !resolveColorChecked(stack, name, kcuDark()).found { complete = false }
+            if !resolveColorChecked(stack, name, kcuLightHighContrast()).found { complete = false }
+        }
+        return complete
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+construct KcuEveryDeclaredMaterialResolvesInEveryAppearance() extends Test {
+    test {
+        let stack = catalogStackOf(kcuDefaultCatalog())
+        var complete = true
+        for name in allMaterialNames() {
+            if !resolveMaterial(stack, name, kcuLight()).found { complete = false }
+            if !resolveMaterial(stack, name, kcuDark()).found { complete = false }
+            if !resolveMaterial(stack, name, kcuReducedTransparency()).found { complete = false }
+        }
+        return complete
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+construct KcuEveryDeclaredTextStyleResolves() extends Test {
+    test {
+        let stack = catalogStackOf(kcuDefaultCatalog())
+        var complete = true
+        for name in allTextStyleNames() {
+            let resolved = resolveTypography(stack, name, kcuLight())
+            if !resolved.found || resolved.value.size <= 0.0 || resolved.value.lineHeight <= 0.0 {
+                complete = false
+            }
+        }
+        return complete
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// A label that did not change between appearances would mean the catalog is
+// carrying one value under two renditions.
+construct KcuTheLabelColourDiffersBetweenAppearances() extends Test {
+    test {
+        let stack = catalogStackOf(kcuDefaultCatalog())
+        let light = resolveColor(stack, colorLabel(), kcuLight())
+        let dark = resolveColor(stack, colorLabel(), kcuDark())
+        return !kcuColorsEqual(light, dark) && light.r < dark.r
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+construct KcuHighContrastDarkensTheLabelInLight() extends Test {
+    test {
+        let stack = catalogStackOf(kcuDefaultCatalog())
+        let standard = resolveColor(stack, colorLabel(), kcuLight())
+        let high = resolveColor(stack, colorLabel(), kcuLightHighContrast())
+        return high.r < standard.r
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// Apple's hierarchical styles are aliases in the shipped catalog, so they track
+// the labels they name in every appearance without a second set of numbers.
+construct KcuTheHierarchicalStylesAliasTheLabels() extends Test {
+    test {
+        let stack = catalogStackOf(kcuDefaultCatalog())
+        var agrees = true
+        if !kcuColorsEqual(resolveColor(stack, colorPrimary(), kcuDark()), resolveColor(stack, colorLabel(), kcuDark())) {
+            agrees = false
+        }
+        if !kcuColorsEqual(resolveColor(stack, colorForeground(), kcuLight()), resolveColor(stack, colorLabel(), kcuLight())) {
+            agrees = false
+        }
+        if !kcuColorsEqual(resolveColor(stack, colorAccentColor(), kcuDark()), resolveColor(stack, colorTint(), kcuDark())) {
+            agrees = false
+        }
+        return agrees
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// The material ladder gets thicker, and its tint follows the appearance because
+// the recipe names a colour rather than carrying one.
+construct KcuTheMaterialLadderThickensAndFollowsTheAppearance() extends Test {
+    test {
+        let stack = catalogStackOf(kcuDefaultCatalog())
+        let thin = resolveMaterial(stack, materialUltraThin(), kcuLight())
+        let thick = resolveMaterial(stack, materialUltraThick(), kcuLight())
+        if materialBlurRadius(thin) >= materialBlurRadius(thick) {
+            return false
+        }
+        let lightRegular = resolveMaterial(stack, materialRegular(), kcuLight())
+        let darkRegular = resolveMaterial(stack, materialRegular(), kcuDark())
+        let background = resolveColor(stack, colorSystemBackground(), kcuDark())
+        return kcuColorsEqual(darkRegular.layers[2].color, background)
+            && !kcuColorsEqual(lightRegular.layers[2].color, darkRegular.layers[2].color)
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// Reduced transparency swaps the recipe rather than dimming it.
+construct KcuReducedTransparencyRemovesTheBlurFromEveryMaterial() extends Test {
+    test {
+        let stack = catalogStackOf(kcuDefaultCatalog())
+        var opaque = true
+        for name in allMaterialNames() {
+            if materialBlurRadius(resolveMaterial(stack, name, kcuReducedTransparency())) != 0.0 {
+                opaque = false
+            }
+        }
+        return opaque
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// The bar is the only material in the ladder that draws its own hairline.
+construct KcuOnlyTheBarMaterialCarriesABorder() extends Test {
+    test {
+        let stack = catalogStackOf(kcuDefaultCatalog())
+        var borders = 0
+        for name in allMaterialNames() {
+            for layer in resolveMaterial(stack, name, kcuLight()).layers {
+                if layer.kind == .Border {
+                    borders = borders + 1
+                }
+            }
+        }
+        return borders
+    }
+    expect { let e: Result<Int, TestFailure> = Result.Ok(1); return e }
+}
+
+// The declared order is Apple's vocabulary order, which is not sorted by size:
+// `subheadline` is 13pt and the `body` after it is 15pt. What the ladder does
+// promise is that every style is usable and that the ends of it bracket the
+// rest.
+construct KcuTheTextLadderBracketsEveryStyle() extends Test {
+    test {
+        let stack = catalogStackOf(kcuDefaultCatalog())
+        let largest = resolveTypography(stack, textLargeTitle(), kcuLight()).value.size
+        let smallest = resolveTypography(stack, textCaption2(), kcuLight()).value.size
+        var bracketed = largest > smallest
+        for name in allTextStyleNames() {
+            let style = resolveTypography(stack, name, kcuLight()).value
+            if style.size > largest || style.size < smallest {
+                bracketed = false
+            }
+            if style.lineHeight < style.size {
+                bracketed = false
+            }
+        }
+        return bracketed
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// KiraUI's own body metrics, which the catalog was authored from. A change here
+// means the toolkit's text would move.
+construct KcuTheBodyStyleKeepsTheToolkitsOwnMetrics() extends Test {
+    test {
+        let stack = catalogStackOf(kcuDefaultCatalog())
+        let body = resolveTypography(stack, textBody(), kcuLight()).value
+        return body.size == 15.0 && body.lineHeight == 21.0 && body.weight == 400
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// --- The embedded mirror ---------------------------------------------------
+//
+// The framework's floor travels with the library rather than with a working
+// directory, so the shipped blob is mirrored into generated source. These are
+// what keep the two from drifting: a catalog edited in an editor and not
+// re-emitted fails here rather than shipping a stale floor.
+
+construct KcuTheEmbeddedCatalogMatchesTheShippedBlob() extends Test {
+    test {
+        let size: Int = fileSize(kcuDefaultCatalogPath())
+        let onDisk = readFileRange(kcuDefaultCatalogPath(), 0, size)
+        return kcuBytesEqual(onDisk, defaultCatalogBytes())
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// The embedded bytes go through the same parser a blob off disk does, so the
+// floor is not the one catalog in the system that was never checked.
+construct KcuTheEmbeddedCatalogParses() extends Test {
+    test { return defaultCatalog().resources.count == kcuDefaultCatalog().resources.count }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+construct KcuTheEmbeddedCatalogCoversEveryDeclaredName() extends Test {
+    test { return integrityHolds(checkIntegrity(defaultCatalog())) }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// A toolkit calls this once at start-up and needs nothing else to resolve a
+// colour.
+construct KcuDefaultResourcesResolveWithNoFileAtAll() extends Test {
+    test {
+        var resources = makeDefaultResources(kcuDark())
+        let ink = color(resources, colorLabel())
+        return !kcuColorsEqual(ink, debugColor()) && ink.r > 0.9
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+construct KcuHexRoundTripsArbitraryBytes() extends Test {
+    test {
+        var bytes: [U8] = []
+        for value in 0..256 {
+            bytes.append(value)
+        }
+        return kcuBytesEqual(bytes, hexToBytes(bytesToHex(bytes)))
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}

@@ -1,0 +1,17 @@
+// KCoreUI's test suite, in the Foundation `Test`-construct shape.
+//
+// Every case drives the public API: records through the writer, bytes through
+// the parser, names through the resolver. Nothing reaches inside a catalog to
+// assert on a field the format does not expose, because a test that does that
+// stops proving the format works and starts proving it has not changed.
+//
+//   kira test --backend vm tests/kcoreui_kik
+//   kira test --backend llvm tests/kcoreui_kik
+//
+// Both backends must agree. The framework is ordinary Kira and a catalog that
+// resolves differently under interpretation than under compilation is exactly
+// the class of bug the deterministic specificity rule exists to make impossible.
+//
+// The runner expands into this file, so what it calls has to be in scope here.
+import Foundation
+import KCoreUI

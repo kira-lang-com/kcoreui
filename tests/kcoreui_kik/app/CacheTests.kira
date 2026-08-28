@@ -1,0 +1,158 @@
+import Foundation
+import KCoreUI
+
+// The cache must be invisible.
+//
+// Every case here asks the same question twice: does the cached answer equal
+// the uncached one. A cache that is ever right about anything the resolver is
+// not is a cache that paints a stale colour after an appearance change, which
+// is the exact bug the environment-in-the-key design exists to prevent.
+
+function kcuCacheRecord() -> CatalogRecord {
+    var record = CatalogRecord()
+    record.resources.append(kcuAdaptive("label", kcuColor(0.0, 0.0, 0.0, 1.0), kcuColor(1.0, 1.0, 1.0, 1.0)))
+    record.resources.append(kcuAdaptive("tint", kcuColor(0.25, 0.5, 1.0, 1.0), kcuColor(0.5, 0.75, 1.0, 1.0)))
+    record.resources.append(kcuAlias("accentColor", "tint"))
+    return record
+}
+
+construct KcuACachedColourEqualsTheUncachedOne() extends Test {
+    test {
+        let stack = kcuStackOf(kcuCacheRecord())
+        var cache = makeDefaultCache()
+        let direct = resolveColor(stack, "label", kcuLight())
+        let cached = cachedColor(cache, stack, "label", kcuLight())
+        let again = cachedColor(cache, stack, "label", kcuLight())
+        return kcuColorsEqual(direct, cached) && kcuColorsEqual(direct, again)
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// The environment is part of the key, so nothing has to be invalidated when the
+// appearance changes and a value cached under the old one is still there when
+// it comes back.
+construct KcuTheEnvironmentIsPartOfTheKey() extends Test {
+    test {
+        let stack = kcuStackOf(kcuCacheRecord())
+        var cache = makeDefaultCache()
+        let light = cachedColor(cache, stack, "label", kcuLight())
+        let dark = cachedColor(cache, stack, "label", kcuDark())
+        let lightAgain = cachedColor(cache, stack, "label", kcuLight())
+        return kcuColorsEqual(light, kcuColor(0.0, 0.0, 0.0, 1.0))
+            && kcuColorsEqual(dark, kcuColor(1.0, 1.0, 1.0, 1.0))
+            && kcuColorsEqual(lightAgain, light)
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+construct KcuARepeatedLookupIsAHit() extends Test {
+    test {
+        let stack = kcuStackOf(kcuCacheRecord())
+        var cache = makeDefaultCache()
+        let _ = cachedColor(cache, stack, "label", kcuLight())
+        let missesAfterFirst = cache.misses
+        var index = 0
+        while index < 50 {
+            let _ = cachedColor(cache, stack, "label", kcuLight())
+            index = index + 1
+        }
+        return cache.misses == missesAfterFirst && cache.hits >= 50 && cacheHitRate(cache) > 90
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// Two kinds under one name must not share a slot.
+construct KcuTheKindIsPartOfTheKey() extends Test {
+    test {
+        var record = kcuCacheRecord()
+        var material = ResourceRecord()
+        material.name = "label"
+        material.kind = kindMaterial()
+        var recipe = MaterialValue()
+        recipe.layers.append(backdropBlurLayer(12.0))
+        var rendition = RenditionRecord()
+        rendition.payload = encodeMaterial(recipe)
+        material.renditions.append(rendition)
+        record.resources.append(material)
+
+        let stack = kcuStackOf(record)
+        var cache = makeDefaultCache()
+        let asColor = cachedColor(cache, stack, "label", kcuLight())
+        let asMaterial = cachedResolve(cache, stack, "label", kindMaterial(), kcuLight())
+        return kcuColorsEqual(asColor, kcuColor(0.0, 0.0, 0.0, 1.0))
+            && asMaterial.found
+            && asMaterial.kind == kindMaterial()
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// Pushing a catalog can change what any name means, so the cache is dropped.
+construct KcuPushingACatalogDropsTheCache() extends Test {
+    test {
+        var resources = makeResources(kcuCatalogOf(kcuCacheRecord()), kcuLight())
+        let before = color(resources, "label")
+
+        var overlay = CatalogRecord()
+        overlay.resources.append(kcuFlat("label", kcuColor(1.0, 0.0, 0.0, 1.0)))
+        pushCatalog(resources, kcuCatalogOf(overlay))
+        let after = color(resources, "label")
+
+        return kcuColorsEqual(before, kcuColor(0.0, 0.0, 0.0, 1.0))
+            && kcuColorsEqual(after, kcuColor(1.0, 0.0, 0.0, 1.0))
+            && resources.cache.hits == 0
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// An appearance change needs no invalidation at all, which is the whole reason
+// a view can hold a semantic name forever.
+construct KcuChangingTheAppearanceNeedsNoInvalidation() extends Test {
+    test {
+        var resources = makeResources(kcuCatalogOf(kcuCacheRecord()), kcuLight())
+        let light = color(resources, "accentColor")
+        setAppearance(resources, .Dark)
+        let dark = color(resources, "accentColor")
+        setAppearance(resources, .Light)
+        let lightAgain = color(resources, "accentColor")
+        return kcuColorsEqual(light, kcuColor(0.25, 0.5, 1.0, 1.0))
+            && kcuColorsEqual(dark, kcuColor(0.5, 0.75, 1.0, 1.0))
+            && kcuColorsEqual(lightAgain, light)
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+// A cache smaller than the working set still answers correctly; it only stops
+// answering quickly.
+construct KcuASmallCacheStaysCorrectUnderEviction() extends Test {
+    test {
+        let stack = kcuStackOf(kcuCacheRecord())
+        var cache = makeResolutionCache(16)
+        var index = 0
+        var correct = true
+        while index < 200 {
+            let value = cachedColor(cache, stack, "tint", kcuDark())
+            if !kcuColorsEqual(value, kcuColor(0.5, 0.75, 1.0, 1.0)) {
+                correct = false
+            }
+            let other = cachedColor(cache, stack, "label", kcuLight())
+            if !kcuColorsEqual(other, kcuColor(0.0, 0.0, 0.0, 1.0)) {
+                correct = false
+            }
+            index = index + 1
+        }
+        return correct
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}
+
+construct KcuClearingTheCacheResetsItsCounters() extends Test {
+    test {
+        let stack = kcuStackOf(kcuCacheRecord())
+        var cache = makeDefaultCache()
+        let _ = cachedColor(cache, stack, "label", kcuLight())
+        let _ = cachedColor(cache, stack, "label", kcuLight())
+        clearCache(cache)
+        return cache.hits == 0 && cache.misses == 0 && cacheHitRate(cache) == 0
+    }
+    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+}

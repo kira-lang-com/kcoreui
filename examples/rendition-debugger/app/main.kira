@@ -1,0 +1,110 @@
+import Foundation
+import KCoreUI
+
+// Why a name resolved the way it did.
+//
+// The failure mode of a variant system is not a value that is wrong; it is a
+// value that is right in every environment except one nobody thought to open.
+// This prints, for a handful of names, which rendition won under each
+// environment and what it pinned to win.
+//
+//     kira run examples/rendition-debugger
+//
+// Run from the repository root, so the shipped catalog is where it says it is.
+
+function catalogPath() -> String {
+    if fileExists("Resources/Default.kcui") {
+        return "Resources/Default.kcui"
+    }
+    return "../../Resources/Default.kcui"
+}
+
+function describe(label: borrow String, resources: borrow UIResources) {
+    printLine("")
+    printLine("=== " + label + " ===")
+    printLine(explainColor(resources, colorLabel()))
+    printLine(explainColor(resources, colorForeground()))
+    printLine(explainMaterial(resources, materialRegular()))
+}
+
+function channel(value: Float) -> String {
+    return String(Int(value * 255.0 + 0.5))
+}
+
+function showColor(resources: borrow mut UIResources, name: borrow String) {
+    let value = color(resources, name)
+    printLine("  " + name + "  rgba(" + channel(value.r) + ", " + channel(value.g)
+        + ", " + channel(value.b) + ", " + String(value.a) + ")")
+}
+
+function showRecipe(resources: borrow UIResources, name: borrow String) {
+    let recipe = material(resources, name)
+    printLine("  " + name + "  " + String(recipe.layers.count) + " layer(s), blur "
+        + String(materialBlurRadius(recipe)))
+    for layer in recipe.layers {
+        var line = "    "
+        match layer.kind {
+            BackdropBlur -> { line = line + "backdropBlur " + String(layer.amount) }
+            Saturation -> { line = line + "saturation " + String(layer.amount) }
+            Tint -> { line = line + "tint rgba(" + channel(layer.color.r) + ", " + channel(layer.color.g) + ", " + channel(layer.color.b) + ") at " + String(layer.opacity) }
+            Noise -> { line = line + "noise " + String(layer.amount) }
+            Border -> { line = line + "border " + String(layer.amount) + "pt" }
+            Fill -> { line = line + "fill rgba(" + channel(layer.color.r) + ", " + channel(layer.color.g) + ", " + channel(layer.color.b) + ") at " + String(layer.opacity) }
+        }
+        printLine(line)
+    }
+}
+
+function environmentFor(appearance: borrow Appearance, contrast: borrow Contrast, reduceTransparency: Bool) -> UIEnvironment {
+    var environment = UIEnvironment()
+    environment.appearance = appearance
+    environment.contrast = contrast
+    environment.reduceTransparency = reduceTransparency
+    environment.platform = .MacOS
+    environment.idiom = .Mac
+    return environment
+}
+
+function walk(label: borrow String, catalog: borrow Catalog, environment: borrow UIEnvironment) {
+    var resources = makeResources(catalog, environment)
+    printLine("")
+    printLine("--- " + label + " ---")
+    showColor(resources, colorLabel())
+    showColor(resources, colorSecondaryLabel())
+    showColor(resources, colorSystemBackground())
+    showColor(resources, colorForeground())
+    showColor(resources, colorAccentColor())
+    showRecipe(resources, materialRegular())
+    printLine("  cache: " + String(resources.cache.hits) + " hit(s), "
+        + String(resources.cache.misses) + " miss(es)")
+}
+
+@Main
+function main() -> Int {
+    let path = catalogPath()
+    let size: Int = fileSize(path)
+    attempt {
+        let catalog = try parseCatalog(readFileRange(path, 0, size))
+        printLine("catalog: " + path)
+        printLine("resources: " + String(catalog.resources.count)
+            + ", renditions: " + String(catalog.renditions.count))
+
+        walk("light", catalog, environmentFor(.Light, .Standard, false))
+        walk("dark", catalog, environmentFor(.Dark, .Standard, false))
+        walk("light, increased contrast", catalog, environmentFor(.Light, .High, false))
+        walk("dark, reduced transparency", catalog, environmentFor(.Dark, .Standard, true))
+
+        describe("why, in dark", makeResources(catalog, environmentFor(.Dark, .Standard, false)))
+        return 0
+    } handle {
+        NotKira { printLine("not a catalog: " + path); return 1 }
+        UnsupportedVersion { printLine("catalog is newer than this build"); return 1 }
+        TruncatedHeader { printLine("catalog is truncated"); return 1 }
+        TruncatedTable { printLine("catalog table runs past the end"); return 1 }
+        OffsetOutOfRange { printLine("catalog layout is not canonical"); return 1 }
+        NamesUnsorted { printLine("catalog name table is out of order"); return 1 }
+        ConstraintsUnsorted { printLine("catalog constraints are out of order"); return 1 }
+        DuplicateRendition { printLine("catalog has a duplicate rendition"); return 1 }
+        ReservedTraitValue { printLine("catalog uses the reserved trait value"); return 1 }
+    }
+}

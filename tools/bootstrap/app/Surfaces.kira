@@ -1,0 +1,137 @@
+import Foundation
+import KCoreUI
+
+// The default catalog's materials and text styles.
+//
+// A material here is a recipe whose tint is a *reference*, so the ladder is
+// authored once and is correct in both appearances without a second table. That
+// is the property the whole design exists for: nothing below re-authors a
+// material when the appearance changes, because the material never carried a
+// colour in the first place.
+//
+// Each material also carries a rendition for reduced transparency. When the
+// person using the interface has asked for it, the recipe is an opaque fill
+// with no blur and no saturation — a different recipe, not the same one with a
+// number turned down. Expressing that as a rendition rather than as a branch in
+// a compositor is the difference between an accessibility setting the catalog
+// answers and one every renderer has to remember.
+
+// The blur radii the ladder steps through, and the tint opacity at each step.
+function materialResource(name: borrow String, blurRadius: Float, tintOpacity: Float, hasBorder: Bool) -> ResourceRecord {
+    var resource = ResourceRecord()
+    resource.name = name
+    resource.kind = kindMaterial()
+
+    var translucent = MaterialValue()
+    translucent.layers.append(backdropBlurLayer(blurRadius))
+    translucent.layers.append(saturationLayer(1.4))
+    translucent.layers.append(tintLayer(referenceColor(colorSystemBackground()), tintOpacity, blendNormal()))
+    if hasBorder {
+        translucent.layers.append(borderLayer(referenceColor(colorSeparator()), 1.0))
+    }
+    var translucentRendition = RenditionRecord()
+    translucentRendition.payload = encodeMaterial(translucent)
+    resource.renditions.append(translucentRendition)
+
+    var opaque = MaterialValue()
+    opaque.layers.append(fillLayer(referenceColor(colorSystemBackground()), 1.0, blendNormal()))
+    if hasBorder {
+        opaque.layers.append(borderLayer(referenceColor(colorSeparator()), 1.0))
+    }
+    var opaqueRendition = RenditionRecord()
+    opaqueRendition.constraints.append(constrain(traitReduceTransparency(), flagValue(true)))
+    opaqueRendition.payload = encodeMaterial(opaque)
+    resource.renditions.append(opaqueRendition)
+    return resource
+}
+
+function defaultMaterialResources() -> [ResourceRecord] {
+    var records: [ResourceRecord] = []
+    records.append(materialResource(materialUltraThin(), 20.0, 0.3, false))
+    records.append(materialResource(materialThin(), 24.0, 0.5, false))
+    records.append(materialResource(materialRegular(), 28.0, 0.68, false))
+    records.append(materialResource(materialThick(), 32.0, 0.82, false))
+    records.append(materialResource(materialUltraThick(), 36.0, 0.94, false))
+    records.append(materialResource(materialBar(), 28.0, 0.8, true))
+    return records
+}
+
+// --- Text styles -----------------------------------------------------------
+//
+// Every metric here is KiraUI's own, so a toolkit reading text through the
+// catalog lays out exactly what it laid out before.
+
+function fontWeightRegular() -> Int { return 400 }
+function fontWeightSemiBold() -> Int { return 600 }
+function fontWeightBold() -> Int { return 700 }
+
+function textStyleResource(name: borrow String, size: Float, weight: Int, lineHeight: Float, tracking: Float) -> ResourceRecord {
+    var resource = ResourceRecord()
+    resource.name = name
+    resource.kind = kindTypography()
+
+    var value = TypographyValue()
+    value.size = size
+    value.weight = weight
+    value.lineHeight = lineHeight
+    value.tracking = tracking
+
+    var rendition = RenditionRecord()
+    rendition.payload = encodeTypography(value)
+    resource.renditions.append(rendition)
+    return resource
+}
+
+// Apple's eleven text styles.
+//
+// Every name the toolkit already had a token for carries the toolkit's own
+// metrics, so text laid out through the catalog is text laid out exactly as it
+// was before. `largeTitle`, `callout` and `caption2` are the three Apple names
+// nothing here had, and are authored to sit in the ladder the others make.
+//
+// `title3` is larger than `title2`, which is the toolkit's own arrangement and
+// is preserved rather than tidied: this change moves where the numbers live,
+// not what they are.
+function defaultTextStyleResources() -> [ResourceRecord] {
+    var records: [ResourceRecord] = []
+    records.append(textStyleResource(textLargeTitle(), 34.0, fontWeightBold(), 41.0, 0.0 - 0.4))
+    records.append(textStyleResource(textTitle(), 28.0, fontWeightBold(), 34.0, 0.0 - 0.3))
+    records.append(textStyleResource(textTitle2(), 24.0, fontWeightBold(), 29.0, 0.0 - 0.2))
+    records.append(textStyleResource(textTitle3(), 28.0, fontWeightBold(), 34.0, 0.0 - 0.2))
+    records.append(textStyleResource(textHeadline(), 18.0, fontWeightSemiBold(), 23.0, 0.0))
+    records.append(textStyleResource(textSubheadline(), 13.0, fontWeightRegular(), 18.0, 0.0))
+    records.append(textStyleResource(textBody(), 15.0, fontWeightRegular(), 21.0, 0.0))
+    records.append(textStyleResource(textCallout(), 14.0, fontWeightRegular(), 19.0, 0.0))
+    records.append(textStyleResource(textFootnote(), 11.0, fontWeightRegular(), 15.0, 0.0))
+    records.append(textStyleResource(textCaption(), 12.0, fontWeightRegular(), 16.0, 0.2))
+    records.append(textStyleResource(textCaption2(), 10.0, fontWeightRegular(), 13.0, 0.2))
+    return records
+}
+
+// The six text styles the toolkit has and Apple does not.
+//
+// `label` is one of them, and it is also a colour. That is not a collision: a
+// resource is keyed by name and kind together, so `label` the typeface and
+// `label` the ink are two resources and a lookup for one cannot return the
+// other.
+function toolkitTextStyleResources() -> [ResourceRecord] {
+    var records: [ResourceRecord] = []
+    records.append(textStyleResource("control", 15.0, fontWeightSemiBold(), 20.0, 0.0))
+    records.append(textStyleResource("bodyEmphasis", 14.0, fontWeightSemiBold(), 20.0, 0.0))
+    records.append(textStyleResource("overline", 10.0, fontWeightSemiBold(), 13.0, 0.5))
+    records.append(textStyleResource("label", 12.0, fontWeightSemiBold(), 16.0, 0.0))
+    records.append(textStyleResource("section", 16.0, fontWeightBold(), 20.0, 0.0))
+    records.append(textStyleResource("title1", 30.0, fontWeightBold(), 36.0, 0.0 - 0.3))
+    return records
+}
+
+// --- The whole catalog -----------------------------------------------------
+
+function defaultCatalogRecord() -> CatalogRecord {
+    var record = CatalogRecord()
+    for entry in defaultColorResources() { record.resources.append(entry) }
+    for entry in defaultMaterialResources() { record.resources.append(entry) }
+    for entry in defaultTextStyleResources() { record.resources.append(entry) }
+    for entry in toolkitTextStyleResources() { record.resources.append(entry) }
+    return record
+}

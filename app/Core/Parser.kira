@@ -1,0 +1,282 @@
+import Foundation
+
+// `.kcui` bytes in, a catalog out, or a typed reason why not.
+//
+// The parser is strict and total. Blobs arrive from an editor and eventually
+// from packages this program did not build, so every offset is checked against
+// the buffer, every table is checked for the canonical order the writer emits,
+// and nothing here traps: a malformed blob is a `CatalogError`, never a stopped
+// program.
+//
+// Strictness is also what makes write-back byte-exact. Because the accepted set
+// is exactly the canonical set, a catalog that loaded can only have been laid
+// out one way, so writing it again reproduces it.
+
+// The constraint list of one rendition, copied out.
+function renditionConstraints(catalog: borrow Catalog, renditionIndex: Int) -> [CatalogConstraint] {
+    var list: [CatalogConstraint] = []
+    if renditionIndex < 0 || renditionIndex >= catalog.renditions.count {
+        return list
+    }
+    let rendition = catalog.renditions[renditionIndex]
+    var index = 0
+    while index < rendition.constraintCount {
+        let position = rendition.firstConstraint + index
+        if position >= 0 && position < catalog.constraints.count {
+            list.append(catalog.constraints[position])
+        }
+        index = index + 1
+    }
+    return list
+}
+
+// Header checks, before any table is trusted enough to read.
+function parseHeaderError(bytes: borrow [U8]) -> CatalogError {
+    if bytes.count < blobHeaderSize() {
+        return .TruncatedHeader
+    }
+    if readU8(bytes, 0) != blobMagic0() || readU8(bytes, 1) != blobMagic1() {
+        return .NotKira
+    }
+    if readU8(bytes, 2) != blobMagic2() || readU8(bytes, 3) != blobMagic3() {
+        return .NotKira
+    }
+    if readU16(bytes, blobOffsetMajor()) > blobMajorVersion() {
+        return .UnsupportedVersion
+    }
+    return .TruncatedHeader
+}
+
+function headerIsWellFormed(bytes: borrow [U8]) -> Bool {
+    if bytes.count < blobHeaderSize() {
+        return false
+    }
+    if readU8(bytes, 0) != blobMagic0() || readU8(bytes, 1) != blobMagic1() {
+        return false
+    }
+    if readU8(bytes, 2) != blobMagic2() || readU8(bytes, 3) != blobMagic3() {
+        return false
+    }
+    return readU16(bytes, blobOffsetMajor()) <= blobMajorVersion()
+}
+
+// Whether the section starts in the header are the only ones the writer could
+// have produced for these counts. Canonical layout is checked rather than
+// tolerated, because a blob with slack between sections would write back as a
+// different file.
+function sectionsAreCanonical(bytes: borrow [U8]) -> Bool {
+    let resourceCount = readU32(bytes, blobOffsetResourceCount())
+    let renditionCount = readU32(bytes, blobOffsetRenditionCount())
+    let constraintCount = readU32(bytes, blobOffsetConstraintCount())
+    let nameCount = readU32(bytes, blobOffsetNameCount())
+    let payloadCount = readU32(bytes, blobOffsetPayloadCount())
+
+    let resourceStart = blobHeaderSize()
+    let renditionStart = resourceStart + resourceCount * blobResourceEntrySize()
+    let constraintStart = renditionStart + renditionCount * blobRenditionEntrySize()
+    let nameStart = constraintStart + constraintCount * blobConstraintEntrySize()
+    let payloadStart = nameStart + nameCount
+    let totalSize = payloadStart + payloadCount
+
+    if readU32(bytes, blobOffsetResourceStart()) != resourceStart { return false }
+    if readU32(bytes, blobOffsetRenditionStart()) != renditionStart { return false }
+    if readU32(bytes, blobOffsetConstraintStart()) != constraintStart { return false }
+    if readU32(bytes, blobOffsetNameStart()) != nameStart { return false }
+    if readU32(bytes, blobOffsetPayloadStart()) != payloadStart { return false }
+    if readU32(bytes, blobOffsetTotalSize()) != totalSize { return false }
+    return totalSize == bytes.count
+}
+
+// Tables read verbatim. Every offset in them is checked afterwards.
+function readTables(bytes: borrow [U8]) -> Catalog {
+    var catalog = Catalog()
+    catalog.majorVersion = readU16(bytes, blobOffsetMajor())
+    catalog.minorVersion = readU16(bytes, blobOffsetMinor())
+    catalog.flags = readU32(bytes, blobOffsetFlags())
+
+    let resourceCount = readU32(bytes, blobOffsetResourceCount())
+    let renditionCount = readU32(bytes, blobOffsetRenditionCount())
+    let constraintCount = readU32(bytes, blobOffsetConstraintCount())
+    let resourceStart = readU32(bytes, blobOffsetResourceStart())
+    let renditionStart = readU32(bytes, blobOffsetRenditionStart())
+    let constraintStart = readU32(bytes, blobOffsetConstraintStart())
+
+    var index = 0
+    while index < resourceCount {
+        let base = resourceStart + index * blobResourceEntrySize()
+        var resource = CatalogResource()
+        resource.nameOffset = readU32(bytes, base)
+        resource.nameCount = readU32(bytes, base + 4)
+        resource.kind = readU32(bytes, base + 8)
+        resource.firstRendition = readU32(bytes, base + 12)
+        resource.renditionCount = readU32(bytes, base + 16)
+        catalog.resources.append(resource)
+        index = index + 1
+    }
+
+    index = 0
+    while index < renditionCount {
+        let base = renditionStart + index * blobRenditionEntrySize()
+        var rendition = CatalogRendition()
+        rendition.firstConstraint = readU32(bytes, base)
+        rendition.constraintCount = readU32(bytes, base + 4)
+        rendition.payloadOffset = readU32(bytes, base + 8)
+        rendition.payloadCount = readU32(bytes, base + 12)
+        catalog.renditions.append(rendition)
+        index = index + 1
+    }
+
+    index = 0
+    while index < constraintCount {
+        let base = constraintStart + index * blobConstraintEntrySize()
+        var entry = CatalogConstraint()
+        entry.identifier = readU32(bytes, base)
+        entry.value = readU32(bytes, base + 4)
+        catalog.constraints.append(entry)
+        index = index + 1
+    }
+
+    catalog.nameBytes = sliceBytes(bytes, readU32(bytes, blobOffsetNameStart()), readU32(bytes, blobOffsetNameCount()))
+    catalog.payload = sliceBytes(bytes, readU32(bytes, blobOffsetPayloadStart()), readU32(bytes, blobOffsetPayloadCount()))
+    return catalog
+}
+
+// Names contiguous from zero, in ascending byte order.
+function namesAreCanonical(catalog: borrow Catalog) -> Bool {
+    var cursor = 0
+    for index in 0..catalog.resources.count {
+        let resource = catalog.resources[index]
+        if resource.nameOffset != cursor {
+            return false
+        }
+        if resource.nameCount < 0 || cursor + resource.nameCount > catalog.nameBytes.count {
+            return false
+        }
+        if index > 0 {
+            let previous = catalog.resources[index - 1]
+            let order = compareSlices(catalog.nameBytes, previous.nameOffset, previous.nameCount, resource.nameOffset, resource.nameCount)
+            if order > 0 {
+                return false
+            }
+            // One name may carry several kinds, so equal names are ordered by
+            // kind. Two entries equal in both are the same resource twice.
+            if order == 0 && previous.kind >= resource.kind {
+                return false
+            }
+        }
+        cursor = cursor + resource.nameCount
+    }
+    return cursor == catalog.nameBytes.count
+}
+
+// Renditions and payloads contiguous in resource order.
+function spansAreContiguous(catalog: borrow Catalog) -> Bool {
+    var renditionCursor = 0
+    for resource in catalog.resources {
+        if resource.firstRendition != renditionCursor {
+            return false
+        }
+        if resource.renditionCount < 0 || renditionCursor + resource.renditionCount > catalog.renditions.count {
+            return false
+        }
+        renditionCursor = renditionCursor + resource.renditionCount
+    }
+    if renditionCursor != catalog.renditions.count {
+        return false
+    }
+
+    var constraintCursor = 0
+    var payloadCursor = 0
+    for rendition in catalog.renditions {
+        if rendition.firstConstraint != constraintCursor {
+            return false
+        }
+        if rendition.constraintCount < 0 || constraintCursor + rendition.constraintCount > catalog.constraints.count {
+            return false
+        }
+        if rendition.payloadOffset != payloadCursor {
+            return false
+        }
+        if rendition.payloadCount < 0 || payloadCursor + rendition.payloadCount > catalog.payload.count {
+            return false
+        }
+        constraintCursor = constraintCursor + rendition.constraintCount
+        payloadCursor = payloadCursor + rendition.payloadCount
+    }
+    return constraintCursor == catalog.constraints.count && payloadCursor == catalog.payload.count
+}
+
+// Constraints ascending by identifier, no identifier twice, no reserved value.
+function constraintsAreCanonical(catalog: borrow Catalog) -> Int {
+    for rendition in catalog.renditions {
+        var index = 0
+        while index < rendition.constraintCount {
+            let entry = catalog.constraints[rendition.firstConstraint + index]
+            if entry.value == 0 {
+                return 2
+            }
+            if index > 0 {
+                let previous = catalog.constraints[rendition.firstConstraint + index - 1]
+                if previous.identifier >= entry.identifier {
+                    return 1
+                }
+            }
+            index = index + 1
+        }
+    }
+    return 0
+}
+
+// A resource's renditions in canonical order, and no two pinning the same
+// traits to the same values. A duplicate has no defined winner, so it is
+// refused at load rather than resolved arbitrarily at paint time.
+function renditionOrderIsCanonical(catalog: borrow Catalog) -> Int {
+    for resource in catalog.resources {
+        var index = 1
+        while index < resource.renditionCount {
+            let previous = renditionConstraints(catalog, resource.firstRendition + index - 1)
+            let current = renditionConstraints(catalog, resource.firstRendition + index)
+            let order = compareConstraintLists(previous, current)
+            if order == 0 {
+                return 2
+            }
+            if order > 0 {
+                return 1
+            }
+            index = index + 1
+        }
+    }
+    return 0
+}
+
+// The whole of loading, in the order the checks depend on each other.
+function parseCatalog(bytes: borrow [U8]) -> Result<Catalog, CatalogError> {
+    if !headerIsWellFormed(bytes) {
+        return .Error(parseHeaderError(bytes))
+    }
+    if !sectionsAreCanonical(bytes) {
+        return .Error(.OffsetOutOfRange)
+    }
+    let catalog = readTables(bytes)
+    if !namesAreCanonical(catalog) {
+        return .Error(.NamesUnsorted)
+    }
+    if !spansAreContiguous(catalog) {
+        return .Error(.TruncatedTable)
+    }
+    let constraintOrder = constraintsAreCanonical(catalog)
+    if constraintOrder == 1 {
+        return .Error(.ConstraintsUnsorted)
+    }
+    if constraintOrder == 2 {
+        return .Error(.ReservedTraitValue)
+    }
+    let renditionOrder = renditionOrderIsCanonical(catalog)
+    if renditionOrder == 1 {
+        return .Error(.ConstraintsUnsorted)
+    }
+    if renditionOrder == 2 {
+        return .Error(.DuplicateRendition)
+    }
+    return .Ok(catalog)
+}

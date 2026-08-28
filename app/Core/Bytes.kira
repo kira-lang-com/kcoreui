@@ -1,0 +1,294 @@
+import Foundation
+
+// Byte-level primitives for the catalog format.
+//
+// Every scalar on the wire is a little-endian unsigned integer, and every
+// fractional quantity is a 16.16 fixed-point integer. The format carries no
+// IEEE floats at all: an encoding decision about NaN, negative zero, or
+// rounding would be a decision three backends could disagree about, and a
+// resource database that resolves differently on the VM and on LLVM is not a
+// resource database.
+
+// The scale of a 16.16 fixed-point value. One unit is 1/65536.
+function fixedScale() -> Int {
+    return 65536
+}
+
+// A fractional value as it is written to the wire. Rounds half away from zero
+// so the sign of a value never decides which way it rounds.
+function fixedFromFloat(value: Float) -> Int {
+    let scaled = value * Float(fixedScale())
+    if scaled < 0.0 {
+        return Int(scaled - 0.5)
+    }
+    return Int(scaled + 0.5)
+}
+
+// The inverse, exact for every value `fixedFromFloat` can produce.
+function floatFromFixed(value: Int) -> Float {
+    return Float(value) / Float(fixedScale())
+}
+
+// --- Writing ---------------------------------------------------------------
+
+function appendU8(bytes: borrow mut [U8], value: Int) {
+    bytes.append(value & 255)
+}
+
+function appendU16(bytes: borrow mut [U8], value: Int) {
+    bytes.append(value & 255)
+    bytes.append((value >> 8) & 255)
+}
+
+function appendU32(bytes: borrow mut [U8], value: Int) {
+    bytes.append(value & 255)
+    bytes.append((value >> 8) & 255)
+    bytes.append((value >> 16) & 255)
+    bytes.append((value >> 24) & 255)
+}
+
+// A signed 32-bit value, two's complement. Sign-extension on the way back out
+// is what `readI32` undoes.
+function appendI32(bytes: borrow mut [U8], value: Int) {
+    appendU32(bytes, value)
+}
+
+function appendBytes(bytes: borrow mut [U8], extra: borrow [U8]) {
+    for byte in extra {
+        bytes.append(byte)
+    }
+}
+
+// A string as its own bytes, with no length and no terminator. Length is the
+// caller's to record, because every string in the format sits in a table whose
+// entries already carry offsets.
+function appendStringBytes(bytes: borrow mut [U8], text: borrow String) {
+    var index = 0
+    while index < text.count {
+        bytes.append(text.charAt(index) & 255)
+        index = index + 1
+    }
+}
+
+// --- Reading ---------------------------------------------------------------
+//
+// Every read is bounds-checked and answers zero past the end rather than
+// trapping. A parser that trapped on a short buffer would turn a malformed blob
+// into a stopped program; the parser above these validates offsets and reports
+// a typed failure instead.
+
+function readU8(bytes: borrow [U8], offset: Int) -> Int {
+    if offset < 0 || offset >= bytes.count {
+        return 0
+    }
+    let value: Int = bytes[offset]
+    return value & 255
+}
+
+function readU16(bytes: borrow [U8], offset: Int) -> Int {
+    return readU8(bytes, offset) | (readU8(bytes, offset + 1) << 8)
+}
+
+function readU32(bytes: borrow [U8], offset: Int) -> Int {
+    var value = readU8(bytes, offset)
+    value = value | (readU8(bytes, offset + 1) << 8)
+    value = value | (readU8(bytes, offset + 2) << 16)
+    value = value | (readU8(bytes, offset + 3) << 24)
+    return value
+}
+
+// The signed reading of the same four bytes.
+function readI32(bytes: borrow [U8], offset: Int) -> Int {
+    let raw = readU32(bytes, offset)
+    if raw >= 2147483648 {
+        return raw - 4294967296
+    }
+    return raw
+}
+
+// A slice, clamped to what is there.
+function sliceBytes(bytes: borrow [U8], offset: Int, count: Int) -> [U8] {
+    var slice: [U8] = []
+    if count <= 0 {
+        return slice
+    }
+    var index = offset
+    let end = offset + count
+    while index < end {
+        if index >= 0 && index < bytes.count {
+            slice.append(bytes[index])
+        }
+        index = index + 1
+    }
+    return slice
+}
+
+// --- Text ------------------------------------------------------------------
+
+// A string as bytes. `charAt` is already a byte read, so this is a copy rather
+// than an encoding.
+function stringBytes(text: borrow String) -> [U8] {
+    var bytes: [U8] = []
+    appendStringBytes(bytes, text)
+    return bytes
+}
+
+// How many bytes the scalar starting at `offset` occupies, by its lead byte.
+// A continuation byte or an invalid lead answers one, so a malformed sequence
+// advances rather than looping.
+function utf8SequenceLength(lead: Int) -> Int {
+    if lead < 128 { return 1 }
+    if lead >= 240 { return 4 }
+    if lead >= 224 { return 3 }
+    if lead >= 192 { return 2 }
+    return 1
+}
+
+// UTF-8 bytes back to a string.
+//
+// The format stores text as bytes and compares it as bytes, so this is needed
+// only where a payload hands text back to a caller — a typeface family name.
+// A byte that begins no valid sequence is replaced rather than dropped, so the
+// result's length still tracks the input's shape.
+function stringFromBytes(bytes: borrow [U8]) -> String {
+    var text = ""
+    var cursor = 0
+    while cursor < bytes.count {
+        let lead = readU8(bytes, cursor)
+        let length = utf8SequenceLength(lead)
+        // How far this scalar advances the cursor. A byte that begins no valid
+        // sequence advances one, so a malformed run cannot stall the walk.
+        var stride = 1
+        if lead < 128 {
+            text = text + scalarText(lead)
+        } else if length == 1 || cursor + length > bytes.count {
+            text = text + scalarText(65533)
+        } else {
+            var code = 0
+            if length == 2 { code = lead & 31 }
+            if length == 3 { code = lead & 15 }
+            if length == 4 { code = lead & 7 }
+            var valid = true
+            for step in 1..length {
+                let continuation = readU8(bytes, cursor + step)
+                if continuation < 128 || continuation >= 192 {
+                    valid = false
+                }
+                code = (code << 6) | (continuation & 63)
+            }
+            text = valid ? text + scalarText(code) : text + scalarText(65533)
+            stride = length
+        }
+        cursor = cursor + stride
+    }
+    return text
+}
+
+// --- Hex --------------------------------------------------------------------
+//
+// How the default catalog ships inside the library.
+//
+// A framework's floor cannot be a file path: a library does not know what
+// directory the program using it will be run from, and a resource system whose
+// completeness depends on a relative path is a resource system that resolves to
+// the debug colour on someone else's machine. So the shipped blob is mirrored
+// into generated source as hex, which survives being a Kira string literal in a
+// way arbitrary bytes do not.
+
+function hexDigitValue(code: Int) -> Int {
+    if code >= 48 && code <= 57 { return code - 48 }
+    if code >= 97 && code <= 102 { return code - 87 }
+    if code >= 65 && code <= 70 { return code - 55 }
+    return 0 - 1
+}
+
+function appendHex(text: borrow mut String, value: Int) {
+    let digits = "0123456789abcdef"
+    text = text + digits.substring((value >> 4) & 15, ((value >> 4) & 15) + 1)
+    text = text + digits.substring(value & 15, (value & 15) + 1)
+}
+
+// Bytes as lowercase hex, with no separators.
+function bytesToHex(bytes: borrow [U8]) -> String {
+    var text = ""
+    for byte in bytes {
+        let value: Int = byte
+        appendHex(text, value)
+    }
+    return text
+}
+
+// The inverse. An odd length or a non-hex character stops the decode where it
+// is, so a damaged literal produces a short buffer the parser then refuses
+// rather than a buffer of plausible rubbish.
+function appendHexBytes(bytes: borrow mut [U8], text: borrow String) {
+    var index = 0
+    while index + 1 < text.count {
+        let high = hexDigitValue(text.charAt(index))
+        let low = hexDigitValue(text.charAt(index + 1))
+        if high < 0 || low < 0 {
+            return
+        }
+        bytes.append((high << 4) | low)
+        index = index + 2
+    }
+}
+
+function hexToBytes(text: borrow String) -> [U8] {
+    var bytes: [U8] = []
+    appendHexBytes(bytes, text)
+    return bytes
+}
+
+// --- Comparison ------------------------------------------------------------
+
+// Lexicographic byte order over a slice of `bytes` and a whole string. This is
+// what the name table is sorted by and what a lookup binary-searches with, so
+// a name never has to be rebuilt into a `String` to be found.
+//
+// Answers a negative number when the slice sorts first, zero when they are
+// equal, and a positive number otherwise.
+function compareSliceToString(bytes: borrow [U8], offset: Int, count: Int, text: borrow String) -> Int {
+    var index = 0
+    let shorter = count < text.count ? count : text.count
+    while index < shorter {
+        let left = readU8(bytes, offset + index)
+        let right = text.charAt(index) & 255
+        if left != right {
+            return left - right
+        }
+        index = index + 1
+    }
+    return count - text.count
+}
+
+// The same order over two slices of the same buffer, which is what the writer
+// sorts the name table with.
+function compareSlices(bytes: borrow [U8], leftOffset: Int, leftCount: Int, rightOffset: Int, rightCount: Int) -> Int {
+    var index = 0
+    let shorter = leftCount < rightCount ? leftCount : rightCount
+    while index < shorter {
+        let left = readU8(bytes, leftOffset + index)
+        let right = readU8(bytes, rightOffset + index)
+        if left != right {
+            return left - right
+        }
+        index = index + 1
+    }
+    return leftCount - rightCount
+}
+
+// Byte order over two strings, for the writer's own sort.
+function compareStrings(left: borrow String, right: borrow String) -> Int {
+    var index = 0
+    let shorter = left.count < right.count ? left.count : right.count
+    while index < shorter {
+        let a = left.charAt(index) & 255
+        let b = right.charAt(index) & 255
+        if a != b {
+            return a - b
+        }
+        index = index + 1
+    }
+    return left.count - right.count
+}

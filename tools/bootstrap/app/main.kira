@@ -73,12 +73,6 @@ function main() -> Int {
             return reportFailure("could not write " + path)
         }
         printLine("bootstrap: wrote " + path)
-
-        let source = emitDefaultCatalogSource(bytes, catalog.resources.count, catalog.renditions.count)
-        if !writeFile(emittedPath(), source) {
-            return reportFailure("could not write " + emittedPath())
-        }
-        printLine("bootstrap: wrote " + emittedPath())
         printLine("bootstrap: " + String(catalog.resources.count) + " resources, "
             + String(catalog.renditions.count) + " renditions, "
             + String(bytes.count) + " bytes")

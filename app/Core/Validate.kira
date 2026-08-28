@@ -52,9 +52,16 @@ function issue(kind: borrow ValidationKind, name: borrow String, detail: borrow 
 
 // --- Reference extraction --------------------------------------------------
 
-function appendReference(names: borrow mut [String], value: borrow ColorValue) {
-    if value.isReference {
-        names.append(value.reference)
+function appendReference(names: borrow mut [String], source: borrow ColorSource) {
+    if source.isReference {
+        names.append(source.reference)
+    }
+}
+
+// Every name a colour's layer stack points at.
+function appendLayerReferences(names: borrow mut [String], value: borrow ColorValue) {
+    for layer in value.layers {
+        appendReference(names, layer.source)
     }
 }
 
@@ -66,7 +73,7 @@ function payloadReferences(kind: Int, bytes: borrow [U8]) -> [String] {
     if kind == kindColor() {
         let read = decodeColorPayload(bytes)
         if read.ok {
-            appendReference(names, read.value)
+            appendLayerReferences(names, read.value)
         }
         return names
     }

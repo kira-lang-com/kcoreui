@@ -9,7 +9,7 @@ import KCoreUI
 
 function kcuRendition(color: borrow Color) -> RenditionRecord {
     var rendition = RenditionRecord()
-    rendition.payload = encodeColor(color)
+    rendition.payload = kcuAuthored(color)
     return rendition
 }
 

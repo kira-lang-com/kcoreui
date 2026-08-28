@@ -170,11 +170,11 @@ construct KcuRenditionOrderDoesNotChangeTheBytes() extends Test {
         swapped.kind = kindColor()
         var darkFirst = RenditionRecord()
         darkFirst.constraints.append(whenAppearance(.Dark))
-        darkFirst.payload = encodeColor(kcuColor(0.9, 0.9, 0.9, 1.0))
+        darkFirst.payload = kcuAuthored(kcuColor(0.9, 0.9, 0.9, 1.0))
         swapped.renditions.append(darkFirst)
         var lightSecond = RenditionRecord()
         lightSecond.constraints.append(whenAppearance(.Light))
-        lightSecond.payload = encodeColor(kcuColor(0.1, 0.1, 0.1, 1.0))
+        lightSecond.payload = kcuAuthored(kcuColor(0.1, 0.1, 0.1, 1.0))
         swapped.renditions.append(lightSecond)
 
         var backward = CatalogRecord()

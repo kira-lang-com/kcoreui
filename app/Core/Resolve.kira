@@ -21,25 +21,60 @@ import Foundation
 function referenceDepthLimit() -> Int { return 16 }
 
 // --- Colours ---------------------------------------------------------------
+//
+// A colour is a stack of layers, so resolving one is: follow each layer's
+// source, composite them bottom to top in linear light, and hand the result
+// back in the gamut the environment reports.
+//
+// Everything between the catalog and that last step is linear-light Display P3.
+// A caller sees neither: what it receives is an encoded colour in its own
+// gamut, which is what a renderer draws.
 
-// A colour value with its references followed against the same environment.
-function resolveColorValue(stack: borrow CatalogStack, value: borrow ColorValue, environment: borrow UIEnvironment, depth: Int) -> Color {
-    if !value.isReference {
-        return value.color
+// One layer's colour, in linear Display P3, with its references followed.
+function resolveSourceLinear(stack: borrow CatalogStack, source: borrow ColorSource, environment: borrow UIEnvironment, depth: Int) -> Color {
+    if !source.isReference {
+        return decodeColor(source.color)
     }
     if depth >= referenceDepthLimit() {
-        return debugColor()
+        return decodeColor(debugColor())
     }
-    let resolved = resolveResource(stack, value.reference, kindColor(), environment)
-    if !resolved.found || resolved.kind != kindColor() {
-        return debugColor()
+    let resolved = resolveResource(stack, source.reference, kindColor(), environment)
+    if !resolved.found {
+        return decodeColor(debugColor())
     }
-    let payload = resolvedPayload(stack, resolved)
-    let read = decodeColorPayload(payload)
+    let read = decodeColorPayload(resolvedPayload(stack, resolved))
     if !read.ok {
-        return debugColor()
+        return decodeColor(debugColor())
     }
-    return resolveColorValue(stack, read.value, environment, depth + 1)
+    return compositeLayers(stack, read.value, environment, depth + 1)
+}
+
+// A layer stack composited, in linear Display P3.
+//
+// Bottom to top, source-over. An empty stack is fully transparent, which is a
+// colour a catalog is entitled to hold: a token meaning "draw nothing here"
+// says so with no layers rather than with an alpha nobody can see.
+function compositeLayers(stack: borrow CatalogStack, value: borrow ColorValue, environment: borrow UIEnvironment, depth: Int) -> Color {
+    var result = Color(r: 0.0, g: 0.0, b: 0.0, a: 0.0)
+    for layer in value.layers {
+        var source = resolveSourceLinear(stack, layer.source, environment, depth)
+        source.a = source.a * layer.opacity
+        result = compositeOver(source, result)
+    }
+    return result
+}
+
+// A colour value composited and handed back in the environment's gamut.
+function resolveColorValue(stack: borrow CatalogStack, value: borrow ColorValue, environment: borrow UIEnvironment, depth: Int) -> Color {
+    let composited = compositeLayers(stack, value, environment, depth)
+    return colorForGamut(encodeColorChannels(composited), environment.gamut)
+}
+
+// One layer source, resolved the way a gradient stop and a material tint need
+// it: followed, encoded, and in the environment's gamut.
+function resolveColorSource(stack: borrow CatalogStack, source: borrow ColorSource, environment: borrow UIEnvironment, depth: Int) -> Color {
+    let linear = resolveSourceLinear(stack, source, environment, depth)
+    return colorForGamut(encodeColorChannels(linear), environment.gamut)
 }
 
 // Whether a colour resolved, alongside the colour. For a debugger and for the
@@ -106,7 +141,7 @@ function resolveGradient(stack: borrow CatalogStack, name: borrow String, enviro
     for stop in read.value.stops {
         var resolvedStop = ResolvedGradientStop()
         resolvedStop.position = stop.position
-        resolvedStop.color = resolveColorValue(stack, stop.color, environment, 0)
+        resolvedStop.color = resolveColorSource(stack, stop.color, environment, 0)
         gradient.stops.append(resolvedStop)
     }
     return gradient
@@ -145,7 +180,7 @@ function resolveMaterial(stack: borrow CatalogStack, name: borrow String, enviro
         resolvedLayer.amount = layer.amount
         resolvedLayer.opacity = layer.opacity
         resolvedLayer.blend = layer.blend
-        resolvedLayer.color = resolveColorValue(stack, layer.color, environment, 0)
+        resolvedLayer.color = resolveColorSource(stack, layer.color, environment, 0)
         material.layers.append(resolvedLayer)
     }
     return material
@@ -198,7 +233,7 @@ function resolveEffect(stack: borrow CatalogStack, name: borrow String, environm
         resolvedOp.offsetY = op.offsetY
         resolvedOp.spread = op.spread
         resolvedOp.amount = op.amount
-        resolvedOp.color = resolveColorValue(stack, op.color, environment, 0)
+        resolvedOp.color = resolveColorSource(stack, op.color, environment, 0)
         effect.ops.append(resolvedOp)
     }
     return effect

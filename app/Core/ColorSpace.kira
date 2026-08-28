@@ -1,0 +1,160 @@
+import Foundation
+
+// The colour space a catalog is authored in, and the arithmetic to leave it.
+//
+// **Every colour in a catalog is Display P3.** One space, stated once, rather
+// than a per-colour tag nobody fills in correctly: a value with no declared
+// space is a value that means something different on each display it reaches,
+// and a resource system whose whole job is answering "what does this mean here"
+// cannot be vague about the one thing a colour *is*.
+//
+// Display P3 rather than sRGB because it is the wider of the two and the
+// conversion only loses what the narrower space could not have shown anyway.
+// An sRGB value embeds in P3 exactly, so authoring in P3 costs an sRGB-sourced
+// palette nothing.
+//
+// A resolved colour is converted to the gamut the environment reports. That is
+// what the `gamut` trait is for, and it is why a catalog authored once is
+// correct on a display that can show P3 and on one that cannot.
+//
+// Compositing happens in **linear light**. Layer alpha over a transfer-encoded
+// channel is the classic wrong answer — it darkens midtones and muddies every
+// blend — so a layer stack is decoded, composited, and encoded again.
+
+// --- Transfer curves -------------------------------------------------------
+//
+// Display P3 and sRGB share the sRGB transfer function; only their primaries
+// differ. So one pair of curves serves both, and moving between the spaces is
+// the matrix in the middle.
+
+// An encoded channel to linear light.
+function transferDecode(channel: Float) -> Float {
+    if channel <= 0.04045 {
+        return channel / 12.92
+    }
+    return pow((channel + 0.055) / 1.055, 2.4)
+}
+
+// Linear light back to an encoded channel.
+function transferEncode(channel: Float) -> Float {
+    if channel <= 0.0031308 {
+        return channel * 12.92
+    }
+    return 1.055 * pow(channel, 1.0 / 2.4) - 0.055
+}
+
+// --- Primaries -------------------------------------------------------------
+//
+// Both spaces are D65, so no chromatic adaptation stands between them and the
+// conversion is one 3x3 matrix each way. The coefficients are the product of
+// the two RGB-to-XYZ matrices, written out rather than multiplied at run time.
+
+// Linear Display P3 to linear sRGB.
+function p3ToSrgbLinear(color: borrow Color) -> Color {
+    return Color {
+        r: 1.2249401 * color.r - 0.2249404 * color.g + 0.0 * color.b
+        g: 0.0 - 0.0420569 * color.r + 1.0420571 * color.g + 0.0 * color.b
+        b: 0.0 - 0.0196376 * color.r - 0.0786361 * color.g + 1.0982735 * color.b
+        a: color.a
+    }
+}
+
+// Linear sRGB to linear Display P3, for authoring a value quoted in sRGB.
+function srgbToP3Linear(color: borrow Color) -> Color {
+    return Color {
+        r: 0.8224621 * color.r + 0.1775380 * color.g + 0.0 * color.b
+        g: 0.0331941 * color.r + 0.9668058 * color.g + 0.0 * color.b
+        b: 0.0170827 * color.r + 0.0723974 * color.g + 0.9105199 * color.b
+        a: color.a
+    }
+}
+
+// --- Whole-colour conversions ----------------------------------------------
+
+// An encoded colour to linear light, alpha untouched.
+//
+// Alpha is a coverage fraction rather than a light measurement, so it never
+// travels through a transfer curve.
+function decodeColor(color: borrow Color) -> Color {
+    return Color {
+        r: transferDecode(color.r)
+        g: transferDecode(color.g)
+        b: transferDecode(color.b)
+        a: color.a
+    }
+}
+
+function encodeColorChannels(color: borrow Color) -> Color {
+    return Color {
+        r: transferEncode(color.r)
+        g: transferEncode(color.g)
+        b: transferEncode(color.b)
+        a: color.a
+    }
+}
+
+// An encoded Display P3 colour as an encoded sRGB one.
+//
+// Out-of-gamut channels are clamped after the matrix: a saturated P3 green has
+// no sRGB spelling, and the nearest one it does have is the edge of the space.
+function p3ToSrgb(color: borrow Color) -> Color {
+    let converted = p3ToSrgbLinear(decodeColor(color))
+    let clamped = Color {
+        r: clampChannel(converted.r)
+        g: clampChannel(converted.g)
+        b: clampChannel(converted.b)
+        a: converted.a
+    }
+    return encodeColorChannels(clamped)
+}
+
+// The inverse, which is what authors a P3 catalog from values quoted in sRGB.
+// Nothing is clamped: every sRGB colour is inside P3.
+function srgbToP3(color: borrow Color) -> Color {
+    return encodeColorChannels(srgbToP3Linear(decodeColor(color)))
+}
+
+// A colour held to [0, 1] on every channel.
+function clampChannel(value: Float) -> Float {
+    if value < 0.0 {
+        return 0.0
+    }
+    if value > 1.0 {
+        return 1.0
+    }
+    return value
+}
+
+// The catalog's colour, in the gamut this environment reports.
+//
+// The one place a resolved colour leaves Display P3. A renderer that is not
+// colour managed is an sRGB one as far as this is concerned, which is what the
+// environment's default says.
+function colorForGamut(color: borrow Color, gamut: borrow DisplayGamut) -> Color {
+    match gamut {
+        SRGB -> return p3ToSrgb(color);
+        P3 -> return color;
+    }
+}
+
+// --- Compositing -----------------------------------------------------------
+
+// One layer over what is beneath it, source-over, in linear light.
+//
+// The standard Porter-Duff composite: the result's alpha is what the two cover
+// together, and each channel is weighted by how much of the result each layer
+// accounts for. A fully transparent result has no colour to speak of and
+// answers black rather than dividing by zero.
+function compositeOver(source: borrow Color, backdrop: borrow Color) -> Color {
+    let outAlpha = source.a + backdrop.a * (1.0 - source.a)
+    if outAlpha <= 0.0 {
+        return Color(r: 0.0, g: 0.0, b: 0.0, a: 0.0)
+    }
+    let backdropWeight = backdrop.a * (1.0 - source.a)
+    return Color {
+        r: (source.r * source.a + backdrop.r * backdropWeight) / outAlpha
+        g: (source.g * source.a + backdrop.g * backdropWeight) / outAlpha
+        b: (source.b * source.a + backdrop.b * backdropWeight) / outAlpha
+        a: outAlpha
+    }
+}

@@ -15,8 +15,17 @@ import KCoreUI
 // because the reference is resolved against the same environment the material
 // or the caller resolved against.
 
+// A colour quoted in sRGB, stored as the Display P3 the catalog holds.
+//
+// Every number below came from a design tool or from KiraUI's own tokens, and
+// both quote sRGB. The catalog is Display P3, so the conversion happens here,
+// once, at authoring — not at resolve, where it would be a guess about what the
+// stored numbers had meant.
+//
+// The two spaces share a transfer curve and a white point, so this is a matrix
+// in linear light and nothing is lost: every sRGB colour is inside P3.
 function rgba(r: Float, g: Float, b: Float, a: Float) -> Color {
-    return Color(r: r, g: g, b: b, a: a)
+    return srgbToP3(Color(r: r, g: g, b: b, a: a))
 }
 
 // A colour with a light and a dark rendition, which is the shape almost every

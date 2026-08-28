@@ -14,18 +14,19 @@ import Foundation
 
 function payloadVersion() -> Int { return 1 }
 
-// --- Colour values ---------------------------------------------------------
+// --- Colour sources --------------------------------------------------------
 //
-// A colour in a payload is either literal channels or the name of another
-// resource. The reference is what makes a material's tint follow the colour it
-// names: nothing is copied at author time, so a tint written against
-// `separator` is still right in dark appearance and in high contrast, because
-// the reference is resolved against the same environment as the material.
+// What one layer of a colour is made of: literal Display P3 channels, or the
+// name of another resource. The reference is what makes a material's tint
+// follow the colour it names — nothing is copied at author time, so a tint
+// written against `separator` is still right in dark appearance and in high
+// contrast, because the reference resolves against the same environment the
+// material did.
 
-function colorValueLiteral() -> Int { return 1 }
-function colorValueReference() -> Int { return 2 }
+function colorSourceLiteral() -> Int { return 1 }
+function colorSourceReference() -> Int { return 2 }
 
-struct ColorValue {
+struct ColorSource {
     var isReference: Bool = false
     var color: Color = Color()
     var reference: String = ""
@@ -33,56 +34,56 @@ struct ColorValue {
 
 // The colour a resolver answers with when a name is absent from every catalog
 // on the stack, or when a reference chain does not terminate. Deliberately
-// loud: the floor catalog is required to be complete and an integrity test
+// loud: the bottom catalog is required to be complete and an integrity test
 // proves it, so seeing this on screen means the stack was built wrong.
 function debugColor() -> Color {
     return Color(r: 1.0, g: 0.0, b: 1.0, a: 1.0)
 }
 
-function literalColor(color: borrow Color) -> ColorValue {
-    var value = ColorValue()
-    value.isReference = false
-    value.color = color
-    return value
+function literalColor(color: borrow Color) -> ColorSource {
+    var source = ColorSource()
+    source.isReference = false
+    source.color = color
+    return source
 }
 
-function referenceColor(name: borrow String) -> ColorValue {
-    var value = ColorValue()
-    value.isReference = true
-    value.reference = name
-    return value
+function referenceColor(name: borrow String) -> ColorSource {
+    var source = ColorSource()
+    source.isReference = true
+    source.reference = name
+    return source
 }
 
-function appendColorValue(bytes: borrow mut [U8], value: borrow ColorValue) {
-    if value.isReference {
-        appendU8(bytes, colorValueReference())
-        appendU16(bytes, value.reference.count)
-        appendStringBytes(bytes, value.reference)
+function appendColorSource(bytes: borrow mut [U8], source: borrow ColorSource) {
+    if source.isReference {
+        appendU8(bytes, colorSourceReference())
+        appendU16(bytes, source.reference.count)
+        appendStringBytes(bytes, source.reference)
     } else {
-        appendU8(bytes, colorValueLiteral())
-        appendI32(bytes, fixedFromFloat(value.color.r))
-        appendI32(bytes, fixedFromFloat(value.color.g))
-        appendI32(bytes, fixedFromFloat(value.color.b))
-        appendI32(bytes, fixedFromFloat(value.color.a))
+        appendU8(bytes, colorSourceLiteral())
+        appendI32(bytes, fixedFromFloat(source.color.r))
+        appendI32(bytes, fixedFromFloat(source.color.g))
+        appendI32(bytes, fixedFromFloat(source.color.b))
+        appendI32(bytes, fixedFromFloat(source.color.a))
     }
 }
 
-// A decoded value and where reading it ended. Kira has no tuples, so a reader
+// A decoded source and where reading it ended. Kira has no tuples, so a reader
 // that advances a cursor answers one of these.
-struct ColorValueRead {
-    var value: ColorValue = ColorValue()
+struct ColorSourceRead {
+    var value: ColorSource = ColorSource()
     var next: Int = 0
     var ok: Bool = false
 }
 
-function readColorValue(bytes: borrow [U8], offset: Int) -> ColorValueRead {
-    var read = ColorValueRead()
+function readColorSource(bytes: borrow [U8], offset: Int) -> ColorSourceRead {
+    var read = ColorSourceRead()
     read.next = offset
     if offset < 0 || offset >= bytes.count {
         return read
     }
     let tag = readU8(bytes, offset)
-    if tag == colorValueLiteral() {
+    if tag == colorSourceLiteral() {
         if offset + 17 > bytes.count {
             return read
         }
@@ -96,7 +97,7 @@ function readColorValue(bytes: borrow [U8], offset: Int) -> ColorValueRead {
         read.ok = true
         return read
     }
-    if tag == colorValueReference() {
+    if tag == colorSourceReference() {
         let length = readU16(bytes, offset + 1)
         if offset + 3 + length > bytes.count {
             return read
@@ -110,31 +111,105 @@ function readColorValue(bytes: borrow [U8], offset: Int) -> ColorValueRead {
     return read
 }
 
-// --- Colour resource -------------------------------------------------------
+// --- Colour resources ------------------------------------------------------
+//
+// A colour is a **stack of layers**, bottom to top, each with its own alpha.
+//
+// That is what a system colour actually is. A separator is ink at a tenth of an
+// opacity over whatever it sits on; a fill is a wash over a surface; a disabled
+// control is its own colour under a scrim. Flattening those into one RGBA at
+// author time throws away the structure and, worse, bakes in the backdrop —
+// which is exactly what a resource system must not do, because the backdrop
+// changes with the appearance.
+//
+// Layers composite source-over in linear light, in Display P3. A single-layer
+// colour is the common case and costs one layer.
 
-function encodeColorPayload(value: borrow ColorValue) -> [U8] {
+struct ColorLayer {
+    var source: ColorSource = ColorSource()
+    // Multiplies the source's own alpha. A layer written as "this ink at 10%"
+    // says so here rather than by editing the ink's alpha, so the ink stays the
+    // named colour it is.
+    var opacity: Float = 1.0
+}
+
+struct ColorValue {
+    var layers: [ColorLayer] = []
+}
+
+function colorLayer(source: borrow ColorSource, opacity: Float) -> ColorLayer {
+    var layer = ColorLayer()
+    layer.source = source
+    layer.opacity = opacity
+    return layer
+}
+
+// The one-layer case, which is most of them.
+function singleLayer(color: borrow Color) -> ColorValue {
+    var value = ColorValue()
+    value.layers.append(colorLayer(literalColor(color), 1.0))
+    return value
+}
+
+// One name meaning another, at full opacity.
+function aliasLayer(name: borrow String) -> ColorValue {
+    var value = ColorValue()
+    value.layers.append(colorLayer(referenceColor(name), 1.0))
+    return value
+}
+
+function encodeColorValue(value: borrow ColorValue) -> [U8] {
     var bytes: [U8] = []
     appendU8(bytes, payloadVersion())
-    appendColorValue(bytes, value)
+    appendU16(bytes, value.layers.count)
+    for layer in value.layers {
+        appendI32(bytes, fixedFromFloat(layer.opacity))
+        appendColorSource(bytes, layer.source)
+    }
     return bytes
 }
 
-// The common case: a literal colour with no variants of its own.
+// The common spellings, so a producer authoring one flat colour writes one call.
 function encodeColor(color: borrow Color) -> [U8] {
-    return encodeColorPayload(literalColor(color))
+    return encodeColorValue(singleLayer(color))
 }
 
-// An alias: this colour is whatever that one resolves to.
 function encodeColorAlias(name: borrow String) -> [U8] {
-    return encodeColorPayload(referenceColor(name))
+    return encodeColorValue(aliasLayer(name))
+}
+
+struct ColorValueRead {
+    var value: ColorValue = ColorValue()
+    var ok: Bool = false
 }
 
 function decodeColorPayload(bytes: borrow [U8]) -> ColorValueRead {
     var read = ColorValueRead()
-    if bytes.count < 1 || readU8(bytes, 0) != payloadVersion() {
+    if bytes.count < 3 || readU8(bytes, 0) != payloadVersion() {
         return read
     }
-    return readColorValue(bytes, 1)
+    let layerCount = readU16(bytes, 1)
+    var value = ColorValue()
+    var cursor = 3
+    var index = 0
+    while index < layerCount {
+        if cursor + 4 > bytes.count {
+            return read
+        }
+        var layer = ColorLayer()
+        layer.opacity = floatFromFixed(readI32(bytes, cursor))
+        let sourceRead = readColorSource(bytes, cursor + 4)
+        if !sourceRead.ok {
+            return read
+        }
+        layer.source = sourceRead.value
+        value.layers.append(layer)
+        cursor = sourceRead.next
+        index = index + 1
+    }
+    read.value = value
+    read.ok = true
+    return read
 }
 
 // --- Gradients -------------------------------------------------------------
@@ -162,7 +237,7 @@ function gradientKindFromValue(value: Int) -> GradientKind {
 // One stop, at a position along the gradient's own 0-to-1 axis.
 struct GradientStop {
     var position: Float = 0.0
-    var color: ColorValue = ColorValue()
+    var color: ColorSource = ColorSource()
 }
 
 // Start and end are in the resource's unit space: a linear gradient runs from
@@ -188,7 +263,7 @@ function encodeGradient(gradient: borrow GradientValue) -> [U8] {
     appendU16(bytes, gradient.stops.count)
     for stop in gradient.stops {
         appendI32(bytes, fixedFromFloat(stop.position))
-        appendColorValue(bytes, stop.color)
+        appendColorSource(bytes, stop.color)
     }
     return bytes
 }
@@ -218,13 +293,13 @@ function decodeGradient(bytes: borrow [U8]) -> GradientRead {
         }
         var stop = GradientStop()
         stop.position = floatFromFixed(readI32(bytes, cursor))
-        let colorRead = readColorValue(bytes, cursor + 4)
-        if !colorRead.ok {
+        let sourceRead = readColorSource(bytes, cursor + 4)
+        if !sourceRead.ok {
             return read
         }
-        stop.color = colorRead.value
+        stop.color = sourceRead.value
         gradient.stops.append(stop)
-        cursor = colorRead.next
+        cursor = sourceRead.next
         index = index + 1
     }
     read.value = gradient

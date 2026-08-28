@@ -120,3 +120,27 @@ function explainColor(resources: borrow UIResources, name: borrow String) -> Str
 function explainMaterial(resources: borrow UIResources, name: borrow String) -> String {
     return explain(resources, name, kindMaterial())
 }
+
+// --- The catalog a program ships -------------------------------------------
+
+// Where the default catalog sits, relative to the directory the program runs
+// from.
+//
+// A path and not an `Asset` declaration: `Asset`'s registry collects the
+// declarations of the *program* being compiled, and a library's do not join it,
+// so an `Asset` written here is a name the consuming program cannot see. The
+// program that ships this file is the one that declares it.
+//
+// There is nothing special about the file. It is a `.kcui` like any other, and
+// it is the floor only because a program puts it at the bottom of its stack.
+function defaultCatalogPath() -> String {
+    return "Resources/Default.kcui"
+}
+
+// A catalog read from disk.
+//
+// A file read and a parse. A program does this once, keeps the `UIResources` it
+// builds, and never asks again.
+function loadDefaultCatalog() -> Result<Catalog, CatalogError> {
+    return loadCatalogFile(defaultCatalogPath())
+}

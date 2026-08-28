@@ -59,7 +59,7 @@ function materialLayerFromValue(value: Int) -> MaterialLayerKind {
 struct MaterialLayer {
     var kind: MaterialLayerKind = .Fill
     var amount: Float = 0.0
-    var color: ColorValue = ColorValue()
+    var color: ColorSource = ColorSource()
     var opacity: Float = 1.0
     var blend: Int = 0
 }
@@ -82,7 +82,7 @@ function saturationLayer(amount: Float) -> MaterialLayer {
     return layer
 }
 
-function tintLayer(color: borrow ColorValue, opacity: Float, blend: Int) -> MaterialLayer {
+function tintLayer(color: borrow ColorSource, opacity: Float, blend: Int) -> MaterialLayer {
     var layer = MaterialLayer()
     layer.kind = .Tint
     layer.color = color
@@ -98,7 +98,7 @@ function noiseLayer(amount: Float) -> MaterialLayer {
     return layer
 }
 
-function borderLayer(color: borrow ColorValue, width: Float) -> MaterialLayer {
+function borderLayer(color: borrow ColorSource, width: Float) -> MaterialLayer {
     var layer = MaterialLayer()
     layer.kind = .Border
     layer.color = color
@@ -107,7 +107,7 @@ function borderLayer(color: borrow ColorValue, width: Float) -> MaterialLayer {
     return layer
 }
 
-function fillLayer(color: borrow ColorValue, opacity: Float, blend: Int) -> MaterialLayer {
+function fillLayer(color: borrow ColorSource, opacity: Float, blend: Int) -> MaterialLayer {
     var layer = MaterialLayer()
     layer.kind = .Fill
     layer.color = color
@@ -121,7 +121,7 @@ function appendMaterialLayer(bytes: borrow mut [U8], layer: borrow MaterialLayer
     appendI32(bytes, fixedFromFloat(layer.amount))
     appendI32(bytes, fixedFromFloat(layer.opacity))
     appendU8(bytes, layer.blend)
-    appendColorValue(bytes, layer.color)
+    appendColorSource(bytes, layer.color)
 }
 
 function encodeMaterial(material: borrow MaterialValue) -> [U8] {
@@ -157,7 +157,7 @@ function decodeMaterial(bytes: borrow [U8]) -> MaterialRead {
         layer.amount = floatFromFixed(readI32(bytes, cursor + 1))
         layer.opacity = floatFromFixed(readI32(bytes, cursor + 5))
         layer.blend = readU8(bytes, cursor + 9)
-        let colorRead = readColorValue(bytes, cursor + 10)
+        let colorRead = readColorSource(bytes, cursor + 10)
         if !colorRead.ok {
             return read
         }
@@ -203,7 +203,7 @@ struct EffectOp {
     var offsetY: Float = 0.0
     var spread: Float = 0.0
     var amount: Float = 1.0
-    var color: ColorValue = ColorValue()
+    var color: ColorSource = ColorSource()
 }
 
 struct EffectValue {
@@ -217,7 +217,7 @@ function blurOp(radius: Float) -> EffectOp {
     return op
 }
 
-function shadowOp(color: borrow ColorValue, offsetX: Float, offsetY: Float, radius: Float, spread: Float) -> EffectOp {
+function shadowOp(color: borrow ColorSource, offsetX: Float, offsetY: Float, radius: Float, spread: Float) -> EffectOp {
     var op = EffectOp()
     op.kind = .Shadow
     op.color = color
@@ -228,7 +228,7 @@ function shadowOp(color: borrow ColorValue, offsetX: Float, offsetY: Float, radi
     return op
 }
 
-function innerShadowOp(color: borrow ColorValue, offsetX: Float, offsetY: Float, radius: Float, spread: Float) -> EffectOp {
+function innerShadowOp(color: borrow ColorSource, offsetX: Float, offsetY: Float, radius: Float, spread: Float) -> EffectOp {
     var op = shadowOp(color, offsetX, offsetY, radius, spread)
     op.kind = .InnerShadow
     return op
@@ -252,7 +252,7 @@ function encodeEffect(effect: borrow EffectValue) -> [U8] {
         appendI32(bytes, fixedFromFloat(op.offsetY))
         appendI32(bytes, fixedFromFloat(op.spread))
         appendI32(bytes, fixedFromFloat(op.amount))
-        appendColorValue(bytes, op.color)
+        appendColorSource(bytes, op.color)
     }
     return bytes
 }
@@ -282,7 +282,7 @@ function decodeEffect(bytes: borrow [U8]) -> EffectRead {
         op.offsetY = floatFromFixed(readI32(bytes, cursor + 9))
         op.spread = floatFromFixed(readI32(bytes, cursor + 13))
         op.amount = floatFromFixed(readI32(bytes, cursor + 17))
-        let colorRead = readColorValue(bytes, cursor + 21)
+        let colorRead = readColorSource(bytes, cursor + 21)
         if !colorRead.ok {
             return read
         }

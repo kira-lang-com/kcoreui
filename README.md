@@ -43,14 +43,15 @@ var label = ResourceRecord()
 label.name = "label"
 label.kind = kindColor()
 
+// A catalog is Display P3, and design tools quote sRGB, so authoring converts.
 var light = RenditionRecord()
 light.constraints.append(whenAppearance(.Light))
-light.payload = encodeColor(Color(r: 0.08, g: 0.09, b: 0.12, a: 1.0))
+light.payload = encodeColor(srgbToP3(Color(r: 0.08, g: 0.09, b: 0.12, a: 1.0)))
 label.renditions.append(light)
 
 var dark = RenditionRecord()
 dark.constraints.append(whenAppearance(.Dark))
-dark.payload = encodeColor(Color(r: 0.95, g: 0.96, b: 0.99, a: 1.0))
+dark.payload = encodeColor(srgbToP3(Color(r: 0.95, g: 0.96, b: 0.99, a: 1.0)))
 label.renditions.append(dark)
 
 record.resources.append(label)
@@ -105,6 +106,23 @@ tintLayer(referenceColor(colorSystemBackground()), 0.68, blendNormal())
 
 The reference is resolved against the same environment the material was. So the recipe is authored once and is still correct in an appearance nobody had in mind when it was written. The validator rejects reference cycles before a blob is written; the resolver carries a depth limit as a backstop for a blob that arrived from somewhere else.
 
+## Colour
+
+**A colour is a stack of layers, each with its own alpha.** That is what a system colour is: a separator is ink at a tenth of an opacity over whatever it sits on, a fill is a wash over a surface. Flattening that at author time bakes in the backdrop, and the backdrop is exactly what changes with the appearance.
+
+```kira
+var separator = ColorValue()
+separator.layers.append(colorLayer(referenceColor(colorLabel()), 0.1))
+```
+
+A layer's source is a literal colour or the name of another resource, and its opacity multiplies that source's own alpha — so an ink written at a tenth stays the named ink rather than becoming a second, fainter colour.
+
+**Every colour in a catalog is Display P3.** One space, stated once, rather than a per-colour tag nobody fills in correctly: a value with no declared space means something different on every display it reaches. P3 rather than sRGB because it is the wider of the two, and every sRGB colour embeds in it exactly, so an sRGB-sourced palette loses nothing by being stored this way.
+
+Layers composite **source-over in linear light**. Alpha applied to a transfer-encoded channel is the classic wrong answer, the one that darkens midtones and muddies every blend, so a stack is decoded, composited, and encoded again. Half-covering white with black gives half the light, which encodes to about 0.735 rather than to 0.5.
+
+A resolved colour is converted to the gamut the environment reports. That is what the `gamut` trait is for, and it is why a catalog authored once is right on a display that can show P3 and on one that cannot.
+
 ## No Floats On The Wire
 
 Every scalar in the format is a little-endian unsigned integer, and every fractional quantity is 16.16 fixed point. An IEEE encoding would be a decision about NaN, negative zero and rounding that three backends could disagree about, and a resource database that resolves differently on the VM and under LLVM is not a resource database.
@@ -132,7 +150,8 @@ app/
 │   ├── Catalog.kira    loading, name lookup, stacks
 │   ├── Resolver.kira   eligibility, specificity, tracing
 │   ├── Resolve.kira    the typed surface, references followed
-│   ├── Payload.kira    colours and gradients
+│   ├── ColorSpace.kira Display P3, transfer curves, compositing
+│   ├── Payload.kira    layered colours and gradients
 │   ├── Recipes.kira    materials, effects, typography
 │   ├── Cache.kira      the two-level resolution cache
 │   └── Validate.kira   cycles, dangling references, integrity

@@ -86,16 +86,35 @@ function kcuRoundTrips(record: borrow CatalogRecord) -> Bool {
     return kcuBytesEqual(bytes, writeCatalog(catalog))
 }
 
+// A colour written the way a case reads it: sRGB, which is what a design tool
+// quotes and what an environment reporting the sRGB gamut resolves back to.
 function kcuColor(r: Float, g: Float, b: Float, a: Float) -> Color {
     return Color(r: r, g: g, b: b, a: a)
 }
 
-// A channel is stored to one part in 65536, so a value authored in thousandths
-// comes back near what was written rather than identical to it. Comparing
-// within one unit of the scale is what the format actually promises; exact
-// float equality would be asserting a precision it never claimed.
+// The same colour as a catalog stores one.
+//
+// A catalog is Display P3, so authoring converts. Every case that writes a
+// colour and then expects it back goes through this, which is what makes
+// "author this, resolve this" true rather than accidentally true for the
+// primaries and false for everything between them.
+function kcuAuthored(color: borrow Color) -> [U8] {
+    return encodeColor(srgbToP3(color))
+}
+
+// How close two channels have to be to count as the same colour.
+//
+// A channel is stored to one part in 65536, and a colour that crosses gamuts
+// also passes through two transfer curves and a matrix. The curve is steep near
+// black, so a channel landing near zero carries the largest error: sRGB green
+// round-trips through Display P3 with about 6.5e-5 on its red channel and under
+// 1e-5 everywhere else.
+//
+// An eighth of an 8-bit step is the bar. That is 4.9e-4, seven times the worst
+// observed error and far below anything a display can show, so it catches a
+// wrong colour without asserting that a gamut conversion is lossless.
 function kcuNear(left: Float, right: Float) -> Bool {
-    return abs(left - right) < 2.0 / Float(fixedScale())
+    return abs(left - right) < 1.0 / 2048.0
 }
 
 function kcuColorsEqual(left: borrow Color, right: borrow Color) -> Bool {
@@ -111,12 +130,12 @@ function kcuAdaptive(name: borrow String, light: borrow Color, dark: borrow Colo
 
     var lightRendition = RenditionRecord()
     lightRendition.constraints.append(whenAppearance(.Light))
-    lightRendition.payload = encodeColor(light)
+    lightRendition.payload = kcuAuthored(light)
     resource.renditions.append(lightRendition)
 
     var darkRendition = RenditionRecord()
     darkRendition.constraints.append(whenAppearance(.Dark))
-    darkRendition.payload = encodeColor(dark)
+    darkRendition.payload = kcuAuthored(dark)
     resource.renditions.append(darkRendition)
     return resource
 }
@@ -127,7 +146,7 @@ function kcuFlat(name: borrow String, value: borrow Color) -> ResourceRecord {
     resource.name = name
     resource.kind = kindColor()
     var rendition = RenditionRecord()
-    rendition.payload = encodeColor(value)
+    rendition.payload = kcuAuthored(value)
     resource.renditions.append(rendition)
     return resource
 }

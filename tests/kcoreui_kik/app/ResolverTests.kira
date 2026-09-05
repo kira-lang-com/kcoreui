@@ -179,7 +179,7 @@ construct KcuACustomTraitSelectsWhenTheEnvironmentCarriesIt() extends Test {
 construct KcuCustomTraitsChangeTheEnvironmentKey() extends Test {
     test {
         return environmentCustomKey(kcuBrandedEnvironment(2)) != environmentCustomKey(kcuBrandedEnvironment(9))
-            && environmentCustomKey(kcuLight()) == 0
+            && environmentCustomKey(kcuLight()) == UICustomTraitKey(0)
     }
     expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
 }

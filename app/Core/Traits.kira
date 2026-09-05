@@ -302,10 +302,22 @@ function environmentTraitValue(environment: borrow UIEnvironment, identifier: bo
 
 // --- Cache keys ------------------------------------------------------------
 
+// The two cache keys, each its own type.
+//
+// They are two `Int`s of the same width that must never be swapped: a lookup
+// takes both, in an order nothing but the parameter names records, and passing
+// them the wrong way round finds no entry and silently fills a second one for
+// every value in the catalog. As `distinct` types the swap is a type error at
+// the call, which is where it is written.
+//
+// Neither is ever written to a blob, so widening a field costs nothing beyond a
+// stale cache, and `.raw` appears exactly where the number is genuinely mixed.
+distinct UIEnvironmentKey = Int
+distinct UICustomTraitKey = Int
+
 // The fixed traits as one integer. Field widths are fixed here and nowhere
-// else; a key is never written to a blob, so widening one costs nothing beyond
-// a stale cache.
-function environmentKey(environment: borrow UIEnvironment) -> Int {
+// else.
+function environmentKey(environment: borrow UIEnvironment) -> UIEnvironmentKey {
     var key = appearanceValue(environment.appearance)
     key = key | (contrastValue(environment.contrast) << 2)
     key = key | (gamutValue(environment.gamut) << 4)
@@ -319,13 +331,13 @@ function environmentKey(environment: borrow UIEnvironment) -> Int {
     key = key | (flagValue(environment.reduceMotion) << 25)
     key = key | (flagValue(environment.invertColors) << 27)
     key = key | (flagValue(environment.differentiateWithoutColor) << 29)
-    return key
+    return UIEnvironmentKey(key)
 }
 
 // The custom traits folded into one integer, order-independent so two
 // environments carrying the same set in a different order share a cache line.
 // Zero when there are none, which is the common case and costs one branch.
-function environmentCustomKey(environment: borrow UIEnvironment) -> Int {
+function environmentCustomKey(environment: borrow UIEnvironment) -> UICustomTraitKey {
     var fold = 0
     for entry in environment.custom {
         var mixed = traitIdentifierValue(entry.identifier) * 2654435761
@@ -333,5 +345,5 @@ function environmentCustomKey(environment: borrow UIEnvironment) -> Int {
         mixed = mixed ^ (mixed >> 17)
         fold = fold + mixed
     }
-    return fold
+    return UICustomTraitKey(fold)
 }

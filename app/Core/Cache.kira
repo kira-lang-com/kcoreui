@@ -22,8 +22,8 @@ struct CacheEntry {
     var hash: Int = 0
     var name: String = ""
     var kind: ResourceKind = .Color
-    var environmentKey: Int = 0
-    var customKey: Int = 0
+    var environmentKey: UIEnvironmentKey = UIEnvironmentKey(0)
+    var customKey: UICustomTraitKey = UICustomTraitKey(0)
     var resolved: ResolvedRendition = ResolvedRendition()
     var color: Color = Color()
     var colorReady: Bool = false
@@ -85,14 +85,14 @@ function nameHash(name: borrow String) -> Int {
     return hash & 4611686018427387903
 }
 
-function probeStart(cache: borrow ResolutionCache, hash: Int, environmentKey: Int, customKey: Int) -> Int {
-    var mixed = hash ^ (environmentKey * 2654435761)
-    mixed = mixed ^ (customKey * 40503)
+function probeStart(cache: borrow ResolutionCache, hash: Int, environmentKey: UIEnvironmentKey, customKey: UICustomTraitKey) -> Int {
+    var mixed = hash ^ (environmentKey.raw * 2654435761)
+    mixed = mixed ^ (customKey.raw * 40503)
     mixed = mixed ^ (mixed >> 21)
     return mixed & cache.mask
 }
 
-function entryMatches(entry: borrow CacheEntry, hash: Int, name: borrow String, kind: borrow ResourceKind, environmentKey: Int, customKey: Int) -> Bool {
+function entryMatches(entry: borrow CacheEntry, hash: Int, name: borrow String, kind: borrow ResourceKind, environmentKey: UIEnvironmentKey, customKey: UICustomTraitKey) -> Bool {
     if !entry.used || entry.hash != hash || !resourceKindsEqual(entry.kind, kind) {
         return false
     }
@@ -103,7 +103,7 @@ function entryMatches(entry: borrow CacheEntry, hash: Int, name: borrow String, 
 }
 
 // The slot this key occupies, or -1. Never writes.
-function findCacheSlot(cache: borrow ResolutionCache, hash: Int, name: borrow String, kind: borrow ResourceKind, environmentKey: Int, customKey: Int) -> Int {
+function findCacheSlot(cache: borrow ResolutionCache, hash: Int, name: borrow String, kind: borrow ResourceKind, environmentKey: UIEnvironmentKey, customKey: UICustomTraitKey) -> Int {
     let start = probeStart(cache, hash, environmentKey, customKey)
     var step = 0
     while step < cacheProbeLimit() {
@@ -121,7 +121,7 @@ function findCacheSlot(cache: borrow ResolutionCache, hash: Int, name: borrow St
 
 // The slot a new entry goes in: the first free one within the probe bound, or
 // the start of the run, which evicts.
-function claimCacheSlot(cache: borrow mut ResolutionCache, hash: Int, environmentKey: Int, customKey: Int) -> Int {
+function claimCacheSlot(cache: borrow mut ResolutionCache, hash: Int, environmentKey: UIEnvironmentKey, customKey: UICustomTraitKey) -> Int {
     let start = probeStart(cache, hash, environmentKey, customKey)
     var step = 0
     while step < cacheProbeLimit() {

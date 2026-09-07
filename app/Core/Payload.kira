@@ -222,9 +222,9 @@ enum GradientKind {
 
 function gradientKindValue(kind: borrow GradientKind) -> Int {
     match kind {
-        Linear -> return 1;
-        Radial -> return 2;
-        Angular -> return 3;
+        Linear -> return 1
+        Radial -> return 2
+        Angular -> return 3
     }
 }
 

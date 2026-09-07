@@ -172,33 +172,33 @@ function traceResolution(stack: borrow CatalogStack, name: borrow String, kind: 
 // mean and will not invent a word for one.
 function traitName(identifier: borrow TraitIdentifier) -> String {
     match identifier {
-        Appearance -> return "appearance";
-        Contrast -> return "contrast";
-        Gamut -> return "gamut";
-        Scale -> return "scale";
-        Idiom -> return "idiom";
-        Platform -> return "platform";
-        LayoutDirection -> return "layoutDirection";
-        HorizontalSizeClass -> return "horizontalSizeClass";
-        VerticalSizeClass -> return "verticalSizeClass";
-        ReduceTransparency -> return "reduceTransparency";
-        ReduceMotion -> return "reduceMotion";
-        InvertColors -> return "invertColors";
-        DifferentiateWithoutColor -> return "differentiateWithoutColor";
-        Custom(value) -> return "trait#" + String(value);
-        Unknown(value) -> return "trait#" + String(value);
+        Appearance -> return "appearance"
+        Contrast -> return "contrast"
+        Gamut -> return "gamut"
+        Scale -> return "scale"
+        Idiom -> return "idiom"
+        Platform -> return "platform"
+        LayoutDirection -> return "layoutDirection"
+        HorizontalSizeClass -> return "horizontalSizeClass"
+        VerticalSizeClass -> return "verticalSizeClass"
+        ReduceTransparency -> return "reduceTransparency"
+        ReduceMotion -> return "reduceMotion"
+        InvertColors -> return "invertColors"
+        DifferentiateWithoutColor -> return "differentiateWithoutColor"
+        Custom(value) -> return "trait#" + String(value)
+        Unknown(value) -> return "trait#" + String(value)
     }
 }
 
 function kindName(kind: borrow ResourceKind) -> String {
     match kind {
-        Color -> return "Color";
-        Gradient -> return "Gradient";
-        Material -> return "Material";
-        Effect -> return "Effect";
-        Typography -> return "Typography";
-        Custom(value) -> return "kind#" + String(value);
-        Unknown(value) -> return "kind#" + String(value);
+        Color -> return "Color"
+        Gradient -> return "Gradient"
+        Material -> return "Material"
+        Effect -> return "Effect"
+        Typography -> return "Typography"
+        Custom(value) -> return "kind#" + String(value)
+        Unknown(value) -> return "kind#" + String(value)
     }
 }
 

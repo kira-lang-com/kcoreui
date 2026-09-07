@@ -52,9 +52,9 @@ function transferEncode(channel: Float) -> Float {
 // Linear Display P3 to linear sRGB.
 function p3ToSrgbLinear(color: borrow Color) -> Color {
     return Color {
-        r: 1.2249401 * color.r - 0.2249404 * color.g + 0.0 * color.b
-        g: 0.0 - 0.0420569 * color.r + 1.0420571 * color.g + 0.0 * color.b
-        b: 0.0 - 0.0196376 * color.r - 0.0786361 * color.g + 1.0982735 * color.b
+        r: 1.2249401 * color.r - 0.2249404 * color.g + 0.0 * color.b,
+        g: 0.0 - 0.0420569 * color.r + 1.0420571 * color.g + 0.0 * color.b,
+        b: 0.0 - 0.0196376 * color.r - 0.0786361 * color.g + 1.0982735 * color.b,
         a: color.a
     }
 }
@@ -62,9 +62,9 @@ function p3ToSrgbLinear(color: borrow Color) -> Color {
 // Linear sRGB to linear Display P3, for authoring a value quoted in sRGB.
 function srgbToP3Linear(color: borrow Color) -> Color {
     return Color {
-        r: 0.8224621 * color.r + 0.1775380 * color.g + 0.0 * color.b
-        g: 0.0331941 * color.r + 0.9668058 * color.g + 0.0 * color.b
-        b: 0.0170827 * color.r + 0.0723974 * color.g + 0.9105199 * color.b
+        r: 0.8224621 * color.r + 0.1775380 * color.g + 0.0 * color.b,
+        g: 0.0331941 * color.r + 0.9668058 * color.g + 0.0 * color.b,
+        b: 0.0170827 * color.r + 0.0723974 * color.g + 0.9105199 * color.b,
         a: color.a
     }
 }
@@ -77,18 +77,18 @@ function srgbToP3Linear(color: borrow Color) -> Color {
 // travels through a transfer curve.
 function decodeColor(color: borrow Color) -> Color {
     return Color {
-        r: transferDecode(color.r)
-        g: transferDecode(color.g)
-        b: transferDecode(color.b)
+        r: transferDecode(color.r),
+        g: transferDecode(color.g),
+        b: transferDecode(color.b),
         a: color.a
     }
 }
 
 function encodeColorChannels(color: borrow Color) -> Color {
     return Color {
-        r: transferEncode(color.r)
-        g: transferEncode(color.g)
-        b: transferEncode(color.b)
+        r: transferEncode(color.r),
+        g: transferEncode(color.g),
+        b: transferEncode(color.b),
         a: color.a
     }
 }
@@ -100,9 +100,9 @@ function encodeColorChannels(color: borrow Color) -> Color {
 function p3ToSrgb(color: borrow Color) -> Color {
     let converted = p3ToSrgbLinear(decodeColor(color))
     let clamped = Color {
-        r: clampChannel(converted.r)
-        g: clampChannel(converted.g)
-        b: clampChannel(converted.b)
+        r: clampChannel(converted.r),
+        g: clampChannel(converted.g),
+        b: clampChannel(converted.b),
         a: converted.a
     }
     return encodeColorChannels(clamped)
@@ -132,8 +132,8 @@ function clampChannel(value: Float) -> Float {
 // environment's default says.
 function colorForGamut(color: borrow Color, gamut: borrow DisplayGamut) -> Color {
     match gamut {
-        SRGB -> return p3ToSrgb(color);
-        P3 -> return color;
+        SRGB -> return p3ToSrgb(color)
+        P3 -> return color
     }
 }
 
@@ -152,9 +152,9 @@ function compositeOver(source: borrow Color, backdrop: borrow Color) -> Color {
     }
     let backdropWeight = backdrop.a * (1.0 - source.a)
     return Color {
-        r: (source.r * source.a + backdrop.r * backdropWeight) / outAlpha
-        g: (source.g * source.a + backdrop.g * backdropWeight) / outAlpha
-        b: (source.b * source.a + backdrop.b * backdropWeight) / outAlpha
+        r: (source.r * source.a + backdrop.r * backdropWeight) / outAlpha,
+        g: (source.g * source.a + backdrop.g * backdropWeight) / outAlpha,
+        b: (source.b * source.a + backdrop.b * backdropWeight) / outAlpha,
         a: outAlpha
     }
 }

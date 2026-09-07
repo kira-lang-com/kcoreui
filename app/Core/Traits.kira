@@ -47,21 +47,21 @@ function traitIdentifierCustomBase() -> Int { return 64 }
 
 function traitIdentifierValue(identifier: borrow TraitIdentifier) -> Int {
     match identifier {
-        Appearance -> return 0;
-        Contrast -> return 1;
-        Gamut -> return 2;
-        Scale -> return 3;
-        Idiom -> return 4;
-        Platform -> return 5;
-        LayoutDirection -> return 6;
-        HorizontalSizeClass -> return 7;
-        VerticalSizeClass -> return 8;
-        ReduceTransparency -> return 9;
-        ReduceMotion -> return 10;
-        InvertColors -> return 11;
-        DifferentiateWithoutColor -> return 12;
-        Custom(value) -> return value;
-        Unknown(value) -> return value;
+        Appearance -> return 0
+        Contrast -> return 1
+        Gamut -> return 2
+        Scale -> return 3
+        Idiom -> return 4
+        Platform -> return 5
+        LayoutDirection -> return 6
+        HorizontalSizeClass -> return 7
+        VerticalSizeClass -> return 8
+        ReduceTransparency -> return 9
+        ReduceMotion -> return 10
+        InvertColors -> return 11
+        DifferentiateWithoutColor -> return 12
+        Custom(value) -> return value
+        Unknown(value) -> return value
     }
 }
 
@@ -192,72 +192,72 @@ struct UIEnvironment {
 
 function appearanceValue(appearance: borrow Appearance) -> Int {
     match appearance {
-        Light -> return 1;
-        Dark -> return 2;
+        Light -> return 1
+        Dark -> return 2
     }
 }
 
 function contrastValue(contrast: borrow Contrast) -> Int {
     match contrast {
-        Standard -> return 1;
-        High -> return 2;
+        Standard -> return 1
+        High -> return 2
     }
 }
 
 function gamutValue(gamut: borrow DisplayGamut) -> Int {
     match gamut {
-        SRGB -> return 1;
-        P3 -> return 2;
+        SRGB -> return 1
+        P3 -> return 2
     }
 }
 
 function scaleValue(scale: borrow DisplayScale) -> Int {
     match scale {
-        X1 -> return 1;
-        X2 -> return 2;
-        X3 -> return 3;
+        X1 -> return 1
+        X2 -> return 2
+        X3 -> return 3
     }
 }
 
 function idiomValue(idiom: borrow Idiom) -> Int {
     match idiom {
-        Phone -> return 1;
-        Pad -> return 2;
-        Mac -> return 3;
-        TV -> return 4;
-        Watch -> return 5;
-        Vision -> return 6;
-        CarPlay -> return 7;
-        Desktop -> return 8;
+        Phone -> return 1
+        Pad -> return 2
+        Mac -> return 3
+        TV -> return 4
+        Watch -> return 5
+        Vision -> return 6
+        CarPlay -> return 7
+        Desktop -> return 8
     }
 }
 
 function platformValue(platform: borrow Platform) -> Int {
     match platform {
-        MacOS -> return 1;
-        IOS -> return 2;
-        IPadOS -> return 3;
-        TVOS -> return 4;
-        WatchOS -> return 5;
-        VisionOS -> return 6;
-        Linux -> return 7;
-        Windows -> return 8;
-        Tessera -> return 9;
-        Web -> return 10;
+        MacOS -> return 1
+        IOS -> return 2
+        IPadOS -> return 3
+        TVOS -> return 4
+        WatchOS -> return 5
+        VisionOS -> return 6
+        Linux -> return 7
+        Windows -> return 8
+        Tessera -> return 9
+        Web -> return 10
     }
 }
 
 function layoutDirectionValue(direction: borrow LayoutDirection) -> Int {
     match direction {
-        LeftToRight -> return 1;
-        RightToLeft -> return 2;
+        LeftToRight -> return 1
+        RightToLeft -> return 2
     }
 }
 
 function sizeClassValue(sizeClass: borrow SizeClass) -> Int {
     match sizeClass {
-        Compact -> return 1;
-        Regular -> return 2;
+        Compact -> return 1
+        Regular -> return 2
     }
 }
 
@@ -282,21 +282,21 @@ function environmentCustomValue(environment: borrow UIEnvironment, wire: Int) ->
 // for that environment.
 function environmentTraitValue(environment: borrow UIEnvironment, identifier: borrow TraitIdentifier) -> Int {
     match identifier {
-        Appearance -> return appearanceValue(environment.appearance);
-        Contrast -> return contrastValue(environment.contrast);
-        Gamut -> return gamutValue(environment.gamut);
-        Scale -> return scaleValue(environment.scale);
-        Idiom -> return idiomValue(environment.idiom);
-        Platform -> return platformValue(environment.platform);
-        LayoutDirection -> return layoutDirectionValue(environment.layoutDirection);
-        HorizontalSizeClass -> return sizeClassValue(environment.horizontalSizeClass);
-        VerticalSizeClass -> return sizeClassValue(environment.verticalSizeClass);
-        ReduceTransparency -> return flagValue(environment.reduceTransparency);
-        ReduceMotion -> return flagValue(environment.reduceMotion);
-        InvertColors -> return flagValue(environment.invertColors);
-        DifferentiateWithoutColor -> return flagValue(environment.differentiateWithoutColor);
-        Custom(wire) -> return environmentCustomValue(environment, wire);
-        Unknown(wire) -> return environmentCustomValue(environment, wire);
+        Appearance -> return appearanceValue(environment.appearance)
+        Contrast -> return contrastValue(environment.contrast)
+        Gamut -> return gamutValue(environment.gamut)
+        Scale -> return scaleValue(environment.scale)
+        Idiom -> return idiomValue(environment.idiom)
+        Platform -> return platformValue(environment.platform)
+        LayoutDirection -> return layoutDirectionValue(environment.layoutDirection)
+        HorizontalSizeClass -> return sizeClassValue(environment.horizontalSizeClass)
+        VerticalSizeClass -> return sizeClassValue(environment.verticalSizeClass)
+        ReduceTransparency -> return flagValue(environment.reduceTransparency)
+        ReduceMotion -> return flagValue(environment.reduceMotion)
+        InvertColors -> return flagValue(environment.invertColors)
+        DifferentiateWithoutColor -> return flagValue(environment.differentiateWithoutColor)
+        Custom(wire) -> return environmentCustomValue(environment, wire)
+        Unknown(wire) -> return environmentCustomValue(environment, wire)
     }
 }
 

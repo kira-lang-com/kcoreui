@@ -32,13 +32,13 @@ function resourceKindCustomBase() -> Int { return 1024 }
 
 function resourceKindValue(kind: borrow ResourceKind) -> Int {
     match kind {
-        Color -> return 1;
-        Gradient -> return 2;
-        Material -> return 3;
-        Effect -> return 4;
-        Typography -> return 5;
-        Custom(value) -> return value;
-        Unknown(value) -> return value;
+        Color -> return 1
+        Gradient -> return 2
+        Material -> return 3
+        Effect -> return 4
+        Typography -> return 5
+        Custom(value) -> return value
+        Unknown(value) -> return value
     }
 }
 
@@ -62,13 +62,13 @@ function resourceKindsEqual(left: borrow ResourceKind, right: borrow ResourceKin
 // kind; only the typed accessors care.
 function resourceKindIsKnown(kind: borrow ResourceKind) -> Bool {
     match kind {
-        Color -> return true;
-        Gradient -> return true;
-        Material -> return true;
-        Effect -> return true;
-        Typography -> return true;
-        Custom(value) -> return false;
-        Unknown(value) -> return false;
+        Color -> return true
+        Gradient -> return true
+        Material -> return true
+        Effect -> return true
+        Typography -> return true
+        Custom(value) -> return false
+        Unknown(value) -> return false
     }
 }
 
@@ -177,15 +177,15 @@ enum CatalogError {
 
 function catalogErrorText(failure: borrow CatalogError) -> String {
     match failure {
-        NotKira -> return "not a KCoreUI catalog: wrong magic";
-        UnsupportedVersion -> return "catalog major version is newer than this build";
-        TruncatedHeader -> return "catalog is shorter than its header";
-        TruncatedTable -> return "a catalog table runs past the end of the blob";
-        OffsetOutOfRange -> return "a catalog entry points outside the blob";
-        NamesUnsorted -> return "the name table is not in byte order";
-        ConstraintsUnsorted -> return "a rendition's constraints are not in identifier order";
-        DuplicateRendition -> return "two renditions of one resource pin the same traits";
-        ReservedTraitValue -> return "a constraint carries the reserved value zero";
+        NotKira -> return "not a KCoreUI catalog: wrong magic"
+        UnsupportedVersion -> return "catalog major version is newer than this build"
+        TruncatedHeader -> return "catalog is shorter than its header"
+        TruncatedTable -> return "a catalog table runs past the end of the blob"
+        OffsetOutOfRange -> return "a catalog entry points outside the blob"
+        NamesUnsorted -> return "the name table is not in byte order"
+        ConstraintsUnsorted -> return "a rendition's constraints are not in identifier order"
+        DuplicateRendition -> return "two renditions of one resource pin the same traits"
+        ReservedTraitValue -> return "a constraint carries the reserved value zero"
     }
 }
 

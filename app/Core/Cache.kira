@@ -79,7 +79,7 @@ function clearCache(cache: borrow mut ResolutionCache) {
 function nameHash(name: borrow String) -> Int {
     var hash = 2166136261
     for index in 0..name.count {
-        hash = hash ^ (name.charAt(index) & 255)
+        hash = hash ^ Int(name.charAt(index))
         hash = hash * 16777619
     }
     return hash & 4611686018427387903

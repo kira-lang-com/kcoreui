@@ -197,7 +197,8 @@ function compareSliceToString(bytes: borrow [U8], offset: Int, count: Int, text:
     let shorter = count < text.count ? count : text.count
     while index < shorter {
         let left = readU8(bytes, offset + index)
-        let right = text.charAt(index) & 255
+        // `charAt` answers the byte itself, and this compares it as a number.
+        let right = Int(text.charAt(index))
         if left != right {
             return left - right
         }

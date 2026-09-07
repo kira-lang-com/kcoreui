@@ -32,13 +32,13 @@ struct ValidationIssue {
 
 function validationKindText(kind: borrow ValidationKind) -> String {
     match kind {
-        DuplicateName -> return "duplicate name";
-        MissingReference -> return "reference to an undefined name";
-        ReferenceCycle -> return "reference cycle";
-        ReservedTraitValue -> return "constraint carries the reserved value zero";
-        DuplicateRendition -> return "two renditions pin the same traits";
-        NoRenditions -> return "resource has no renditions";
-        UndecodablePayload -> return "payload does not decode for its kind";
+        DuplicateName -> return "duplicate name"
+        MissingReference -> return "reference to an undefined name"
+        ReferenceCycle -> return "reference cycle"
+        ReservedTraitValue -> return "constraint carries the reserved value zero"
+        DuplicateRendition -> return "two renditions pin the same traits"
+        NoRenditions -> return "resource has no renditions"
+        UndecodablePayload -> return "payload does not decode for its kind"
     }
 }
 
@@ -105,9 +105,9 @@ function payloadReferences(kind: borrow ResourceKind, bytes: borrow [U8]) -> [St
             }
             return names
         }
-        Typography -> return names;
-        Custom(value) -> return names;
-        Unknown(value) -> return names;
+        Typography -> return names
+        Custom(value) -> return names
+        Unknown(value) -> return names
     }
 }
 
@@ -115,13 +115,13 @@ function payloadReferences(kind: borrow ResourceKind, bytes: borrow [U8]) -> [St
 // decoder for always does: the container is agnostic about payload.
 function payloadDecodes(kind: borrow ResourceKind, bytes: borrow [U8]) -> Bool {
     match kind {
-        Color -> return decodeColorPayload(bytes).ok;
-        Gradient -> return decodeGradient(bytes).ok;
-        Material -> return decodeMaterial(bytes).ok;
-        Effect -> return decodeEffect(bytes).ok;
-        Typography -> return decodeTypography(bytes).ok;
-        Custom(value) -> return true;
-        Unknown(value) -> return true;
+        Color -> return decodeColorPayload(bytes).ok
+        Gradient -> return decodeGradient(bytes).ok
+        Material -> return decodeMaterial(bytes).ok
+        Effect -> return decodeEffect(bytes).ok
+        Typography -> return decodeTypography(bytes).ok
+        Custom(value) -> return true
+        Unknown(value) -> return true
     }
 }
 

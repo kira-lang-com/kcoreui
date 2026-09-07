@@ -31,16 +31,16 @@ enum BlendMode {
 
 function blendModeValue(blend: borrow BlendMode) -> Int {
     match blend {
-        Normal -> return 0;
-        LinearDodge -> return 1;
-        ColorDodge -> return 2;
-        HardLight -> return 3;
-        Overlay -> return 4;
-        Lighten -> return 5;
-        Darken -> return 6;
-        Multiply -> return 7;
-        Luminosity -> return 8;
-        Unknown(value) -> return value;
+        Normal -> return 0
+        LinearDodge -> return 1
+        ColorDodge -> return 2
+        HardLight -> return 3
+        Overlay -> return 4
+        Lighten -> return 5
+        Darken -> return 6
+        Multiply -> return 7
+        Luminosity -> return 8
+        Unknown(value) -> return value
     }
 }
 
@@ -70,12 +70,12 @@ enum MaterialLayerKind {
 
 function materialLayerValue(kind: borrow MaterialLayerKind) -> Int {
     match kind {
-        BackdropBlur -> return 1;
-        Saturation -> return 2;
-        Tint -> return 3;
-        Noise -> return 4;
-        Border -> return 5;
-        Fill -> return 6;
+        BackdropBlur -> return 1
+        Saturation -> return 2
+        Tint -> return 3
+        Noise -> return 4
+        Border -> return 5
+        Fill -> return 6
     }
 }
 
@@ -217,10 +217,10 @@ enum EffectOpKind {
 
 function effectOpValue(kind: borrow EffectOpKind) -> Int {
     match kind {
-        Blur -> return 1;
-        Shadow -> return 2;
-        InnerShadow -> return 3;
-        Opacity -> return 4;
+        Blur -> return 1
+        Shadow -> return 2
+        InnerShadow -> return 3
+        Opacity -> return 4
     }
 }
 

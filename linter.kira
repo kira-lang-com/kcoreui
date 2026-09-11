@@ -10,9 +10,8 @@ import Foundation
 // is written here rather than left to the runner's default so it is the same
 // one this repo's AGENTS.md states, in the file that enforces it.
 construct FileLength() extends Lint {
-    let code: String = "KLINT003"
-    let severity: String = "warning"
-    let enabled: Bool = true
+    let code: KiraError = .KLINT003
+    let level: LintLevel = .Warn
     let limit: Int = 700
 }
 
@@ -20,15 +19,13 @@ construct FileLength() extends Lint {
 // leading dot against the expected type, and `x == .Red` compiles to a tag
 // compare with no throwaway enum, so the qualified spelling does more work.
 construct QualifiedVariant() extends Lint {
-    let code: String = "KLINT001"
-    let severity: String = "warning"
-    let enabled: Bool = true
+    let code: KiraError = .KLINT001
+    let level: LintLevel = .Warn
 }
 
 // A `while` counting an index by hand, where a `for` does it for you. Reported
 // only when the rewrite is safe, and it carries the fix.
 construct ManualIndexLoop() extends Lint {
-    let code: String = "KLINT002"
-    let severity: String = "warning"
-    let enabled: Bool = true
+    let code: KiraError = .KLINT002
+    let level: LintLevel = .Warn
 }

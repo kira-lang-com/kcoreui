@@ -186,12 +186,14 @@ function cachedColor(cache: borrow mut ResolutionCache, stack: borrow CatalogSta
     entry.used = true
     entry.hash = hash
     entry.name = name
-    entry.kind = kind
     entry.environmentKey = fixedKey
     entry.customKey = customKey
     entry.resolved = resolveResource(stack, name, kind, environment)
     entry.color = resolution.color
     entry.colorReady = true
+    // Stored last: assigning the owned `kind` into the entry moves it, so the
+    // resolve above, which only borrows it, must run first.
+    entry.kind = kind
     cache.entries[slot] = entry
     return resolution.color
 }

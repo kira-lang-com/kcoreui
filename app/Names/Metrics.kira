@@ -150,16 +150,27 @@ function metricNavigationSwipeCommitFraction() -> String { return "navigationSwi
 function metricNavigationSwipeCommitVelocity() -> String { return "navigationSwipeCommitVelocity" }
 function metricNavigationSwipeSlop() -> String { return "navigationSwipeSlop" }
 function metricMenuMorphGrowthResponse() -> String { return "menuMorphGrowthResponse" }
+function metricMenuMorphGrowthDamping() -> String { return "menuMorphGrowthDamping" }
+function metricMenuMorphHeightResponse() -> String { return "menuMorphHeightResponse" }
+function metricMenuMorphHeightDamping() -> String { return "menuMorphHeightDamping" }
 function metricMenuMorphDropResponse() -> String { return "menuMorphDropResponse" }
 function metricMenuMorphDropDamping() -> String { return "menuMorphDropDamping" }
+function metricMenuMorphDropLaunch() -> String { return "menuMorphDropLaunch" }
 function metricMenuMorphCloseResponse() -> String { return "menuMorphCloseResponse" }
+function metricMenuMorphCloseDamping() -> String { return "menuMorphCloseDamping" }
+function metricMenuMorphCloseHeightResponse() -> String { return "menuMorphCloseHeightResponse" }
+function metricMenuMorphCloseHeightDamping() -> String { return "menuMorphCloseHeightDamping" }
+function metricMenuMorphSinkResponse() -> String { return "menuMorphSinkResponse" }
+function metricMenuMorphSinkDamping() -> String { return "menuMorphSinkDamping" }
+function metricMenuMorphSinkLaunch() -> String { return "menuMorphSinkLaunch" }
+function metricMenuMorphCornerResponse() -> String { return "menuMorphCornerResponse" }
 function metricMenuMorphRoundness() -> String { return "menuMorphRoundness" }
 function metricMenuMorphContentOpen() -> String { return "menuMorphContentOpen" }
 function metricMenuMorphContentClose() -> String { return "menuMorphContentClose" }
 function metricMenuMorphContentZoom() -> String { return "menuMorphContentZoom" }
 function metricMenuMorphContentBlur() -> String { return "menuMorphContentBlur" }
-function metricMenuMorphNeckStart() -> String { return "menuMorphNeckStart" }
-function metricMenuMorphNeckBlend() -> String { return "menuMorphNeckBlend" }
+function metricMenuMorphGlyphGone() -> String { return "menuMorphGlyphGone" }
+function metricMenuMorphGlyphReturn() -> String { return "menuMorphGlyphReturn" }
 function metricMenuSubmenuOpenResponse() -> String { return "menuSubmenuOpenResponse" }
 function metricMenuSubmenuOpenDamping() -> String { return "menuSubmenuOpenDamping" }
 function metricMenuSubmenuCloseResponse() -> String { return "menuSubmenuCloseResponse" }
@@ -285,16 +296,27 @@ function allMetricNames() -> [String] {
     names.append(metricNavigationSwipeCommitVelocity())
     names.append(metricNavigationSwipeSlop())
     names.append(metricMenuMorphGrowthResponse())
+    names.append(metricMenuMorphGrowthDamping())
+    names.append(metricMenuMorphHeightResponse())
+    names.append(metricMenuMorphHeightDamping())
     names.append(metricMenuMorphDropResponse())
     names.append(metricMenuMorphDropDamping())
+    names.append(metricMenuMorphDropLaunch())
     names.append(metricMenuMorphCloseResponse())
+    names.append(metricMenuMorphCloseDamping())
+    names.append(metricMenuMorphCloseHeightResponse())
+    names.append(metricMenuMorphCloseHeightDamping())
+    names.append(metricMenuMorphSinkResponse())
+    names.append(metricMenuMorphSinkDamping())
+    names.append(metricMenuMorphSinkLaunch())
+    names.append(metricMenuMorphCornerResponse())
     names.append(metricMenuMorphRoundness())
     names.append(metricMenuMorphContentOpen())
     names.append(metricMenuMorphContentClose())
     names.append(metricMenuMorphContentZoom())
     names.append(metricMenuMorphContentBlur())
-    names.append(metricMenuMorphNeckStart())
-    names.append(metricMenuMorphNeckBlend())
+    names.append(metricMenuMorphGlyphGone())
+    names.append(metricMenuMorphGlyphReturn())
     names.append(metricMenuSubmenuOpenResponse())
     names.append(metricMenuSubmenuOpenDamping())
     names.append(metricMenuSubmenuCloseResponse())

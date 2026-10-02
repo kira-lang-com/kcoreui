@@ -207,15 +207,21 @@ function defaultMetricResources() -> [ResourceRecord] {
     records.append(metricResource(metricTabSymbolInset(), 16.0))
 
     // The kit's switch: a 64 by 28 capsule holding a 38 by 24 knob 2 off its
-    // ends. Its slider stands 28 tall, a 4-point track through the middle under
-    // a 28-point knob; its progress bar is the same 4-point track.
+    // ends. Its slider stands 28 tall, a 6-point track through the middle under
+    // the same 38 by 24 knob, whose center travels from 16 in from one end of
+    // the track to 16 in from the other. Held, the knob swells into a 60 by 40
+    // piece of clear glass. Its progress bar is a 4-point track.
     records.append(metricResource(metricSwitchWidth(), 64.0))
     records.append(metricResource(metricSwitchHeight(), 28.0))
     records.append(metricResource(metricSwitchKnobWidth(), 38.0))
     records.append(metricResource(metricSwitchKnobInset(), 2.0))
     records.append(metricResource(metricSliderHeight(), 28.0))
-    records.append(metricResource(metricSliderTrackHeight(), 4.0))
-    records.append(metricResource(metricSliderKnobSize(), 28.0))
+    records.append(metricResource(metricSliderTrackHeight(), 6.0))
+    records.append(metricResource(metricSliderKnobWidth(), 38.0))
+    records.append(metricResource(metricSliderKnobHeight(), 24.0))
+    records.append(metricResource(metricSliderKnobInset(), 16.0))
+    records.append(metricResource(metricSliderHeldKnobWidth(), 60.0))
+    records.append(metricResource(metricSliderHeldKnobHeight(), 40.0))
     records.append(metricResource(metricProgressTrackHeight(), 4.0))
 
     // The kit's insertion point: a 2 by 23 bar in the accent beside 17-point

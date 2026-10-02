@@ -211,7 +211,7 @@ function toolkitResources() -> [ResourceRecord] {
 
     // The kit's switch: green when on, a gray wash when off, and a white knob
     // either way. The track under a slider's knob and under a progress bar's
-    // fill are the same kind of wash, a little lighter.
+    // fill are one lighter wash.
     records.append(adaptiveColor("switchOn",
         rgba255(52.0, 199.0, 89.0, 1.0), rgba255(52.0, 199.0, 89.0, 1.0)))
     records.append(adaptiveColor("switchOff",
@@ -221,7 +221,10 @@ function toolkitResources() -> [ResourceRecord] {
     records.append(adaptiveColor("knobShadow",
         rgba255(0.0, 0.0, 0.0, 0.12), rgba255(0.0, 0.0, 0.0, 0.12)))
     records.append(adaptiveColor("sliderTrack",
-        rgba255(120.0, 120.0, 128.0, 0.16), rgba255(120.0, 120.0, 128.0, 0.16)))
+        rgba255(120.0, 120.0, 120.0, 0.2), rgba255(120.0, 120.0, 120.0, 0.2)))
+    // A held slider knob is clear glass washed with a little white.
+    records.append(adaptiveColor("sliderKnobGlass",
+        rgba255(255.0, 255.0, 255.0, 0.09), rgba255(255.0, 255.0, 255.0, 0.09)))
     records.append(adaptiveColor("progressTrack",
         rgba255(120.0, 120.0, 120.0, 0.2), rgba255(120.0, 120.0, 120.0, 0.2)))
     // The kit's menu shadow: black at a quarter in light, nearly half in dark,

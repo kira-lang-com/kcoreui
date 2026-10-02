@@ -207,7 +207,11 @@ function metricSwitchKnobWidth() -> String { return "switchKnobWidth" }
 function metricSwitchKnobInset() -> String { return "switchKnobInset" }
 function metricSliderHeight() -> String { return "sliderHeight" }
 function metricSliderTrackHeight() -> String { return "sliderTrackHeight" }
-function metricSliderKnobSize() -> String { return "sliderKnobSize" }
+function metricSliderKnobWidth() -> String { return "sliderKnobWidth" }
+function metricSliderKnobHeight() -> String { return "sliderKnobHeight" }
+function metricSliderKnobInset() -> String { return "sliderKnobInset" }
+function metricSliderHeldKnobWidth() -> String { return "sliderHeldKnobWidth" }
+function metricSliderHeldKnobHeight() -> String { return "sliderHeldKnobHeight" }
 function metricProgressTrackHeight() -> String { return "progressTrackHeight" }
 // The two shadows under a slider's knob: a soft one that falls away from it,
 // and a tight one where it meets the track.
@@ -323,7 +327,11 @@ function allMetricNames() -> [String] {
     names.append(metricSwitchKnobInset())
     names.append(metricSliderHeight())
     names.append(metricSliderTrackHeight())
-    names.append(metricSliderKnobSize())
+    names.append(metricSliderKnobWidth())
+    names.append(metricSliderKnobHeight())
+    names.append(metricSliderKnobInset())
+    names.append(metricSliderHeldKnobWidth())
+    names.append(metricSliderHeldKnobHeight())
     names.append(metricProgressTrackHeight())
     names.append(metricCaretWidth())
     names.append(metricCaretHeight())

@@ -1,0 +1,114 @@
+import Foundation
+import KCoreUI
+
+// The default catalog's chrome metrics.
+//
+// The bar, the sidebar, the list and the large title are read off Apple's iOS
+// and iPadOS 27 design kit. The window's own numbers -- its corner, its close,
+// minimise and zoom buttons, the split divider -- were measured on a running
+// macOS 27 window, since the window is the Mac's.
+//
+// They are authored without a platform constraint because the floor has to
+// answer in every environment, and the Mac's are the only measurements this
+// catalog holds yet. A platform with different chrome adds renditions pinned
+// to itself; the Mac's numbers stay where they are.
+
+function metricResource(name: borrow String, points: Float) -> ResourceRecord {
+    var resource = ResourceRecord()
+    resource.name = name
+    resource.kind = .Metric
+
+    var value = MetricValue()
+    value.points = points
+
+    var rendition = RenditionRecord()
+    rendition.payload = encodeMetric(value)
+    resource.renditions.append(rendition)
+    return resource
+}
+
+function defaultMetricResources() -> [ResourceRecord] {
+    var records: [ResourceRecord] = []
+
+    // The bar is the iPadOS 27 kit's top toolbar. Its controls row is 44 tall,
+    // held 10 under the window's top edge (the kit's window content holds 10)
+    // and 10 over what follows: a 64-point band with the row centred in it.
+    // A symbol button is a 44-point square of glass around a 36-point symbol
+    // box. A button group holds its symbols 20 apart and 6 off its ends, which
+    // is 44-point items 12 apart, 2 off the ends: two buttons come to 104.
+    records.append(metricResource(metricToolbarHeight(), 64.0))
+    records.append(metricResource(metricToolbarItemHeight(), 44.0))
+    records.append(metricResource(metricToolbarItemWidth(), 44.0))
+    records.append(metricResource(metricToolbarGroupSpacing(), 12.0))
+    records.append(metricResource(metricToolbarGroupInset(), 2.0))
+
+    // Twelve points between pieces of glass, which is all a fixed spacer
+    // holds, and ten from the outermost piece to the edge of the bar.
+    records.append(metricResource(metricToolbarItemSpacing(), 12.0))
+    records.append(metricResource(metricToolbarSpacerWidth(), 12.0))
+    records.append(metricResource(metricToolbarEdgeInset(), 10.0))
+
+    // An inline title starts at the column's 20-point margin, or 12 past a
+    // back button's glass.
+    records.append(metricResource(metricToolbarTitleInset(), 20.0))
+    records.append(metricResource(metricToolbarTitleSpacing(), 12.0))
+
+    // A text button holds its label 14 off its glass's ends: 8 to the label's
+    // own capsule and 6 inside it. Symbols are SF Pro Medium at 17 points:
+    // weight 510.
+    records.append(metricResource(metricToolbarItemLabelInset(), 14.0))
+    records.append(metricResource(metricToolbarSymbolSize(), 17.0))
+    records.append(metricResource(metricToolbarSymbolWeight(), 510.0))
+
+    records.append(metricResource(metricWindowCornerRadius(), 16.0))
+
+    // Three 14-point buttons at x = 19, 42 and 65; the bar's own items start at
+    // 92, 13 points after the last.
+    records.append(metricResource(metricWindowControlsLeading(), 19.0))
+    records.append(metricResource(metricWindowControlDiameter(), 14.0))
+    records.append(metricResource(metricWindowControlSpacing(), 9.0))
+    records.append(metricResource(metricWindowControlsTrailing(), 13.0))
+
+    records.append(metricResource(metricSplitDividerThickness(), 0.5))
+
+    // A `List` in the sidebar column, from the iPadOS 27 kit's split view: the
+    // column holds its rows 10 off each edge. A section's header row is 54
+    // tall with its title 12 further in and its line starting 21 down. Rows
+    // are 44 and touch, their content 10 further in than the column's. The
+    // selected row's band is the row itself, a capsule. The symbol sits in a
+    // 34-point box at 17 points, the title 4 after it.
+    records.append(metricResource(metricSidebarHeaderHeight(), 54.0))
+    records.append(metricResource(metricSidebarHeaderInset(), 22.0))
+    records.append(metricResource(metricSidebarHeaderTopInset(), 21.0))
+    records.append(metricResource(metricSidebarRowHeight(), 44.0))
+    records.append(metricResource(metricSidebarRowInset(), 20.0))
+    records.append(metricResource(metricSidebarSelectionInset(), 10.0))
+    records.append(metricResource(metricSidebarSelectionRadius(), 22.0))
+    records.append(metricResource(metricSidebarIconColumn(), 34.0))
+    records.append(metricResource(metricSidebarTitleSpacing(), 4.0))
+    records.append(metricResource(metricSidebarSymbolSize(), 17.0))
+
+    // The kit's list screen: a 648-point column, 10 between a header, its
+    // card and the next section, 10 above the first. The card's corner is 26;
+    // a row is 52 at least, its content and separator 16 in, the separator a
+    // hairline, accessories 16 apart. A header holds 10 above and below its
+    // title; a footer 8 above and 6 below.
+    records.append(metricResource(metricListReadableWidth(), 648.0))
+    records.append(metricResource(metricListSectionSpacing(), 10.0))
+    records.append(metricResource(metricListTopInset(), 10.0))
+    records.append(metricResource(metricListCornerRadius(), 26.0))
+    records.append(metricResource(metricListRowHeight(), 52.0))
+    records.append(metricResource(metricListRowInset(), 16.0))
+    records.append(metricResource(metricListSeparatorThickness(), 0.5))
+    records.append(metricResource(metricListAccessorySpacing(), 16.0))
+    records.append(metricResource(metricListHeaderPadding(), 10.0))
+    records.append(metricResource(metricListFooterTopInset(), 8.0))
+    records.append(metricResource(metricListFooterBottomInset(), 6.0))
+
+    // The kit's top toolbar sets its large title in a row that holds 4 above
+    // it, under the 10 the band already leaves below the controls, and leaves
+    // 10 under it before the content.
+    records.append(metricResource(metricLargeTitleTopInset(), 4.0))
+    records.append(metricResource(metricLargeTitleBottomInset(), 10.0))
+    return records
+}

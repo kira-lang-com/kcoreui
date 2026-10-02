@@ -56,6 +56,41 @@ function defaultMaterialResources() -> [ResourceRecord] {
     return records
 }
 
+// --- Vibrancy --------------------------------------------------------------
+//
+// Apple's kit inks a control's symbol in its "Labels - Vibrant" greys, burned
+// into the glass in the light appearance and dodged into it in the dark —
+// so one fill layer per appearance, the grey and the blend together.
+function vibrancyResource(name: borrow String, light: Float, dark: Float) -> ResourceRecord {
+    var resource = ResourceRecord()
+    resource.name = name
+    resource.kind = .Material
+
+    var burned = MaterialValue()
+    burned.layers.append(fillLayer(literalColor(rgba(light, light, light, 1.0)), 1.0, .LinearBurn))
+    var lightRendition = RenditionRecord()
+    lightRendition.constraints.append(whenAppearance(.Light))
+    lightRendition.payload = encodeMaterial(burned)
+    resource.renditions.append(lightRendition)
+
+    var dodged = MaterialValue()
+    dodged.layers.append(fillLayer(literalColor(rgba(dark, dark, dark, 1.0)), 1.0, .LinearDodge))
+    var darkRendition = RenditionRecord()
+    darkRendition.constraints.append(whenAppearance(.Dark))
+    darkRendition.payload = encodeMaterial(dodged)
+    resource.renditions.append(darkRendition)
+    return resource
+}
+
+function defaultVibrancyResources() -> [ResourceRecord] {
+    var records: [ResourceRecord] = []
+    records.append(vibrancyResource(materialVibrantLabel(), 0.102, 0.9608))
+    records.append(vibrancyResource(materialVibrantSecondaryLabel(), 0.4471, 0.5412))
+    records.append(vibrancyResource(materialVibrantTertiaryLabel(), 0.749, 0.251))
+    records.append(vibrancyResource(materialVibrantQuaternaryLabel(), 0.851, 0.149))
+    return records
+}
+
 // --- Text styles -----------------------------------------------------------
 //
 // Every metric here is KiraUI's own, so a toolkit reading text through the
@@ -82,33 +117,29 @@ function textStyleResource(name: borrow String, size: Float, weight: Int, lineHe
     return resource
 }
 
-// Apple's eleven text styles.
+// Apple's eleven text styles, at the default Dynamic Type size.
 //
-// Every name the toolkit already had a token for carries the toolkit's own
-// metrics, so text laid out through the catalog is text laid out exactly as it
-// was before. `largeTitle`, `callout` and `caption2` are the three Apple names
-// nothing here had, and are authored to sit in the ladder the others make.
-//
-// `title3` is larger than `title2`, which is the toolkit's own arrangement and
-// is preserved rather than tidied: this change moves where the numbers live,
-// not what they are.
+// Read off the iOS and iPadOS 27 kit's typography variables: `Size`, the
+// default leading under `Large (Default)` and `letterSpacing`. Every style is
+// regular except `headline`; an emphasized title is the same style asked for
+// heavier, not a second style.
 function defaultTextStyleResources() -> [ResourceRecord] {
     var records: [ResourceRecord] = []
-    records.append(textStyleResource(textLargeTitle(), 34.0, fontWeightBold(), 41.0, 0.0 - 0.4))
-    records.append(textStyleResource(textTitle(), 28.0, fontWeightBold(), 34.0, 0.0 - 0.3))
-    records.append(textStyleResource(textTitle2(), 24.0, fontWeightBold(), 29.0, 0.0 - 0.2))
-    records.append(textStyleResource(textTitle3(), 28.0, fontWeightBold(), 34.0, 0.0 - 0.2))
-    records.append(textStyleResource(textHeadline(), 18.0, fontWeightSemiBold(), 23.0, 0.0))
-    records.append(textStyleResource(textSubheadline(), 13.0, fontWeightRegular(), 18.0, 0.0))
-    records.append(textStyleResource(textBody(), 15.0, fontWeightRegular(), 21.0, 0.0))
-    records.append(textStyleResource(textCallout(), 14.0, fontWeightRegular(), 19.0, 0.0))
-    records.append(textStyleResource(textFootnote(), 11.0, fontWeightRegular(), 15.0, 0.0))
-    records.append(textStyleResource(textCaption(), 12.0, fontWeightRegular(), 16.0, 0.2))
-    records.append(textStyleResource(textCaption2(), 10.0, fontWeightRegular(), 13.0, 0.2))
+    records.append(textStyleResource(textLargeTitle(), 34.0, fontWeightRegular(), 41.0, 0.4))
+    records.append(textStyleResource(textTitle(), 28.0, fontWeightRegular(), 34.0, 0.38))
+    records.append(textStyleResource(textTitle2(), 22.0, fontWeightRegular(), 28.0, 0.0 - 0.26))
+    records.append(textStyleResource(textTitle3(), 20.0, fontWeightRegular(), 25.0, 0.0 - 0.45))
+    records.append(textStyleResource(textHeadline(), 17.0, fontWeightSemiBold(), 22.0, 0.0 - 0.43))
+    records.append(textStyleResource(textSubheadline(), 15.0, fontWeightRegular(), 20.0, 0.0 - 0.23))
+    records.append(textStyleResource(textBody(), 17.0, fontWeightRegular(), 22.0, 0.0 - 0.43))
+    records.append(textStyleResource(textCallout(), 16.0, fontWeightRegular(), 21.0, 0.0 - 0.31))
+    records.append(textStyleResource(textFootnote(), 13.0, fontWeightRegular(), 18.0, 0.0 - 0.08))
+    records.append(textStyleResource(textCaption(), 12.0, fontWeightRegular(), 16.0, 0.0))
+    records.append(textStyleResource(textCaption2(), 11.0, fontWeightRegular(), 13.0, 0.06))
     return records
 }
 
-// The six text styles the toolkit has and Apple does not.
+// The text styles the toolkit has and Apple does not.
 //
 // `label` is one of them, and it is also a colour. That is not a collision: a
 // resource is keyed by name and kind together, so `label` the typeface and
@@ -122,6 +153,9 @@ function toolkitTextStyleResources() -> [ResourceRecord] {
     records.append(textStyleResource("label", 12.0, fontWeightSemiBold(), 16.0, 0.0))
     records.append(textStyleResource("section", 16.0, fontWeightBold(), 20.0, 0.0))
     records.append(textStyleResource("title1", 30.0, fontWeightBold(), 36.0, 0.0 - 0.3))
+    // A window's title on the toolbar band, measured on macOS 27: SF Pro
+    // semibold at 15 points on a 19-point line.
+    records.append(textStyleResource("windowTitle", 15.0, fontWeightSemiBold(), 19.0, 0.0))
     return records
 }
 
@@ -131,7 +165,10 @@ function defaultCatalogRecord() -> CatalogRecord {
     var record = CatalogRecord()
     for entry in defaultColorResources() { record.resources.append(entry) }
     for entry in defaultMaterialResources() { record.resources.append(entry) }
+    for entry in defaultVibrancyResources() { record.resources.append(entry) }
     for entry in defaultTextStyleResources() { record.resources.append(entry) }
     for entry in toolkitTextStyleResources() { record.resources.append(entry) }
+    for entry in defaultMetricResources() { record.resources.append(entry) }
+    for entry in defaultGlassResources() { record.resources.append(entry) }
     return record
 }

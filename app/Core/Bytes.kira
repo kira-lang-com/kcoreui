@@ -228,8 +228,9 @@ function compareStrings(left: borrow String, right: borrow String) -> Int {
     var index = 0
     let shorter = left.count < right.count ? left.count : right.count
     while index < shorter {
-        let a = left.charAt(index) & 255
-        let b = right.charAt(index) & 255
+        // `charAt` answers a `U8`, and a difference of two bytes is signed.
+        let a = Int(left.charAt(index))
+        let b = Int(right.charAt(index))
         if a != b {
             return a - b
         }

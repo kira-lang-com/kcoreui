@@ -260,3 +260,72 @@ function resolveTypography(stack: borrow CatalogStack, name: borrow String, envi
     typography.value = read.value
     return typography
 }
+
+// --- Metrics ---------------------------------------------------------------
+
+struct ResolvedMetric {
+    var found: Bool = false
+    var points: Float = 0.0
+}
+
+function resolveMetric(stack: borrow CatalogStack, name: borrow String, environment: borrow UIEnvironment) -> ResolvedMetric {
+    var metric = ResolvedMetric()
+    let resolved = resolveResource(stack, name, .Metric, environment)
+    if !resolved.found || !resourceKindsEqual(resolved.kind, .Metric) {
+        return metric
+    }
+    let read = decodeMetric(resolvedPayload(stack, resolved))
+    if !read.ok {
+        return metric
+    }
+    metric.found = true
+    metric.points = read.value.points
+    return metric
+}
+
+// --- Glass -----------------------------------------------------------------
+
+struct ResolvedGlass {
+    var found: Bool = false
+    var ramps: [GlassRamp] = []
+}
+
+function resolveGlass(stack: borrow CatalogStack, name: borrow String, environment: borrow UIEnvironment) -> ResolvedGlass {
+    var glass = ResolvedGlass()
+    let resolved = resolveResource(stack, name, .Glass, environment)
+    if !resolved.found || !resourceKindsEqual(resolved.kind, .Glass) {
+        return glass
+    }
+    let read = decodeGlass(resolvedPayload(stack, resolved))
+    if !read.ok {
+        return glass
+    }
+    glass.found = true
+    glass.ramps = read.value.ramps
+    return glass
+}
+
+// Whether a recipe states an input at all. An input it leaves out is one the
+// platform does not draw for this glass, which is different from one it draws
+// at zero.
+function glassStates(glass: borrow ResolvedGlass, input: GlassInput) -> Bool {
+    let wanted = glassInputValue(input)
+    for ramp in glass.ramps {
+        if glassInputValue(ramp.input) == wanted {
+            return true
+        }
+    }
+    return false
+}
+
+// One input of a recipe on a surface whose shorter side is `extent`, or zero
+// when the recipe does not state it.
+function glassFigure(glass: borrow ResolvedGlass, input: GlassInput, extent: Float) -> Float {
+    let wanted = glassInputValue(input)
+    for ramp in glass.ramps {
+        if glassInputValue(ramp.input) == wanted {
+            return glassRampAt(ramp, extent)
+        }
+    }
+    return 0.0
+}

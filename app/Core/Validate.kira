@@ -106,6 +106,8 @@ function payloadReferences(kind: borrow ResourceKind, bytes: borrow [U8]) -> [St
             return names
         }
         Typography -> return names
+        Metric -> return names
+        Glass -> return names
         Custom(value) -> return names
         Unknown(value) -> return names
     }
@@ -120,6 +122,8 @@ function payloadDecodes(kind: borrow ResourceKind, bytes: borrow [U8]) -> Bool {
         Material -> return decodeMaterial(bytes).ok
         Effect -> return decodeEffect(bytes).ok
         Typography -> return decodeTypography(bytes).ok
+        Metric -> return decodeMetric(bytes).ok
+        Glass -> return decodeGlass(bytes).ok
         Custom(value) -> return true
         Unknown(value) -> return true
     }

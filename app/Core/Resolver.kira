@@ -197,6 +197,8 @@ function kindName(kind: borrow ResourceKind) -> String {
         Material -> return "Material"
         Effect -> return "Effect"
         Typography -> return "Typography"
+        Metric -> return "Metric"
+        Glass -> return "Glass"
         Custom(value) -> return "kind#" + String(value)
         Unknown(value) -> return "kind#" + String(value)
     }

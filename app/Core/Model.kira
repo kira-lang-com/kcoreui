@@ -23,6 +23,8 @@ enum ResourceKind {
     Material
     Effect
     Typography
+    Metric
+    Glass
     Custom(Int)
     Unknown(Int)
 }
@@ -37,6 +39,8 @@ function resourceKindValue(kind: borrow ResourceKind) -> Int {
         Material -> return 3
         Effect -> return 4
         Typography -> return 5
+        Metric -> return 6
+        Glass -> return 7
         Custom(value) -> return value
         Unknown(value) -> return value
     }
@@ -48,6 +52,8 @@ function resourceKindFromValue(value: Int) -> ResourceKind {
     if value == 3 { return .Material }
     if value == 4 { return .Effect }
     if value == 5 { return .Typography }
+    if value == 6 { return .Metric }
+    if value == 7 { return .Glass }
     if value >= resourceKindCustomBase() { return .Custom(value) }
     return .Unknown(value)
 }
@@ -67,6 +73,8 @@ function resourceKindIsKnown(kind: borrow ResourceKind) -> Bool {
         Material -> return true
         Effect -> return true
         Typography -> return true
+        Metric -> return true
+        Glass -> return true
         Custom(value) -> return false
         Unknown(value) -> return false
     }

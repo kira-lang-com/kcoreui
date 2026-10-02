@@ -1,0 +1,109 @@
+import Foundation
+import KCoreUI
+
+// The default catalog's glass.
+//
+// Every ramp here was read off a running macOS 27 window: an
+// `NSGlassEffectView` swept from 24 to 400 points in each style and each
+// appearance, the filter inputs read back at every size, and each input fitted
+// as a line in the shorter side between the bounds it settled at. Every fit is
+// exact at every size swept. The glass refracts and blurs the same in both
+// appearances, and casts no shadow in either.
+//
+// Its edge is the one Apple's own design kit draws: a hairline ring all the way
+// round and a pair of side lines that weight the left and right, each burned
+// into what is behind it at a grey. The kit states the greys twice — for the
+// small glass of a 48-point control and for the medium and large glass of a
+// 160-point panel — so in the light appearance each is a line between those
+// two sizes, and the dark appearance burns both at one grey at every size.
+//
+// The kit lights the top and bottom edges too: a soft band along each, added
+// in a grey that is the same at every size and darker in the dark appearance,
+// and on the small glass alone a wider band under the top edge burned in a
+// light grey. The burn is a line from that grey at 48 points to white — no
+// burn at all — at 160.
+
+function glassResource(name: borrow String, light: borrow GlassValue, dark: borrow GlassValue) -> ResourceRecord {
+    var resource = ResourceRecord()
+    resource.name = name
+    resource.kind = .Glass
+
+    var lightRendition = RenditionRecord()
+    lightRendition.constraints.append(whenAppearance(.Light))
+    lightRendition.payload = encodeGlass(light)
+    resource.renditions.append(lightRendition)
+
+    var darkRendition = RenditionRecord()
+    darkRendition.constraints.append(whenAppearance(.Dark))
+    darkRendition.payload = encodeGlass(dark)
+    resource.renditions.append(darkRendition)
+    return resource
+}
+
+// The kit's edge in the light appearance: the ring 0.9098 and the side lines
+// 0.8157 on the small glass, both 0.8588 on the medium and large, and its
+// light added at 0.1569.
+function lightEdge(value: GlassValue) -> GlassValue {
+    var edged = move value
+    edged.ramps.append(glassRamp(.EdgeRingTone, 0.93166, -0.00045536, 0.8588, 0.9098))
+    edged.ramps.append(glassRamp(.EdgeSideTone, 0.79723, 0.00038482, 0.8157, 0.8588))
+    edged.ramps.append(glassConstant(.EdgeLightDodge, 0.1569))
+    edged.ramps.append(edgeLightBurn())
+    return edged
+}
+
+// The small glass's burn under its top edge, the same in both appearances.
+function edgeLightBurn() -> GlassRamp {
+    return glassRamp(.EdgeLightBurn, 0.86, 0.000875, 0.902, 1.0)
+}
+
+// The kit's edge in the dark appearance: both at 0.651, at every size, and its
+// light added at 0.102.
+function darkEdge(value: GlassValue) -> GlassValue {
+    var edged = move value
+    edged.ramps.append(glassConstant(.EdgeRingTone, 0.651))
+    edged.ramps.append(glassConstant(.EdgeSideTone, 0.651))
+    edged.ramps.append(glassConstant(.EdgeLightDodge, 0.102))
+    edged.ramps.append(edgeLightBurn())
+    return edged
+}
+
+// What the regular glass does at every size. Below 60 points it shows none of
+// its blur; by 167 it blurs fully, and by 120 it refracts as deeply as it ever
+// will.
+function regularGlass() -> GlassValue {
+    var ramps: [GlassRamp] = []
+    ramps.append(glassRamp(.InnerRefractionAmount, 0.0, -0.5, -60.0, -12.0))
+    ramps.append(glassRamp(.InnerRefractionHeight, 0.0, 0.25, 6.0, 20.0))
+    ramps.append(glassRamp(.OuterRefractionAmount, 0.0, 0.25, 16.0, 100.0))
+    ramps.append(glassRamp(.OuterRefractionHeight, 0.0, 0.2, 16.0, 80.0))
+    ramps.append(glassConstant(.RefractionOpacity, 0.6))
+    ramps.append(glassConstant(.BlurRadius, 5.0))
+    ramps.append(glassRamp(.BlurDistance, 0.0, -0.5, -200.0, -12.0))
+    ramps.append(glassRamp(.BlurOpacity, -0.45, 0.0075, 0.0, 0.8))
+    ramps.append(glassRamp(.BlurOpacityFar, -0.225, 0.00375, 0.0, 0.4))
+    ramps.append(glassRamp(.BleedAmount, 0.0, 0.35, 8.4, 140.0))
+    var value = GlassValue()
+    value.ramps = move ramps
+    return value
+}
+
+// The clear glass refracts further in, and draws no blur at any size.
+function clearGlass() -> GlassValue {
+    var value = GlassValue()
+    value.ramps.append(glassRamp(.InnerRefractionAmount, 0.0, -0.65, -60.0, -15.6))
+    value.ramps.append(glassRamp(.InnerRefractionHeight, 0.0, 0.36, 8.64, 20.0))
+    value.ramps.append(glassRamp(.OuterRefractionAmount, 0.0, 0.2, 4.8, 80.0))
+    value.ramps.append(glassRamp(.OuterRefractionHeight, 0.0, 0.125, 3.0, 50.0))
+    value.ramps.append(glassConstant(.RefractionOpacity, 0.0))
+    value.ramps.append(glassConstant(.BlurRadius, 0.0))
+    value.ramps.append(glassRamp(.BlurDistance, 0.0, -0.5, -200.0, -12.0))
+    return value
+}
+
+function defaultGlassResources() -> [ResourceRecord] {
+    var records: [ResourceRecord] = []
+    records.append(glassResource(glassRegular(), lightEdge(regularGlass()), darkEdge(regularGlass())))
+    records.append(glassResource(glassClear(), clearGlass(), clearGlass()))
+    return records
+}

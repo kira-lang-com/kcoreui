@@ -1,0 +1,18 @@
+import Foundation
+
+// The glass a surface is made of.
+//
+// SwiftUI names two: `.regular`, the glass of controls, bars and sidebars,
+// which blurs what is behind it once it is large enough to, and `.clear`,
+// which only refracts. Each is one recipe across every size, so the name says
+// which glass and the surface's size says how it looks.
+
+function glassRegular() -> String { return "glassRegular" }
+function glassClear() -> String { return "glassClear" }
+
+function allGlassNames() -> [String] {
+    var names: [String] = []
+    names.append(glassRegular())
+    names.append(glassClear())
+    return names
+}

@@ -15,9 +15,13 @@ struct IntegrityReport {
     var missingColors: [String] = []
     var missingMaterials: [String] = []
     var missingTextStyles: [String] = []
+    var missingMetrics: [String] = []
+    var missingGlass: [String] = []
     var undeclaredColors: [String] = []
     var undeclaredMaterials: [String] = []
     var undeclaredTextStyles: [String] = []
+    var undeclaredMetrics: [String] = []
+    var undeclaredGlass: [String] = []
 }
 
 // Whether every declared name has a resource behind it. Undeclared extras do
@@ -25,7 +29,9 @@ struct IntegrityReport {
 function integrityHolds(report: borrow IntegrityReport) -> Bool {
     if report.missingColors.count > 0 { return false }
     if report.missingMaterials.count > 0 { return false }
-    return report.missingTextStyles.count == 0
+    if report.missingTextStyles.count > 0 { return false }
+    if report.missingMetrics.count > 0 { return false }
+    return report.missingGlass.count == 0
 }
 
 function checkIntegrity(catalog: borrow Catalog) -> IntegrityReport {
@@ -33,12 +39,18 @@ function checkIntegrity(catalog: borrow Catalog) -> IntegrityReport {
     let colors = allColorNames()
     let materials = allMaterialNames()
     let textStyles = allTextStyleNames()
+    let metrics = allMetricNames()
+    let glass = allGlassNames()
     report.missingColors = missingNames(catalog, colors, .Color)
     report.missingMaterials = missingNames(catalog, materials, .Material)
     report.missingTextStyles = missingNames(catalog, textStyles, .Typography)
+    report.missingMetrics = missingNames(catalog, metrics, .Metric)
+    report.missingGlass = missingNames(catalog, glass, .Glass)
     report.undeclaredColors = undeclaredNames(catalog, colors, .Color)
     report.undeclaredMaterials = undeclaredNames(catalog, materials, .Material)
     report.undeclaredTextStyles = undeclaredNames(catalog, textStyles, .Typography)
+    report.undeclaredMetrics = undeclaredNames(catalog, metrics, .Metric)
+    report.undeclaredGlass = undeclaredNames(catalog, glass, .Glass)
     return report
 }
 
@@ -58,9 +70,13 @@ function integrityText(report: borrow IntegrityReport) -> String {
     text = appendNameList(text, "missing colors:", report.missingColors)
     text = appendNameList(text, "missing materials:", report.missingMaterials)
     text = appendNameList(text, "missing text styles:", report.missingTextStyles)
+    text = appendNameList(text, "missing metrics:", report.missingMetrics)
+    text = appendNameList(text, "missing glass:", report.missingGlass)
     text = appendNameList(text, "undeclared colors:", report.undeclaredColors)
     text = appendNameList(text, "undeclared materials:", report.undeclaredMaterials)
     text = appendNameList(text, "undeclared text styles:", report.undeclaredTextStyles)
+    text = appendNameList(text, "undeclared metrics:", report.undeclaredMetrics)
+    text = appendNameList(text, "undeclared glass:", report.undeclaredGlass)
     if text.count == 0 {
         return "catalog and name surface agree\n"
     }
@@ -78,6 +94,12 @@ function allDeclaredNames() -> [String] {
         names.append(name)
     }
     for name in allTextStyleNames() {
+        names.append(name)
+    }
+    for name in allMetricNames() {
+        names.append(name)
+    }
+    for name in allGlassNames() {
         names.append(name)
     }
     return names

@@ -1,6 +1,6 @@
 import Foundation
 
-// Materials, effects and typography.
+// Materials, effects, typography and metrics.
 //
 // A material is not pixels. It is a recipe: an ordered stack of layers a
 // compositor applies bottom to top, each carrying numbers and, where it needs a
@@ -26,6 +26,7 @@ enum BlendMode {
     Darken
     Multiply
     Luminosity
+    LinearBurn
     Unknown(Int)
 }
 
@@ -40,6 +41,7 @@ function blendModeValue(blend: borrow BlendMode) -> Int {
         Darken -> return 6
         Multiply -> return 7
         Luminosity -> return 8
+        LinearBurn -> return 9
         Unknown(value) -> return value
     }
 }
@@ -54,6 +56,7 @@ function blendModeFromValue(value: Int) -> BlendMode {
     if value == 6 { return .Darken }
     if value == 7 { return .Multiply }
     if value == 8 { return .Luminosity }
+    if value == 9 { return .LinearBurn }
     return .Unknown(value)
 }
 
@@ -383,6 +386,192 @@ function decodeTypography(bytes: borrow [U8]) -> TypographyRead {
     typography.tracking = floatFromFixed(readI32(bytes, tail + 10))
     typography.lineHeight = floatFromFixed(readI32(bytes, tail + 14))
     read.value = typography
+    read.ok = true
+    return read
+}
+
+// --- Metrics ---------------------------------------------------------------
+
+// A metric is one length in points: a bar's height, the gap between two items,
+// the inset from a window's edge. It is a catalog resource rather than a
+// literal in a toolkit for the same reason a colour is — the number differs by
+// platform, by idiom and by size class, and the toolkit asking for it should
+// not have to know which of those it is running under.
+struct MetricValue {
+    var points: Float = 0.0
+}
+
+function encodeMetric(metric: borrow MetricValue) -> [U8] {
+    var bytes: [U8] = []
+    appendU8(bytes, payloadVersion())
+    appendI32(bytes, fixedFromFloat(metric.points))
+    return bytes
+}
+
+struct MetricRead {
+    var value: MetricValue = MetricValue()
+    var ok: Bool = false
+}
+
+function decodeMetric(bytes: borrow [U8]) -> MetricRead {
+    var read = MetricRead()
+    if bytes.count < 5 || readU8(bytes, 0) != payloadVersion() {
+        return read
+    }
+    read.value.points = floatFromFixed(readI32(bytes, 1))
+    read.ok = true
+    return read
+}
+
+// --- Glass -----------------------------------------------------------------
+
+// Liquid Glass is not one look at every size. The platform states each figure
+// of its recipe as a line in the surface's shorter side, held between two
+// bounds: a 36-point control refracts a band nine points deep and shows none of
+// its blur, a panel three hundred points across refracts twenty and blurs
+// fully. A glass resource is that recipe, each input with its ramp, and the
+// size is applied by whoever has laid the surface out.
+//
+// The inputs are the platform's own, under its own names, so a recipe measured
+// off it is written down without translation. A renderer reads the ones it
+// draws and leaves the rest; `Unknown` carries an input this build has no name
+// for through load and write-back unchanged.
+enum GlassInput {
+    InnerRefractionAmount
+    InnerRefractionHeight
+    OuterRefractionAmount
+    OuterRefractionHeight
+    RefractionOpacity
+    BlurRadius
+    BlurDistance
+    BlurOpacity
+    BlurOpacityFar
+    BleedAmount
+    BleedOpacity
+    EdgeRingTone
+    EdgeSideTone
+    EdgeLightDodge
+    EdgeLightBurn
+    Unknown(Int)
+}
+
+function glassInputValue(input: borrow GlassInput) -> Int {
+    match input {
+        InnerRefractionAmount -> return 1
+        InnerRefractionHeight -> return 2
+        OuterRefractionAmount -> return 3
+        OuterRefractionHeight -> return 4
+        RefractionOpacity -> return 5
+        BlurRadius -> return 6
+        BlurDistance -> return 7
+        BlurOpacity -> return 8
+        BlurOpacityFar -> return 9
+        BleedAmount -> return 10
+        BleedOpacity -> return 11
+        EdgeRingTone -> return 12
+        EdgeSideTone -> return 13
+        EdgeLightDodge -> return 14
+        EdgeLightBurn -> return 15
+        Unknown(value) -> return value
+    }
+}
+
+function glassInputFromValue(value: Int) -> GlassInput {
+    if value == 1 { return .InnerRefractionAmount }
+    if value == 2 { return .InnerRefractionHeight }
+    if value == 3 { return .OuterRefractionAmount }
+    if value == 4 { return .OuterRefractionHeight }
+    if value == 5 { return .RefractionOpacity }
+    if value == 6 { return .BlurRadius }
+    if value == 7 { return .BlurDistance }
+    if value == 8 { return .BlurOpacity }
+    if value == 9 { return .BlurOpacityFar }
+    if value == 10 { return .BleedAmount }
+    if value == 11 { return .BleedOpacity }
+    if value == 12 { return .EdgeRingTone }
+    if value == 13 { return .EdgeSideTone }
+    if value == 14 { return .EdgeLightDodge }
+    if value == 15 { return .EdgeLightBurn }
+    return .Unknown(value)
+}
+
+// One input as a function of size: `base + slope * extent`, held between
+// `minimum` and `maximum`, where the extent is the surface's shorter side in
+// points. A figure that does not change with size has a slope of zero.
+struct GlassRamp {
+    var input: GlassInput = .InnerRefractionAmount
+    var base: Float = 0.0
+    var slope: Float = 0.0
+    var minimum: Float = 0.0
+    var maximum: Float = 0.0
+}
+
+function glassRamp(input: GlassInput, base: Float, slope: Float, minimum: Float, maximum: Float) -> GlassRamp {
+    var ramp = GlassRamp()
+    ramp.input = move input
+    ramp.base = base
+    ramp.slope = slope
+    ramp.minimum = minimum
+    ramp.maximum = maximum
+    return ramp
+}
+
+function glassConstant(input: GlassInput, value: Float) -> GlassRamp {
+    return glassRamp(move input, value, 0.0, value, value)
+}
+
+// What a ramp comes to on a surface whose shorter side is `extent`.
+function glassRampAt(ramp: borrow GlassRamp, extent: Float) -> Float {
+    return clamp(ramp.base + ramp.slope * extent, ramp.minimum, ramp.maximum)
+}
+
+struct GlassValue {
+    var ramps: [GlassRamp] = []
+}
+
+function encodeGlass(glass: borrow GlassValue) -> [U8] {
+    var bytes: [U8] = []
+    appendU8(bytes, payloadVersion())
+    appendU16(bytes, glass.ramps.count)
+    for ramp in glass.ramps {
+        appendU16(bytes, glassInputValue(ramp.input))
+        appendI32(bytes, fixedFromFloat(ramp.base))
+        appendI32(bytes, fixedFromFloat(ramp.slope))
+        appendI32(bytes, fixedFromFloat(ramp.minimum))
+        appendI32(bytes, fixedFromFloat(ramp.maximum))
+    }
+    return bytes
+}
+
+struct GlassRead {
+    var value: GlassValue = GlassValue()
+    var ok: Bool = false
+}
+
+function decodeGlass(bytes: borrow [U8]) -> GlassRead {
+    var read = GlassRead()
+    if bytes.count < 3 || readU8(bytes, 0) != payloadVersion() {
+        return read
+    }
+    let rampCount = readU16(bytes, 1)
+    if 3 + rampCount * 18 > bytes.count {
+        return read
+    }
+    var glass = GlassValue()
+    var cursor = 3
+    var index = 0
+    while index < rampCount {
+        var ramp = GlassRamp()
+        ramp.input = glassInputFromValue(readU16(bytes, cursor))
+        ramp.base = floatFromFixed(readI32(bytes, cursor + 2))
+        ramp.slope = floatFromFixed(readI32(bytes, cursor + 6))
+        ramp.minimum = floatFromFixed(readI32(bytes, cursor + 10))
+        ramp.maximum = floatFromFixed(readI32(bytes, cursor + 14))
+        glass.ramps.append(ramp)
+        cursor = cursor + 18
+        index = index + 1
+    }
+    read.value = glass
     read.ok = true
     return read
 }

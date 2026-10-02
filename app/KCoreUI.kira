@@ -104,6 +104,18 @@ function typography(resources: borrow UIResources, name: borrow String) -> Resol
     return resolveTypography(resources.stack, name, resources.environment)
 }
 
+// The length a metric name means right now, in points.
+function metric(resources: borrow UIResources, name: borrow String) -> Float {
+    return resolveMetric(resources.stack, name, resources.environment).points
+}
+
+// The glass recipe a name means right now: each input with the ramp that
+// carries it across sizes. The size itself is the caller's, applied with
+// `glassFigure` once the surface is laid out.
+function glass(resources: borrow UIResources, name: borrow String) -> ResolvedGlass {
+    return resolveGlass(resources.stack, name, resources.environment)
+}
+
 // --- Diagnostics -----------------------------------------------------------
 
 // Why a name resolved the way it did, as text. The failure mode of a variant

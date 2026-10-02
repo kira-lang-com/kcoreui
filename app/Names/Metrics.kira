@@ -1,0 +1,169 @@
+import Foundation
+
+// The lengths a window's chrome is laid out with.
+//
+// Apple exposes none of these as API. They are what AppKit and SwiftUI lay a
+// window out with, so a toolkit drawing its own chrome needs the same numbers
+// under names it can ask for. Each name is the measurement, not the view it
+// was measured on: `toolbarItemSpacing` is the gap between two pieces of glass
+// on the bar, whichever items they hold.
+//
+// Everything on the bar is centred in its height, so no name here carries a
+// vertical offset: an item's top is the bar's height less the item's, halved.
+
+// --- The bar ---------------------------------------------------------------
+
+// The unified title and toolbar band. Content runs underneath it; this is the
+// top safe-area inset a window's content is laid out against.
+function metricToolbarHeight() -> String { return "toolbarHeight" }
+
+// One piece of glass on the bar, and the width of an item holding an icon.
+function metricToolbarItemHeight() -> String { return "toolbarItemHeight" }
+function metricToolbarItemWidth() -> String { return "toolbarItemWidth" }
+
+// The gap between two items sharing one piece of glass, and how far the glass
+// holds the first and last of them off its ends. An item alone on its glass
+// is the glass.
+function metricToolbarGroupSpacing() -> String { return "toolbarGroupSpacing" }
+function metricToolbarGroupInset() -> String { return "toolbarGroupInset" }
+
+// The gap between two pieces of glass, and the width a fixed spacer holds open.
+function metricToolbarItemSpacing() -> String { return "toolbarItemSpacing" }
+function metricToolbarSpacerWidth() -> String { return "toolbarSpacerWidth" }
+
+// How far the outermost glass sits from the edge of its section.
+function metricToolbarEdgeInset() -> String { return "toolbarEdgeInset" }
+
+// How far a column's title sits from the column's leading edge, and from a
+// piece of glass before it -- a back button -- when there is one.
+function metricToolbarTitleInset() -> String { return "toolbarTitleInset" }
+function metricToolbarTitleSpacing() -> String { return "toolbarTitleSpacing" }
+
+// What a piece of glass holds an item's label off its ends by, and the point
+// size and weight its symbols are set at.
+function metricToolbarItemLabelInset() -> String { return "toolbarItemLabelInset" }
+function metricToolbarSymbolSize() -> String { return "toolbarSymbolSize" }
+function metricToolbarSymbolWeight() -> String { return "toolbarSymbolWeight" }
+
+// --- The window ------------------------------------------------------------
+
+function metricWindowCornerRadius() -> String { return "windowCornerRadius" }
+
+// The close, minimise and zoom buttons: where the first one starts, how large
+// each one is, the gap between them, and the room left after the last before
+// anything else on the bar.
+function metricWindowControlsLeading() -> String { return "windowControlsLeading" }
+function metricWindowControlDiameter() -> String { return "windowControlDiameter" }
+function metricWindowControlSpacing() -> String { return "windowControlSpacing" }
+function metricWindowControlsTrailing() -> String { return "windowControlsTrailing" }
+
+// The line between two columns of a split view.
+function metricSplitDividerThickness() -> String { return "splitDividerThickness" }
+
+// --- The sidebar -----------------------------------------------------------
+//
+// A source list in a split view's sidebar column. It starts under the bar;
+// each section opens with a header row, then rows that touch.
+
+// A section's header row, how far its title sits from the column's edge, and
+// how far down the row the title's line starts: a header sits low in its row,
+// close to the rows it heads.
+function metricSidebarHeaderHeight() -> String { return "sidebarHeaderHeight" }
+function metricSidebarHeaderInset() -> String { return "sidebarHeaderInset" }
+function metricSidebarHeaderTopInset() -> String { return "sidebarHeaderTopInset" }
+
+// One row, and how far its content sits from each edge of the column.
+function metricSidebarRowHeight() -> String { return "sidebarRowHeight" }
+function metricSidebarRowInset() -> String { return "sidebarRowInset" }
+
+// The band behind the selected row: how far it sits from each edge of the
+// column, and its corner radius. The corner is continuous.
+function metricSidebarSelectionInset() -> String { return "sidebarSelectionInset" }
+function metricSidebarSelectionRadius() -> String { return "sidebarSelectionRadius" }
+
+// A row's symbol column, the gap after it to the title, and the point size
+// the symbol is set at.
+function metricSidebarIconColumn() -> String { return "sidebarIconColumn" }
+function metricSidebarTitleSpacing() -> String { return "sidebarTitleSpacing" }
+function metricSidebarSymbolSize() -> String { return "sidebarSymbolSize" }
+
+// --- The inset grouped list ------------------------------------------------
+//
+// SwiftUI's `Form`, and a `List` in the inset grouped style: sections, each a
+// header over a card of rows over a footer, in one readable column centred in
+// the room it has.
+
+// The widest the column grows, the gap between a header, its card and the next
+// section, and the room above the first section.
+function metricListReadableWidth() -> String { return "listReadableWidth" }
+function metricListSectionSpacing() -> String { return "listSectionSpacing" }
+function metricListTopInset() -> String { return "listTopInset" }
+
+// The card: its continuous corner, a row's least height, how far a row's
+// content and its separator sit from the card's edges, the separator's
+// thickness, and the gap between a row's trailing accessories.
+function metricListCornerRadius() -> String { return "listCornerRadius" }
+function metricListRowHeight() -> String { return "listRowHeight" }
+function metricListRowInset() -> String { return "listRowInset" }
+function metricListSeparatorThickness() -> String { return "listSeparatorThickness" }
+function metricListAccessorySpacing() -> String { return "listAccessorySpacing" }
+
+// What a header holds above and below its title, and what a footer holds
+// above and below its text. Both start at the row inset.
+function metricListHeaderPadding() -> String { return "listHeaderPadding" }
+function metricListFooterTopInset() -> String { return "listFooterTopInset" }
+function metricListFooterBottomInset() -> String { return "listFooterBottomInset" }
+
+// --- The large title ---------------------------------------------------------
+//
+// A column's title set large under the bar: how far below the bar its line
+// starts, and the room under it before the content.
+function metricLargeTitleTopInset() -> String { return "largeTitleTopInset" }
+function metricLargeTitleBottomInset() -> String { return "largeTitleBottomInset" }
+
+function allMetricNames() -> [String] {
+    var names: [String] = []
+    names.append(metricToolbarHeight())
+    names.append(metricToolbarItemHeight())
+    names.append(metricToolbarItemWidth())
+    names.append(metricToolbarGroupSpacing())
+    names.append(metricToolbarGroupInset())
+    names.append(metricToolbarItemSpacing())
+    names.append(metricToolbarSpacerWidth())
+    names.append(metricToolbarEdgeInset())
+    names.append(metricToolbarTitleInset())
+    names.append(metricToolbarTitleSpacing())
+    names.append(metricToolbarItemLabelInset())
+    names.append(metricToolbarSymbolSize())
+    names.append(metricToolbarSymbolWeight())
+    names.append(metricWindowCornerRadius())
+    names.append(metricWindowControlsLeading())
+    names.append(metricWindowControlDiameter())
+    names.append(metricWindowControlSpacing())
+    names.append(metricWindowControlsTrailing())
+    names.append(metricSplitDividerThickness())
+    names.append(metricSidebarHeaderHeight())
+    names.append(metricSidebarHeaderInset())
+    names.append(metricSidebarHeaderTopInset())
+    names.append(metricSidebarRowHeight())
+    names.append(metricSidebarRowInset())
+    names.append(metricSidebarSelectionInset())
+    names.append(metricSidebarSelectionRadius())
+    names.append(metricSidebarIconColumn())
+    names.append(metricSidebarTitleSpacing())
+    names.append(metricSidebarSymbolSize())
+    names.append(metricListReadableWidth())
+    names.append(metricListSectionSpacing())
+    names.append(metricListTopInset())
+    names.append(metricListCornerRadius())
+    names.append(metricListRowHeight())
+    names.append(metricListRowInset())
+    names.append(metricListSeparatorThickness())
+    names.append(metricListAccessorySpacing())
+    names.append(metricListHeaderPadding())
+    names.append(metricListFooterTopInset())
+    names.append(metricListFooterBottomInset())
+    names.append(metricLargeTitleTopInset())
+    names.append(metricLargeTitleBottomInset())
+    return names
+}

@@ -3,11 +3,11 @@ import KCoreUI
 
 // The default catalog's colours.
 //
-// Values are KiraUI's own, transcribed from the tokens its `DefaultStyle`
-// already ships, so a toolkit reading colours from this catalog draws exactly
-// what it drew before. Where Apple's surface names something KiraUI had no
-// token for — the grey ladder, `quinary`, the grouped backgrounds — the value
-// is authored here rather than taken from a platform.
+// Values are Apple's, read off the variables of the iOS and iPadOS 27 design
+// kit: every name below is one of the kit's colour variables, quoted in its
+// light and dark modes. The kit dropped its increased-contrast mode, so these
+// resources carry an appearance pair and nothing else. What Apple has no word
+// for sits at the end of the file, under the toolkit's own names.
 //
 // A name that means the same thing as another is written as a reference, not as
 // a second copy of the numbers. `foreground` is `label`, and stays `label` in
@@ -26,6 +26,12 @@ import KCoreUI
 // in linear light and nothing is lost: every sRGB colour is inside P3.
 function rgba(r: Float, g: Float, b: Float, a: Float) -> Color {
     return srgbToP3(Color(r: r, g: g, b: b, a: a))
+}
+
+// The same, with the channels in the 0–255 the kit quotes them in, so each
+// number below reads exactly as it does in the design file.
+function rgba255(r: Float, g: Float, b: Float, a: Float) -> Color {
+    return rgba(r / 255.0, g / 255.0, b / 255.0, a)
 }
 
 // A colour with a light and a dark rendition, which is the shape almost every
@@ -47,26 +53,6 @@ function adaptiveColor(name: borrow String, light: borrow Color, dark: borrow Co
     return resource
 }
 
-// The same, plus a pair for increased contrast. The contrast renditions pin two
-// traits, so they beat the appearance-only pair whenever contrast is high and
-// are invisible otherwise.
-function contrastingColor(name: borrow String, light: borrow Color, dark: borrow Color, lightHigh: borrow Color, darkHigh: borrow Color) -> ResourceRecord {
-    var resource = adaptiveColor(name, light, dark)
-
-    var lightRendition = RenditionRecord()
-    lightRendition.constraints.append(whenAppearance(.Light))
-    lightRendition.constraints.append(whenContrast(.High))
-    lightRendition.payload = encodeColor(lightHigh)
-    resource.renditions.append(lightRendition)
-
-    var darkRendition = RenditionRecord()
-    darkRendition.constraints.append(whenAppearance(.Dark))
-    darkRendition.constraints.append(whenContrast(.High))
-    darkRendition.payload = encodeColor(darkHigh)
-    resource.renditions.append(darkRendition)
-    return resource
-}
-
 // One name meaning another. No constraints, because an alias holds under every
 // environment: what varies is what it points at.
 function aliasColor(name: borrow String, target: borrow String) -> ResourceRecord {
@@ -80,51 +66,44 @@ function aliasColor(name: borrow String, target: borrow String) -> ResourceRecor
 }
 
 // --- The system palette ----------------------------------------------------
+//
+// The kit's `Accents` and `Grays` collections.
 
 function paletteResources() -> [ResourceRecord] {
     var records: [ResourceRecord] = []
-    records.append(adaptiveColor(colorSystemRed(), rgba(1.0, 0.231, 0.188, 1.0), rgba(1.0, 0.271, 0.227, 1.0)))
-    records.append(adaptiveColor(colorSystemOrange(), rgba(1.0, 0.584, 0.0, 1.0), rgba(1.0, 0.624, 0.039, 1.0)))
-    records.append(adaptiveColor(colorSystemYellow(), rgba(1.0, 0.8, 0.0, 1.0), rgba(1.0, 0.839, 0.039, 1.0)))
-    records.append(adaptiveColor(colorSystemGreen(), rgba(0.204, 0.78, 0.349, 1.0), rgba(0.188, 0.82, 0.345, 1.0)))
-    records.append(adaptiveColor(colorSystemMint(), rgba(0.0, 0.78, 0.745, 1.0), rgba(0.388, 0.902, 0.886, 1.0)))
-    records.append(adaptiveColor(colorSystemTeal(), rgba(0.188, 0.69, 0.78, 1.0), rgba(0.251, 0.784, 0.878, 1.0)))
-    records.append(adaptiveColor(colorSystemCyan(), rgba(0.196, 0.678, 0.902, 1.0), rgba(0.392, 0.824, 1.0, 1.0)))
-    records.append(adaptiveColor(colorSystemBlue(), rgba(0.0, 0.478, 1.0, 1.0), rgba(0.039, 0.518, 1.0, 1.0)))
-    records.append(adaptiveColor(colorSystemIndigo(), rgba(0.345, 0.337, 0.839, 1.0), rgba(0.369, 0.361, 0.902, 1.0)))
-    records.append(adaptiveColor(colorSystemPurple(), rgba(0.686, 0.322, 0.871, 1.0), rgba(0.749, 0.353, 0.949, 1.0)))
-    records.append(adaptiveColor(colorSystemPink(), rgba(1.0, 0.176, 0.333, 1.0), rgba(1.0, 0.216, 0.373, 1.0)))
-    records.append(adaptiveColor(colorSystemBrown(), rgba(0.635, 0.518, 0.369, 1.0), rgba(0.675, 0.557, 0.408, 1.0)))
+    records.append(adaptiveColor(colorSystemRed(), rgba255(255.0, 56.0, 60.0, 1.0), rgba255(255.0, 66.0, 69.0, 1.0)))
+    records.append(adaptiveColor(colorSystemOrange(), rgba255(255.0, 141.0, 40.0, 1.0), rgba255(255.0, 146.0, 48.0, 1.0)))
+    records.append(adaptiveColor(colorSystemYellow(), rgba255(255.0, 204.0, 0.0, 1.0), rgba255(255.0, 214.0, 0.0, 1.0)))
+    records.append(adaptiveColor(colorSystemGreen(), rgba255(52.0, 199.0, 89.0, 1.0), rgba255(48.0, 209.0, 88.0, 1.0)))
+    records.append(adaptiveColor(colorSystemMint(), rgba255(0.0, 200.0, 179.0, 1.0), rgba255(0.0, 218.0, 195.0, 1.0)))
+    records.append(adaptiveColor(colorSystemTeal(), rgba255(0.0, 195.0, 208.0, 1.0), rgba255(0.0, 210.0, 224.0, 1.0)))
+    records.append(adaptiveColor(colorSystemCyan(), rgba255(0.0, 192.0, 232.0, 1.0), rgba255(60.0, 211.0, 254.0, 1.0)))
+    records.append(adaptiveColor(colorSystemBlue(), rgba255(0.0, 136.0, 255.0, 1.0), rgba255(0.0, 145.0, 255.0, 1.0)))
+    records.append(adaptiveColor(colorSystemIndigo(), rgba255(97.0, 85.0, 245.0, 1.0), rgba255(109.0, 124.0, 255.0, 1.0)))
+    records.append(adaptiveColor(colorSystemPurple(), rgba255(203.0, 48.0, 224.0, 1.0), rgba255(219.0, 52.0, 242.0, 1.0)))
+    records.append(adaptiveColor(colorSystemPink(), rgba255(255.0, 45.0, 85.0, 1.0), rgba255(255.0, 55.0, 95.0, 1.0)))
+    records.append(adaptiveColor(colorSystemBrown(), rgba255(172.0, 127.0, 94.0, 1.0), rgba255(183.0, 138.0, 102.0, 1.0)))
 
-    // A six-step grey ladder around KiraUI's single grey token, light stepping
-    // toward the canvas and dark stepping toward it from the other side.
-    records.append(adaptiveColor(colorSystemGray(), rgba(0.557, 0.557, 0.576, 1.0), rgba(0.557, 0.557, 0.576, 1.0)))
-    records.append(adaptiveColor(colorSystemGray2(), rgba(0.628, 0.628, 0.644, 1.0), rgba(0.482, 0.482, 0.502, 1.0)))
-    records.append(adaptiveColor(colorSystemGray3(), rgba(0.706, 0.706, 0.722, 1.0), rgba(0.392, 0.392, 0.412, 1.0)))
-    records.append(adaptiveColor(colorSystemGray4(), rgba(0.784, 0.784, 0.8, 1.0), rgba(0.318, 0.318, 0.337, 1.0)))
-    records.append(adaptiveColor(colorSystemGray5(), rgba(0.898, 0.898, 0.918, 1.0), rgba(0.231, 0.231, 0.259, 1.0)))
-    records.append(adaptiveColor(colorSystemGray6(), rgba(0.949, 0.949, 0.969, 1.0), rgba(0.141, 0.141, 0.161, 1.0)))
+    records.append(adaptiveColor(colorSystemGray(), rgba255(142.0, 142.0, 147.0, 1.0), rgba255(142.0, 142.0, 147.0, 1.0)))
+    records.append(adaptiveColor(colorSystemGray2(), rgba255(174.0, 174.0, 178.0, 1.0), rgba255(99.0, 99.0, 102.0, 1.0)))
+    records.append(adaptiveColor(colorSystemGray3(), rgba255(199.0, 199.0, 204.0, 1.0), rgba255(72.0, 72.0, 74.0, 1.0)))
+    records.append(adaptiveColor(colorSystemGray4(), rgba255(209.0, 209.0, 214.0, 1.0), rgba255(58.0, 58.0, 60.0, 1.0)))
+    records.append(adaptiveColor(colorSystemGray5(), rgba255(229.0, 229.0, 234.0, 1.0), rgba255(44.0, 44.0, 46.0, 1.0)))
+    records.append(adaptiveColor(colorSystemGray6(), rgba255(242.0, 242.0, 247.0, 1.0), rgba255(28.0, 28.0, 30.0, 1.0)))
     return records
 }
 
 // --- The content hierarchy -------------------------------------------------
+//
+// The kit's `Labels` collection.
 
 function labelResources() -> [ResourceRecord] {
     var records: [ResourceRecord] = []
-    records.append(contrastingColor(colorLabel(),
-        rgba(0.08, 0.09, 0.12, 1.0), rgba(0.95, 0.96, 0.99, 1.0),
-        rgba(0.0, 0.0, 0.0, 1.0), rgba(1.0, 1.0, 1.0, 1.0)))
-    records.append(contrastingColor(colorSecondaryLabel(),
-        rgba(0.38, 0.4, 0.46, 1.0), rgba(0.68, 0.71, 0.78, 1.0),
-        rgba(0.24, 0.26, 0.31, 1.0), rgba(0.84, 0.86, 0.92, 1.0)))
-    records.append(contrastingColor(colorTertiaryLabel(),
-        rgba(0.5, 0.51, 0.55, 0.58), rgba(0.58, 0.6, 0.66, 0.58),
-        rgba(0.4, 0.41, 0.45, 0.82), rgba(0.72, 0.74, 0.8, 0.82)))
-    records.append(contrastingColor(colorQuaternaryLabel(),
-        rgba(0.5, 0.51, 0.55, 0.34), rgba(0.58, 0.6, 0.66, 0.34),
-        rgba(0.4, 0.41, 0.45, 0.6), rgba(0.72, 0.74, 0.8, 0.6)))
-    records.append(adaptiveColor(colorPlaceholderText(),
-        rgba(0.5, 0.51, 0.55, 0.46), rgba(0.58, 0.6, 0.66, 0.46)))
+    records.append(adaptiveColor(colorLabel(), rgba255(0.0, 0.0, 0.0, 1.0), rgba255(255.0, 255.0, 255.0, 1.0)))
+    records.append(adaptiveColor(colorSecondaryLabel(), rgba255(60.0, 60.0, 67.0, 0.6), rgba255(235.0, 235.0, 245.0, 0.7)))
+    records.append(adaptiveColor(colorTertiaryLabel(), rgba255(60.0, 60.0, 67.0, 0.3), rgba255(235.0, 235.0, 245.0, 0.3)))
+    records.append(adaptiveColor(colorQuaternaryLabel(), rgba255(60.0, 60.0, 67.0, 0.18), rgba255(235.0, 235.0, 245.0, 0.16)))
+    records.append(aliasColor(colorPlaceholderText(), colorTertiaryLabel()))
 
     // Apple's hierarchical shape styles are the same ladder under shorter
     // names, so they are references rather than a second set of numbers.
@@ -132,60 +111,51 @@ function labelResources() -> [ResourceRecord] {
     records.append(aliasColor(colorSecondary(), colorSecondaryLabel()))
     records.append(aliasColor(colorTertiary(), colorTertiaryLabel()))
     records.append(aliasColor(colorQuaternary(), colorQuaternaryLabel()))
-    records.append(adaptiveColor(colorQuinary(),
-        rgba(0.5, 0.51, 0.55, 0.2), rgba(0.58, 0.6, 0.66, 0.2)))
+    records.append(adaptiveColor(colorQuinary(), rgba255(60.0, 60.0, 67.0, 0.1), rgba255(235.0, 235.0, 245.0, 0.1)))
     records.append(aliasColor(colorForeground(), colorLabel()))
     records.append(aliasColor(colorPlaceholder(), colorPlaceholderText()))
     return records
 }
 
 // --- Backgrounds, fills, separators ----------------------------------------
+//
+// The kit's `Backgrounds`, `Backgrounds (Grouped)`, `Fills` and `Separators`
+// collections. The grouped ladder is not the plain one: its canvas is the grey
+// a grouped table sits on, and its second rung is the white of the table's
+// rows.
 
 function surfaceResources() -> [ResourceRecord] {
     var records: [ResourceRecord] = []
-    records.append(adaptiveColor(colorSystemBackground(),
-        rgba(0.95, 0.96, 0.98, 1.0), rgba(0.035, 0.04, 0.065, 1.0)))
-    records.append(adaptiveColor(colorSecondarySystemBackground(),
-        rgba(1.0, 1.0, 1.0, 0.92), rgba(0.08, 0.1, 0.15, 0.92)))
-    records.append(adaptiveColor(colorTertiarySystemBackground(),
-        rgba(1.0, 1.0, 1.0, 0.98), rgba(0.12, 0.14, 0.2, 0.96)))
-    records.append(adaptiveColor(colorWindowBackground(),
-        rgba(0.96, 0.97, 1.0, 0.88), rgba(0.1, 0.12, 0.18, 0.88)))
+    records.append(adaptiveColor(colorSystemBackground(), rgba255(255.0, 255.0, 255.0, 1.0), rgba255(0.0, 0.0, 0.0, 1.0)))
+    records.append(adaptiveColor(colorSecondarySystemBackground(), rgba255(242.0, 242.0, 247.0, 1.0), rgba255(28.0, 28.0, 30.0, 1.0)))
+    records.append(adaptiveColor(colorTertiarySystemBackground(), rgba255(255.0, 255.0, 255.0, 1.0), rgba255(44.0, 44.0, 46.0, 1.0)))
+    records.append(adaptiveColor(colorWindowBackground(), rgba255(255.0, 255.0, 255.0, 1.0), rgba255(30.0, 30.0, 30.0, 1.0)))
     records.append(aliasColor(colorBackground(), colorSystemBackground()))
 
-    // The grouped ladder is the plain one shifted a step: a grouped table sits
-    // its rows on the surface colour rather than on the canvas.
-    records.append(aliasColor(colorSystemGroupedBackground(), colorSystemBackground()))
-    records.append(aliasColor(colorSecondarySystemGroupedBackground(), colorSecondarySystemBackground()))
-    records.append(aliasColor(colorTertiarySystemGroupedBackground(), colorTertiarySystemBackground()))
+    records.append(adaptiveColor(colorSystemGroupedBackground(), rgba255(242.0, 242.0, 247.0, 1.0), rgba255(0.0, 0.0, 0.0, 1.0)))
+    records.append(adaptiveColor(colorSecondarySystemGroupedBackground(), rgba255(255.0, 255.0, 255.0, 1.0), rgba255(28.0, 28.0, 30.0, 1.0)))
+    records.append(adaptiveColor(colorTertiarySystemGroupedBackground(), rgba255(242.0, 242.0, 247.0, 1.0), rgba255(44.0, 44.0, 46.0, 1.0)))
 
-    records.append(adaptiveColor(colorSystemFill(),
-        rgba(0.91, 0.93, 0.98, 1.0), rgba(0.16, 0.18, 0.26, 1.0)))
-    records.append(adaptiveColor(colorSecondarySystemFill(),
-        rgba(0.08, 0.09, 0.12, 0.08), rgba(0.95, 0.96, 0.99, 0.08)))
-    records.append(adaptiveColor(colorTertiarySystemFill(),
-        rgba(0.08, 0.09, 0.12, 0.05), rgba(0.95, 0.96, 0.99, 0.05)))
-    records.append(adaptiveColor(colorQuaternarySystemFill(),
-        rgba(0.08, 0.09, 0.12, 0.03), rgba(0.95, 0.96, 0.99, 0.03)))
+    records.append(adaptiveColor(colorSystemFill(), rgba255(120.0, 120.0, 120.0, 0.2), rgba255(120.0, 120.0, 128.0, 0.36)))
+    records.append(adaptiveColor(colorSecondarySystemFill(), rgba255(120.0, 120.0, 128.0, 0.16), rgba255(120.0, 120.0, 128.0, 0.32)))
+    records.append(adaptiveColor(colorTertiarySystemFill(), rgba255(118.0, 118.0, 128.0, 0.12), rgba255(118.0, 118.0, 128.0, 0.24)))
+    records.append(adaptiveColor(colorQuaternarySystemFill(), rgba255(116.0, 116.0, 128.0, 0.08), rgba255(118.0, 118.0, 128.0, 0.18)))
     records.append(aliasColor(colorFill(), colorSystemFill()))
 
-    records.append(contrastingColor(colorSeparator(),
-        rgba(0.08, 0.1, 0.16, 0.1), rgba(1.0, 1.0, 1.0, 0.1),
-        rgba(0.08, 0.1, 0.16, 0.32), rgba(1.0, 1.0, 1.0, 0.32)))
-    records.append(adaptiveColor(colorOpaqueSeparator(),
-        rgba(0.78, 0.79, 0.82, 1.0), rgba(0.22, 0.24, 0.3, 1.0)))
+    records.append(adaptiveColor(colorSeparator(), rgba255(0.0, 0.0, 0.0, 0.12), rgba255(255.0, 255.0, 255.0, 0.17)))
+    records.append(adaptiveColor(colorOpaqueSeparator(), rgba255(198.0, 198.0, 200.0, 1.0), rgba255(56.0, 56.0, 58.0, 1.0)))
     return records
 }
 
 // --- Accents ---------------------------------------------------------------
+//
+// The kit tints with its blue. Its text selection is one wash in both
+// appearances, drawn with a screen blend the catalog does not carry.
 
 function accentResources() -> [ResourceRecord] {
     var records: [ResourceRecord] = []
-    records.append(contrastingColor(colorTint(),
-        rgba(0.2, 0.45, 0.96, 1.0), rgba(0.43, 0.67, 1.0, 1.0),
-        rgba(0.09, 0.32, 0.86, 1.0), rgba(0.6, 0.78, 1.0, 1.0)))
-    records.append(adaptiveColor(colorSelection(),
-        rgba(0.2, 0.45, 0.96, 0.22), rgba(0.43, 0.67, 1.0, 0.22)))
+    records.append(aliasColor(colorTint(), colorSystemBlue()))
+    records.append(adaptiveColor(colorSelection(), rgba255(80.0, 156.0, 254.0, 0.2), rgba255(80.0, 156.0, 254.0, 0.2)))
     records.append(aliasColor(colorAccentColor(), colorTint()))
     records.append(aliasColor(colorLink(), colorSystemBlue()))
     return records
@@ -222,6 +192,13 @@ function toolkitResources() -> [ResourceRecord] {
         rgba(0.08, 0.1, 0.16, 0.32), rgba(1.0, 1.0, 1.0, 0.32)))
     records.append(adaptiveColor("focusRing",
         rgba(0.2, 0.45, 0.96, 0.86), rgba(0.43, 0.67, 1.0, 0.9)))
+
+    // The selected row of a sidebar. The kit adds its tertiary vibrant fill to
+    // the column (237 in light, 18 in dark, linear dodge): in light that
+    // saturates every channel to white, and in dark it lifts the column by
+    // 18/255, which is white at 7% over near-black.
+    records.append(adaptiveColor("sidebarSelection",
+        rgba255(255.0, 255.0, 255.0, 1.0), rgba255(255.0, 255.0, 255.0, 0.07)))
     return records
 }
 

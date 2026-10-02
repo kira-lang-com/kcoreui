@@ -20,13 +20,13 @@ One function, productized:
 (semantic name, kind, catalog stack, environment)  ->  rendition  ->  concrete value
 ```
 
-`Color.label` is not a colour. It is an identity that a catalog answers for, differently in light and dark, differently again under increased contrast, and differently again on a display with a wider gamut. Nothing in a view changes when any of that changes.
+`Color.label` is not a color. It is an identity that a catalog answers for, differently in light and dark, differently again under increased contrast, and differently again on a display with a wider gamut. Nothing in a view changes when any of that changes.
 
 ## The Two Properties
 
-**Round-trip is byte-exact.** The parser accepts exactly the canonical form the writer emits. Opening a catalog, changing one colour and saving cannot perturb anything else in it, including resources this build has no decoder for.
+**Round-trip is byte-exact.** The parser accepts exactly the canonical form the writer emits. Opening a catalog, changing one color and saving cannot perturb anything else in it, including resources this build has no decoder for.
 
-**Resolution is total.** The lowest catalog on the stack is complete, an integrity check proves it against the declared name surface, and a lookup therefore always answers. Nothing above has to carry a failure path for a colour.
+**Resolution is total.** The lowest catalog on the stack is complete, an integrity check proves it against the declared name surface, and a lookup therefore always answers. Nothing above has to carry a failure path for a color.
 
 ## The API Is The Product
 
@@ -94,11 +94,11 @@ theme blob         (partial)
 default catalog    (complete, the floor)
 ```
 
-A catalog that names a resource but has no rendition eligible for this environment does not stop the search. Overriding a colour in dark appearance alone is safe: light still falls through to the floor.
+A catalog that names a resource but has no rendition eligible for this environment does not stop the search. Overriding a color in dark appearance alone is safe: light still falls through to the floor.
 
 ## References
 
-A material's tint names a colour instead of copying one:
+A material's tint names a color instead of copying one:
 
 ```kira
 tintLayer(referenceColor(colorSystemBackground()), 0.68, blendNormal())
@@ -106,22 +106,22 @@ tintLayer(referenceColor(colorSystemBackground()), 0.68, blendNormal())
 
 The reference is resolved against the same environment the material was. So the recipe is authored once and is still correct in an appearance nobody had in mind when it was written. The validator rejects reference cycles before a blob is written; the resolver carries a depth limit as a backstop for a blob that arrived from somewhere else.
 
-## Colour
+## Color
 
-**A colour is a stack of layers, each with its own alpha.** That is what a system colour is: a separator is ink at a tenth of an opacity over whatever it sits on, a fill is a wash over a surface. Flattening that at author time bakes in the backdrop, and the backdrop is exactly what changes with the appearance.
+**A color is a stack of layers, each with its own alpha.** That is what a system color is: a separator is ink at a tenth of an opacity over whatever it sits on, a fill is a wash over a surface. Flattening that at author time bakes in the backdrop, and the backdrop is exactly what changes with the appearance.
 
 ```kira
 var separator = ColorValue()
 separator.layers.append(colorLayer(referenceColor(colorLabel()), 0.1))
 ```
 
-A layer's source is a literal colour or the name of another resource, and its opacity multiplies that source's own alpha — so an ink written at a tenth stays the named ink rather than becoming a second, fainter colour.
+A layer's source is a literal color or the name of another resource, and its opacity multiplies that source's own alpha — so an ink written at a tenth stays the named ink rather than becoming a second, fainter color.
 
-**Every colour in a catalog is Display P3.** One space, stated once, rather than a per-colour tag nobody fills in correctly: a value with no declared space means something different on every display it reaches. P3 rather than sRGB because it is the wider of the two, and every sRGB colour embeds in it exactly, so an sRGB-sourced palette loses nothing by being stored this way.
+**Every color in a catalog is Display P3.** One space, stated once, rather than a per-color tag nobody fills in correctly: a value with no declared space means something different on every display it reaches. P3 rather than sRGB because it is the wider of the two, and every sRGB color embeds in it exactly, so an sRGB-sourced palette loses nothing by being stored this way.
 
 Layers composite **source-over in linear light**. Alpha applied to a transfer-encoded channel is the classic wrong answer, the one that darkens midtones and muddies every blend, so a stack is decoded, composited, and encoded again. Half-covering white with black gives half the light, which encodes to about 0.735 rather than to 0.5.
 
-A resolved colour is converted to the gamut the environment reports. That is what the `gamut` trait is for, and it is why a catalog authored once is right on a display that can show P3 and on one that cannot.
+A resolved color is converted to the gamut the environment reports. That is what the `gamut` trait is for, and it is why a catalog authored once is right on a display that can show P3 and on one that cannot.
 
 ## No Floats On The Wire
 
@@ -131,7 +131,7 @@ One channel unit is 1/65536, so a value authored in thousandths comes back withi
 
 ## Names
 
-`app/Names` carries Apple's vocabulary in SwiftUI's spelling: the hierarchical styles, the label and fill and background ladders, the grouped backgrounds, the system palette, the six-step grey, the six materials, and the eleven text styles.
+`app/Names` carries Apple's vocabulary in SwiftUI's spelling: the hierarchical styles, the label and fill and background ladders, the grouped backgrounds, the system palette, the six-step gray, the six materials, and the eleven text styles.
 
 Those are names, not values. Nothing in `app/Core` may import them, and the format, the parser and the resolver never learn a single one. Swapping the whole vocabulary is a different blob and no code change.
 

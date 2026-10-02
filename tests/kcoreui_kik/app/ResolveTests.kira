@@ -3,7 +3,7 @@ import KCoreUI
 
 // References, recipes and the typed surface.
 //
-// The reference is what makes the design pay: a material's tint names a colour
+// The reference is what makes the design pay: a material's tint names a color
 // instead of copying one, so the recipe is authored once and is still correct
 // in an appearance nobody had in mind when it was written. These cases prove
 // that, and prove a reference chain cannot run away.
@@ -26,7 +26,10 @@ construct KcuAnAliasResolvesToWhatItNames() extends Test {
         let stack = kcuStackOf(kcuReferenceRecord())
         return kcuColorsEqual(resolveColor(stack, "foreground", kcuLight()), kcuInk())
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // The reference is followed against the *caller's* environment, which is why an
@@ -37,7 +40,10 @@ construct KcuAnAliasFollowsTheEnvironmentRatherThanACopy() extends Test {
         return kcuColorsEqual(resolveColor(stack, "foreground", kcuDark()), kcuPaper())
             && kcuColorsEqual(resolveColor(stack, "foreground", kcuLight()), kcuInk())
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 construct KcuAChainOfAliasesResolves() extends Test {
@@ -45,7 +51,10 @@ construct KcuAChainOfAliasesResolves() extends Test {
         let stack = kcuStackOf(kcuReferenceRecord())
         return kcuColorsEqual(resolveColor(stack, "primary", kcuDark()), kcuPaper())
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // An override of the target moves everything pointing at it, with no second
@@ -57,19 +66,25 @@ construct KcuOverridingATargetMovesEveryAliasPointingAtIt() extends Test {
         let stack = catalogStackOverride(kcuStackOf(kcuReferenceRecord()), kcuCatalogOf(overlay))
         return kcuColorsEqual(resolveColor(stack, "primary", kcuLight()), kcuColor(1.0, 0.0, 0.0, 1.0))
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
-// A reference to a name nothing defines is the debug colour rather than a trap
+// A reference to a name nothing defines is the debug color rather than a trap
 // or a silent black.
-construct KcuADanglingReferenceIsTheDebugColour() extends Test {
+construct KcuADanglingReferenceIsTheDebugColor() extends Test {
     test {
         var record = CatalogRecord()
         record.resources.append(kcuAlias("foreground", "nothingDefinesThis"))
         let stack = kcuStackOf(record)
         return kcuColorsEqual(resolveColor(stack, "foreground", kcuLight()), debugColor())
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // The validator rejects cycles before a blob is written; this proves the
@@ -83,7 +98,10 @@ construct KcuAReferenceCycleStopsAtTheDepthLimit() extends Test {
         let stack = kcuStackOf(record)
         return kcuColorsEqual(resolveColor(stack, "a", kcuLight()), debugColor())
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // --- Materials -------------------------------------------------------------
@@ -123,7 +141,10 @@ construct KcuAMaterialResolvesItsWholeRecipe() extends Test {
             && resolved.layers.count == 4
             && materialBlurRadius(resolved) == 28.0
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // The recipe is one authored thing; only what its references resolve to moves.
@@ -139,7 +160,10 @@ construct KcuAMaterialTintFollowsTheAppearanceWithoutASecondRecipe() extends Tes
             && kcuColorsEqual(dark.layers[2].color, kcuInk())
             && light.layers[0].amount == dark.layers[0].amount
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // Reduced transparency is a different recipe, not the same one turned down,
@@ -153,12 +177,18 @@ construct KcuReducedTransparencySelectsTheOpaqueRecipe() extends Test {
             && materialBlurRadius(reduced) == 0.0
             && kcuColorsEqual(reduced.layers[0].color, kcuInk())
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 construct KcuAskingForAMaterialByTheWrongKindFindsNothing() extends Test {
     test { return resolveMaterial(kcuStackOf(kcuMaterialRecord()), "separator", kcuLight()).found }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(false); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(false)
+        return e
+    }
 }
 
 // --- Gradients -------------------------------------------------------------
@@ -191,7 +221,10 @@ construct KcuAGradientResolvesItsStops() extends Test {
             && resolved.startX == 0.5
             && kcuColorsEqual(resolved.stops[0].color, kcuInk())
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // --- Effects ---------------------------------------------------------------
@@ -220,7 +253,10 @@ construct KcuAnEffectResolvesItsOps() extends Test {
             && resolved.ops[0].radius == 8.0
             && kcuNear(resolved.ops[1].amount, 0.8)
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // --- Typography ------------------------------------------------------------
@@ -252,5 +288,8 @@ construct KcuATextStyleResolvesItsMetrics() extends Test {
             && kcuNear(resolved.value.tracking, 0.0 - 0.3)
             && compareStrings(resolved.value.family, "Kira Sans") == 0
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }

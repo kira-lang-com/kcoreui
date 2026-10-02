@@ -5,7 +5,7 @@ import KCoreUI
 //
 // The bar, the sidebar, the list and the large title are read off Apple's iOS
 // and iPadOS 27 design kit. The window's own numbers -- its corner, its close,
-// minimise and zoom buttons, the split divider -- were measured on a running
+// minimize and zoom buttons, the split divider -- were measured on a running
 // macOS 27 window, since the window is the Mac's.
 //
 // They are authored without a platform constraint because the floor has to
@@ -32,7 +32,7 @@ function defaultMetricResources() -> [ResourceRecord] {
 
     // The bar is the iPadOS 27 kit's top toolbar. Its controls row is 44 tall,
     // held 10 under the window's top edge (the kit's window content holds 10)
-    // and 10 over what follows: a 64-point band with the row centred in it.
+    // and 10 over what follows: a 64-point band with the row centered in it.
     // A symbol button is a 44-point square of glass around a 36-point symbol
     // box. A button group holds its symbols 20 apart and 6 off its ends, which
     // is 44-point items 12 apart, 2 off the ends: two buttons come to 104.
@@ -53,6 +53,20 @@ function defaultMetricResources() -> [ResourceRecord] {
     records.append(metricResource(metricToolbarTitleInset(), 20.0))
     records.append(metricResource(metricToolbarTitleSpacing(), 12.0))
 
+    // A back button stays through the pop and leaves after it, swelling a
+    // tenth as it fades in under a fifth of a second. Set by eye against the
+    // platform, not measured.
+    records.append(metricResource(metricToolbarBackRemovalScale(), 1.1))
+    records.append(metricResource(metricToolbarBackRemovalDuration(), 0.18))
+
+    // The iPadOS kit's toolbar search field: 180 points of glass, the
+    // magnifier 11 in from its leading end, its trailing end 10 in, and 4
+    // between the magnifier and the text.
+    records.append(metricResource(metricToolbarSearchWidth(), 180.0))
+    records.append(metricResource(metricToolbarSearchLeading(), 11.0))
+    records.append(metricResource(metricToolbarSearchTrailing(), 10.0))
+    records.append(metricResource(metricToolbarSearchSpacing(), 4.0))
+
     // A text button holds its label 14 off its glass's ends: 8 to the label's
     // own capsule and 6 inside it. Symbols are SF Pro Medium at 17 points:
     // weight 510.
@@ -60,7 +74,8 @@ function defaultMetricResources() -> [ResourceRecord] {
     records.append(metricResource(metricToolbarSymbolSize(), 17.0))
     records.append(metricResource(metricToolbarSymbolWeight(), 510.0))
 
-    records.append(metricResource(metricWindowCornerRadius(), 16.0))
+    // The iPad kit's window: a continuous corner of 34.
+    records.append(metricResource(metricWindowCornerRadius(), 34.0))
 
     // Three 14-point buttons at x = 19, 42 and 65; the bar's own items start at
     // 92, 13 points after the last.
@@ -110,5 +125,117 @@ function defaultMetricResources() -> [ResourceRecord] {
     // 10 under it before the content.
     records.append(metricResource(metricLargeTitleTopInset(), 4.0))
     records.append(metricResource(metricLargeTitleBottomInset(), 10.0))
+
+    // The platform's push, measured off Apple Music mid-swipe: the moving view
+    // takes the display's corner, the covered one sits under an 11% black
+    // (its 242 gray reads 216) and trails the moving one at 30% of its speed,
+    // from 30% of the width toward the leading edge. UIKit's interactive pop
+    // commits past half the width or on a throw faster than 300 points a
+    // second, and the swipe starts once it has moved 10 points.
+    records.append(metricResource(metricNavigationPageCornerRadius(), 18.0))
+    records.append(metricResource(metricNavigationCoveredDim(), 0.11))
+    records.append(metricResource(metricNavigationCoveredParallax(), 0.3))
+    records.append(metricResource(metricNavigationSwipeCommitFraction(), 0.5))
+    records.append(metricResource(metricNavigationSwipeCommitVelocity(), 300.0))
+    records.append(metricResource(metricNavigationSwipeSlop(), 10.0))
+
+    // A bar's menu growing out of its button, measured off the iOS 26 Photos
+    // menu slowed tenfold. The button's glass leaves it and grows into the
+    // card on a critically damped 0.23 s spring; its center falls on a 0.21 s
+    // spring at 0.3 damping, so it drops about 38% past the card and spreads
+    // back up. It stays round until 60% grown. The rows are there from 40%,
+    // at their own size -- 1 + 0.1 x what is left to grow -- under a 12-point
+    // blur that clears as the glass finishes growing. It goes home on a 0.2 s
+    // spring, the rows blurring away by 80%, and from 35% left a neck 14
+    // points wide pulls it into the button. The blur and the rows' size are
+    // read by eye off the Photos recording, not measured.
+    records.append(metricResource(metricMenuMorphGrowthResponse(), 0.23))
+    records.append(metricResource(metricMenuMorphDropResponse(), 0.21))
+    records.append(metricResource(metricMenuMorphDropDamping(), 0.8))
+    records.append(metricResource(metricMenuMorphCloseResponse(), 0.2))
+    records.append(metricResource(metricMenuMorphRoundness(), 0.6))
+    records.append(metricResource(metricMenuMorphContentOpen(), 0.4))
+    records.append(metricResource(metricMenuMorphContentClose(), 0.8))
+    records.append(metricResource(metricMenuMorphContentZoom(), 0.1))
+    records.append(metricResource(metricMenuMorphContentBlur(), 12.0))
+    records.append(metricResource(metricMenuMorphNeckStart(), 0.35))
+    records.append(metricResource(metricMenuMorphNeckBlend(), 14.0))
+
+    // A submenu, measured frame by frame off the iOS 26 Music playlist menu at
+    // 60 fps. Its card is the menu's full width, its header 30 points under its
+    // top edge, and grows out of the row on a critically damped 0.18 s spring
+    // both ways. The items show from 5% of the way in; the glass comes up
+    // around the header from 30% and is whole by 90%, over the four frames
+    // Music takes. Going back the items are gone by 20% and the row-sized
+    // glass fades in the last 12%. The chevron is turned by 70%. The menu
+    // behind gives way with the card toward the side it stands on, its free
+    // edges coming in by 1.7% of its size -- the 98% Music's menu narrows to
+    // with its trailing edge held -- and after 70 ms dims to 64% ink on a
+    // 0.3 s spring; it comes back on 0.12 s with no hold.
+    records.append(metricResource(metricMenuSubmenuOpenResponse(), 0.18))
+    records.append(metricResource(metricMenuSubmenuOpenDamping(), 1.0))
+    records.append(metricResource(metricMenuSubmenuCloseResponse(), 0.18))
+    records.append(metricResource(metricMenuSubmenuCloseDamping(), 1.0))
+    records.append(metricResource(metricMenuSubmenuRecededOpacity(), 0.64))
+    records.append(metricResource(metricMenuSubmenuRecedeScale(), 0.983))
+    records.append(metricResource(metricMenuSubmenuRecedeHold(), 0.07))
+    records.append(metricResource(metricMenuSubmenuRecedeInResponse(), 0.3))
+    records.append(metricResource(metricMenuSubmenuRecedeInDamping(), 1.0))
+    records.append(metricResource(metricMenuSubmenuRecedeOutResponse(), 0.12))
+    records.append(metricResource(metricMenuSubmenuRecedeOutDamping(), 1.0))
+    records.append(metricResource(metricMenuSubmenuHeaderCenter(), 30.0))
+    records.append(metricResource(metricMenuSubmenuChevronTurn(), 0.7))
+    records.append(metricResource(metricMenuSubmenuCardAppear(), 0.3))
+    records.append(metricResource(metricMenuSubmenuCardAppearSpan(), 0.6))
+    records.append(metricResource(metricMenuSubmenuCardVanish(), 0.12))
+    records.append(metricResource(metricMenuSubmenuItemsAppear(), 0.05))
+    records.append(metricResource(metricMenuSubmenuItemsAppearSpan(), 0.35))
+    records.append(metricResource(metricMenuSubmenuItemsVanish(), 0.2))
+    records.append(metricResource(metricMenuSubmenuItemsVanishSpan(), 0.5))
+
+    // The kit's context menu hangs 16 under what opened it, its trailing edge
+    // on that control's.
+    records.append(metricResource(metricMenuAnchorSpacing(), 16.0))
+
+    // The kit's iPad tab bar: a 44-point capsule of glass holding its tabs 4
+    // off every side. A tab is a 36-point capsule with its title 18 off its
+    // ends; a symbol tab holds its symbol 16 off them.
+    records.append(metricResource(metricTabBarHeight(), 44.0))
+    records.append(metricResource(metricTabBarInset(), 4.0))
+    records.append(metricResource(metricTabHeight(), 36.0))
+    records.append(metricResource(metricTabLabelInset(), 18.0))
+    records.append(metricResource(metricTabSymbolInset(), 16.0))
+
+    // The kit's switch: a 64 by 28 capsule holding a 38 by 24 knob 2 off its
+    // ends. Its slider stands 28 tall, a 4-point track through the middle under
+    // a 28-point knob; its progress bar is the same 4-point track.
+    records.append(metricResource(metricSwitchWidth(), 64.0))
+    records.append(metricResource(metricSwitchHeight(), 28.0))
+    records.append(metricResource(metricSwitchKnobWidth(), 38.0))
+    records.append(metricResource(metricSwitchKnobInset(), 2.0))
+    records.append(metricResource(metricSliderHeight(), 28.0))
+    records.append(metricResource(metricSliderTrackHeight(), 4.0))
+    records.append(metricResource(metricSliderKnobSize(), 28.0))
+    records.append(metricResource(metricProgressTrackHeight(), 4.0))
+
+    // The kit's insertion point: a 2 by 23 bar in the accent beside 17-point
+    // text.
+    records.append(metricResource(metricCaretWidth(), 2.0))
+    records.append(metricResource(metricCaretHeight(), 23.0))
+
+    // The kit draws a disabled switch at half opacity, knob and all.
+    records.append(metricResource(metricDisabledControlOpacity(), 0.5))
+
+    // The kit's slider knob casts two shadows: 13 of blur falling 6 below it,
+    // and 4 of blur half a point below it.
+    records.append(metricResource(metricKnobShadowRadius(), 13.0))
+    records.append(metricResource(metricKnobShadowOffset(), 6.0))
+    records.append(metricResource(metricKnobContactShadowRadius(), 4.0))
+    records.append(metricResource(metricKnobContactShadowOffset(), 0.5))
+
+    // The kit's menu lifts off what it is over by a wide, soft shadow: 48 of
+    // blur falling 8 below the card.
+    records.append(metricResource(metricMenuShadowRadius(), 48.0))
+    records.append(metricResource(metricMenuShadowOffset(), 8.0))
     return records
 }

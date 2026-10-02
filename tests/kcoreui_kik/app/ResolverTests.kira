@@ -48,7 +48,10 @@ construct KcuTheAppearanceSelectsTheRendition() extends Test {
         return kcuColorsEqual(resolveColor(stack, "label", kcuLight()), kcuRed())
             && kcuColorsEqual(resolveColor(stack, "label", kcuDark()), kcuBlue())
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // A rendition that pins nothing matches every environment, which is what makes
@@ -62,7 +65,10 @@ construct KcuAnUnconstrainedRenditionServesEveryEnvironment() extends Test {
             && kcuColorsEqual(resolveColor(stack, "separator", kcuDark()), kcuGreen())
             && kcuColorsEqual(resolveColor(stack, "separator", kcuLightHighContrast()), kcuGreen())
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // --- Specificity -----------------------------------------------------------
@@ -83,7 +89,10 @@ construct KcuMoreConstraintsWinWhenBothAreEligible() extends Test {
         return kcuColorsEqual(resolveColor(stack, "label", kcuLightHighContrast()), kcuGreen())
             && kcuColorsEqual(resolveColor(stack, "label", kcuLight()), kcuRed())
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // Priority is the trait numbering. Appearance is identifier zero, so a
@@ -102,7 +111,10 @@ construct KcuTheLowerTraitIdentifierWinsAtEqualCount() extends Test {
         let stack = kcuStackOf(record)
         return kcuColorsEqual(resolveColor(stack, "label", kcuLight()), kcuRed())
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // The order renditions were authored in cannot change the answer, because the
@@ -130,7 +142,10 @@ construct KcuAuthoringOrderDoesNotChangeTheWinner() extends Test {
         let right = resolveColor(kcuStackOf(second), "label", kcuLightHighContrast())
         return kcuColorsEqual(left, right) && kcuColorsEqual(left, kcuGreen())
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // --- Custom traits ---------------------------------------------------------
@@ -162,7 +177,10 @@ construct KcuACustomTraitIsInvisibleToAnEnvironmentWithoutIt() extends Test {
         let stack = kcuStackOf(kcuBrandedRecord())
         return kcuColorsEqual(resolveColor(stack, "tint", kcuLight()), kcuBlue())
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 construct KcuACustomTraitSelectsWhenTheEnvironmentCarriesIt() extends Test {
@@ -171,7 +189,10 @@ construct KcuACustomTraitSelectsWhenTheEnvironmentCarriesIt() extends Test {
         return kcuColorsEqual(resolveColor(stack, "tint", kcuBrandedEnvironment(2)), kcuRed())
             && kcuColorsEqual(resolveColor(stack, "tint", kcuBrandedEnvironment(9)), kcuBlue())
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // Custom traits are part of the cache key, so two environments differing only
@@ -181,7 +202,10 @@ construct KcuCustomTraitsChangeTheEnvironmentKey() extends Test {
         return environmentCustomKey(kcuBrandedEnvironment(2)) != environmentCustomKey(kcuBrandedEnvironment(9))
             && environmentCustomKey(kcuLight()) == UICustomTraitKey(0)
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // --- Stacks ----------------------------------------------------------------
@@ -201,11 +225,14 @@ construct KcuAnOverlayOverridesTheFloor() extends Test {
         return kcuColorsEqual(resolveColor(stack, "label", kcuLight()), kcuWhite())
             && kcuColorsEqual(resolveColor(stack, "separator", kcuLight()), kcuGreen())
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
-// The whole override story: a partial blob names three colours and changes
-// three colours. Nothing else in the catalog moves, and no override API exists.
+// The whole override story: a partial blob names three colors and changes
+// three colors. Nothing else in the catalog moves, and no override API exists.
 construct KcuAPartialOverlayLeavesEverythingElseAlone() extends Test {
     test {
         var overlay = CatalogRecord()
@@ -215,7 +242,10 @@ construct KcuAPartialOverlayLeavesEverythingElseAlone() extends Test {
             && kcuColorsEqual(resolveColor(stack, "label", kcuDark()), kcuBlue())
             && catalogStackDepth(stack) == 2
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // An overlay that names a resource but has no rendition eligible for this
@@ -233,7 +263,10 @@ construct KcuAnOverlayThatCannotAnswerFallsThroughToTheFloor() extends Test {
         return kcuColorsEqual(resolveColor(stack, "label", kcuDark()), kcuWhite())
             && kcuColorsEqual(resolveColor(stack, "label", kcuLight()), kcuRed())
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // A resource of another kind under the same name does not shadow, because a
@@ -255,18 +288,24 @@ construct KcuAnotherKindUnderTheSameNameDoesNotShadow() extends Test {
         return kcuColorsEqual(resolveColor(stack, "label", kcuLight()), kcuRed())
             && material(makeResources(kcuCatalogOf(overlay), kcuLight()), "label").found
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // --- Absence ---------------------------------------------------------------
 
-construct KcuAnUnknownNameResolvesToTheDebugColour() extends Test {
+construct KcuAnUnknownNameResolvesToTheDebugColor() extends Test {
     test {
         let stack = kcuStackOf(kcuFloorRecord())
         let resolution = resolveColorChecked(stack, "noSuchThing", kcuLight())
         return !resolution.found && kcuColorsEqual(resolution.color, debugColor())
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // --- Tracing ---------------------------------------------------------------
@@ -287,7 +326,10 @@ construct KcuATraceReportsWhichRenditionWon() extends Test {
             && trace.candidatesEligible == 2
             && trace.matchedConstraints.count == 2
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 construct KcuATraceOfAnAbsentNameReportsNothingMatched() extends Test {
@@ -295,5 +337,8 @@ construct KcuATraceOfAnAbsentNameReportsNothingMatched() extends Test {
         let trace = traceResolution(kcuStackOf(kcuFloorRecord()), "noSuchThing", .Color, kcuLight())
         return !trace.found && trace.catalogsSearched == 1
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }

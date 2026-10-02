@@ -44,29 +44,44 @@ function kcuTruncated(bytes: borrow [U8], count: Int) -> [U8] {
 
 construct KcuAGoodBlobParses() extends Test {
     test { return kcuParses(kcuGoodBytes()) }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 construct KcuWrongMagicIsRefused() extends Test {
     test { return kcuParseFailure(kcuWithByte(kcuGoodBytes(), 0, 88)) }
-    expect { let e: Result<String, TestFailure> = Result.Ok("not a KCoreUI catalog: wrong magic"); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok("not a KCoreUI catalog: wrong magic")
+        return e
+    }
 }
 
 construct KcuANewerMajorVersionIsRefused() extends Test {
     test { return kcuParseFailure(kcuWithByte(kcuGoodBytes(), blobOffsetMajor(), blobMajorVersion() + 1)) }
-    expect { let e: Result<String, TestFailure> = Result.Ok("catalog major version is newer than this build"); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok("catalog major version is newer than this build")
+        return e
+    }
 }
 
 construct KcuAShortHeaderIsRefused() extends Test {
     test { return kcuParseFailure(kcuTruncated(kcuGoodBytes(), 12)) }
-    expect { let e: Result<String, TestFailure> = Result.Ok("catalog is shorter than its header"); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok("catalog is shorter than its header")
+        return e
+    }
 }
 
 // Truncating the body leaves the header claiming a size the buffer does not
 // have, which is a layout the writer could not have produced.
 construct KcuATruncatedBodyIsRefused() extends Test {
     test { return kcuParses(kcuTruncated(kcuGoodBytes(), blobHeaderSize() + 8)) }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(false); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(false)
+        return e
+    }
 }
 
 // Slack between sections would write back as a different file, so a header
@@ -78,7 +93,10 @@ construct KcuANonCanonicalLayoutIsRefused() extends Test {
         let moved = kcuWithU32(bytes, blobOffsetResourceStart(), blobHeaderSize() + 4)
         return kcuParseFailure(moved)
     }
-    expect { let e: Result<String, TestFailure> = Result.Ok("a catalog entry points outside the blob"); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok("a catalog entry points outside the blob")
+        return e
+    }
 }
 
 construct KcuATotalSizeThatDisagreesWithTheBufferIsRefused() extends Test {
@@ -86,7 +104,10 @@ construct KcuATotalSizeThatDisagreesWithTheBufferIsRefused() extends Test {
         let bytes = kcuGoodBytes()
         return kcuParses(kcuWithU32(bytes, blobOffsetTotalSize(), bytes.count + 16))
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(false); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(false)
+        return e
+    }
 }
 
 // The name table is what a lookup binary-searches, so a table out of order is a
@@ -100,7 +121,10 @@ construct KcuAnUnsortedNameTableIsRefused() extends Test {
         let swapped = kcuWithU32(kcuWithU32(bytes, firstEntry, 5), firstEntry + 4, 9)
         return kcuParseFailure(swapped)
     }
-    expect { let e: Result<String, TestFailure> = Result.Ok("the name table is not in byte order"); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok("the name table is not in byte order")
+        return e
+    }
 }
 
 // Constraints are stored ascending by identifier because the specificity
@@ -127,7 +151,10 @@ construct KcuUnsortedConstraintsAreRefused() extends Test {
         reversed = kcuWithU32(reversed, constraintStart + 12, appearanceValue(Appearance.Light))
         return kcuParseFailure(reversed)
     }
-    expect { let e: Result<String, TestFailure> = Result.Ok("a rendition's constraints are not in identifier order"); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok("a rendition's constraints are not in identifier order")
+        return e
+    }
 }
 
 // Zero is reserved on every trait: a constraint carrying it would be
@@ -145,7 +172,10 @@ construct KcuAReservedTraitValueIsRefused() extends Test {
         record.resources.append(resource)
         return kcuParseFailure(writeCatalogRecord(record))
     }
-    expect { let e: Result<String, TestFailure> = Result.Ok("a constraint carries the reserved value zero"); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok("a constraint carries the reserved value zero")
+        return e
+    }
 }
 
 // Two renditions pinning the same traits have no defined winner. Refusing at
@@ -168,7 +198,10 @@ construct KcuADuplicateRenditionIsRefused() extends Test {
         record.resources.append(resource)
         return kcuParseFailure(writeCatalogRecord(record))
     }
-    expect { let e: Result<String, TestFailure> = Result.Ok("two renditions of one resource pin the same traits"); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok("two renditions of one resource pin the same traits")
+        return e
+    }
 }
 
 construct KcuAnEmptyBufferIsRefusedRatherThanTrapping() extends Test {
@@ -176,5 +209,8 @@ construct KcuAnEmptyBufferIsRefusedRatherThanTrapping() extends Test {
         var empty: [U8] = []
         return kcuParses(empty)
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(false); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(false)
+        return e
+    }
 }

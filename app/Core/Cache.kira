@@ -2,13 +2,13 @@ import Foundation
 
 // The two-level resolution cache.
 //
-// Every component reads its colours and materials from a catalog, so a
+// Every component reads its colors and materials from a catalog, so a
 // resolution happens once per drawn value per frame rather than once per theme
 // change. Without a cache that is a binary search plus an eligibility walk plus
 // a payload decode, per value, per frame.
 //
 // Level one maps a name and an environment to the rendition that won. Level two
-// keeps the decoded colour beside it, because a colour is the value a paint
+// keeps the decoded color beside it, because a color is the value a paint
 // pass asks for most and decoding one is four fixed-point conversions and a
 // possible reference chase.
 //
@@ -80,14 +80,14 @@ function nameHash(name: borrow String) -> Int {
     var hash = 2166136261
     for index in 0..name.count {
         hash = hash ^ Int(name.charAt(index))
-        hash = hash * 16777619
+        hash = wrappingMul(hash, 16777619)
     }
     return hash & 4611686018427387903
 }
 
 function probeStart(cache: borrow ResolutionCache, hash: Int, environmentKey: UIEnvironmentKey, customKey: UICustomTraitKey) -> Int {
-    var mixed = hash ^ (environmentKey.raw * 2654435761)
-    mixed = mixed ^ (customKey.raw * 40503)
+    var mixed = hash ^ wrappingMul(environmentKey.raw, 2654435761)
+    mixed = mixed ^ wrappingMul(customKey.raw, 40503)
     mixed = mixed ^ (mixed >> 21)
     return mixed & cache.mask
 }
@@ -160,7 +160,7 @@ function cachedResolve(cache: borrow mut ResolutionCache, stack: borrow CatalogS
     return resolved
 }
 
-// Level two: the decoded colour, kept beside the rendition that produced it.
+// Level two: the decoded color, kept beside the rendition that produced it.
 function cachedColor(cache: borrow mut ResolutionCache, stack: borrow CatalogStack, name: borrow String, environment: borrow UIEnvironment) -> Color {
     let kind: ResourceKind = .Color
     let hash = nameHash(name)

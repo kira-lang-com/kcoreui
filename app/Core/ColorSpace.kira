@@ -1,19 +1,19 @@
 import Foundation
 
-// The colour space a catalog is authored in, and the arithmetic to leave it.
+// The color space a catalog is authored in, and the arithmetic to leave it.
 //
-// **Every colour in a catalog is Display P3.** One space, stated once, rather
-// than a per-colour tag nobody fills in correctly: a value with no declared
+// **Every color in a catalog is Display P3.** One space, stated once, rather
+// than a per-color tag nobody fills in correctly: a value with no declared
 // space is a value that means something different on each display it reaches,
 // and a resource system whose whole job is answering "what does this mean here"
-// cannot be vague about the one thing a colour *is*.
+// cannot be vague about the one thing a color *is*.
 //
 // Display P3 rather than sRGB because it is the wider of the two and the
 // conversion only loses what the narrower space could not have shown anyway.
 // An sRGB value embeds in P3 exactly, so authoring in P3 costs an sRGB-sourced
 // palette nothing.
 //
-// A resolved colour is converted to the gamut the environment reports. That is
+// A resolved color is converted to the gamut the environment reports. That is
 // what the `gamut` trait is for, and it is why a catalog authored once is
 // correct on a display that can show P3 and on one that cannot.
 //
@@ -69,9 +69,9 @@ function srgbToP3Linear(color: borrow Color) -> Color {
     }
 }
 
-// --- Whole-colour conversions ----------------------------------------------
+// --- Whole-color conversions ----------------------------------------------
 
-// An encoded colour to linear light, alpha untouched.
+// An encoded color to linear light, alpha untouched.
 //
 // Alpha is a coverage fraction rather than a light measurement, so it never
 // travels through a transfer curve.
@@ -93,7 +93,7 @@ function encodeColorChannels(color: borrow Color) -> Color {
     }
 }
 
-// An encoded Display P3 colour as an encoded sRGB one.
+// An encoded Display P3 color as an encoded sRGB one.
 //
 // Out-of-gamut channels are clamped after the matrix: a saturated P3 green has
 // no sRGB spelling, and the nearest one it does have is the edge of the space.
@@ -109,12 +109,12 @@ function p3ToSrgb(color: borrow Color) -> Color {
 }
 
 // The inverse, which is what authors a P3 catalog from values quoted in sRGB.
-// Nothing is clamped: every sRGB colour is inside P3.
+// Nothing is clamped: every sRGB color is inside P3.
 function srgbToP3(color: borrow Color) -> Color {
     return encodeColorChannels(srgbToP3Linear(decodeColor(color)))
 }
 
-// A colour held to [0, 1] on every channel.
+// A color held to [0, 1] on every channel.
 function clampChannel(value: Float) -> Float {
     if value < 0.0 {
         return 0.0
@@ -125,10 +125,10 @@ function clampChannel(value: Float) -> Float {
     return value
 }
 
-// The catalog's colour, in the gamut this environment reports.
+// The catalog's color, in the gamut this environment reports.
 //
-// The one place a resolved colour leaves Display P3. A renderer that is not
-// colour managed is an sRGB one as far as this is concerned, which is what the
+// The one place a resolved color leaves Display P3. A renderer that is not
+// color managed is an sRGB one as far as this is concerned, which is what the
 // environment's default says.
 function colorForGamut(color: borrow Color, gamut: borrow DisplayGamut) -> Color {
     match gamut {
@@ -143,7 +143,7 @@ function colorForGamut(color: borrow Color, gamut: borrow DisplayGamut) -> Color
 //
 // The standard Porter-Duff composite: the result's alpha is what the two cover
 // together, and each channel is weighted by how much of the result each layer
-// accounts for. A fully transparent result has no colour to speak of and
+// accounts for. A fully transparent result has no color to speak of and
 // answers black rather than dividing by zero.
 function compositeOver(source: borrow Color, backdrop: borrow Color) -> Color {
     let outAlpha = source.a + backdrop.a * (1.0 - source.a)

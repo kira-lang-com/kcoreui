@@ -20,7 +20,10 @@ construct KcuResourceKindWireValuesAreFixed() extends Test {
             && resourceKindValue(.Custom(resourceKindCustomBase())) == resourceKindCustomBase()
             && resourceKindValue(.Unknown(9)) == 9
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // Integer to kind and back is the identity for every wire value, named or not,
@@ -39,7 +42,10 @@ construct KcuResourceKindMappingIsTotal() extends Test {
             && !resourceKindIsKnown(resourceKindFromValue(0))
             && resourceKindIsKnown(.Typography)
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // The named trait identifiers sit on their assigned wire values, ascending in
@@ -61,7 +67,10 @@ construct KcuTraitIdentifierWireValuesAreFixed() extends Test {
             && traitIdentifierValue(.DifferentiateWithoutColor) == 12
             && traitIdentifierCustomBase() == 64
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // Integer to trait identifier and back is the identity across the built-in
@@ -78,7 +87,10 @@ construct KcuTraitIdentifierMappingIsTotal() extends Test {
             && traitIdentifiersEqual(traitIdentifierFromValue(63), .Unknown(63))
             && traitIdentifiersEqual(traitIdentifierFromValue(64), .Custom(64))
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // The named blend modes sit on their assigned wire values and every other u8
@@ -100,5 +112,8 @@ construct KcuBlendModeMappingIsTotal() extends Test {
             && blendModeValue(.Multiply) == 7
             && blendModeValue(.Luminosity) == 8
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }

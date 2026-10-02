@@ -6,7 +6,7 @@ import Foundation
 // *catalog*: a reference to a name nothing defines, a reference chain that
 // comes back to where it started, two resources with the same name. Those are
 // authoring mistakes, and the place to catch them is the moment a producer asks
-// for bytes, not the moment a compositor asks for a colour.
+// for bytes, not the moment a compositor asks for a color.
 //
 // Cycle detection is deliberately conservative. References resolve per
 // environment, so a chain that closes only under one combination of traits is
@@ -58,7 +58,7 @@ function appendReference(names: borrow mut [String], source: borrow ColorSource)
     }
 }
 
-// Every name a colour's layer stack points at.
+// Every name a color's layer stack points at.
 function appendLayerReferences(names: borrow mut [String], value: borrow ColorValue) {
     for layer in value.layers {
         appendReference(names, layer.source)

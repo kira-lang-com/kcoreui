@@ -4,9 +4,9 @@ import Foundation
 //
 // A material is not pixels. It is a recipe: an ordered stack of layers a
 // compositor applies bottom to top, each carrying numbers and, where it needs a
-// colour, a reference rather than a copy. That is the whole reason a material
+// color, a reference rather than a copy. That is the whole reason a material
 // costs nothing to keep correct across appearances — the recipe never changes,
-// and the colours it names resolve against the same environment it did.
+// and the colors it names resolve against the same environment it did.
 //
 // The blend identifiers are the compositor's own, so a resolved layer hands
 // its blend straight to the shader without a translation table in between.
@@ -394,7 +394,7 @@ function decodeTypography(bytes: borrow [U8]) -> TypographyRead {
 
 // A metric is one length in points: a bar's height, the gap between two items,
 // the inset from a window's edge. It is a catalog resource rather than a
-// literal in a toolkit for the same reason a colour is — the number differs by
+// literal in a toolkit for the same reason a color is — the number differs by
 // platform, by idiom and by size class, and the toolkit asking for it should
 // not have to know which of those it is running under.
 struct MetricValue {

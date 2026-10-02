@@ -32,7 +32,7 @@ function saveCatalogFile(path: borrow String, catalog: borrow Catalog) -> Bool {
 // The index of the resource named `name` with kind `kind`, or -1.
 //
 // A resource is keyed by name *and* kind. The surface KCoreUI ships already
-// spells a material `regular`, and a colour of that name is a resource a
+// spells a material `regular`, and a color of that name is a resource a
 // producer is entitled to add; keying by name alone would make those two the
 // same entry and hand a paint pass the wrong one.
 //

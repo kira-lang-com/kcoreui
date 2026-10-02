@@ -53,7 +53,7 @@ function sortedRenditions(input: borrow [RenditionRecord]) -> [RenditionRecord] 
 // Total order over two resources: name bytes first, then kind.
 //
 // A resource is keyed by both, because the surface KCoreUI ships spells a
-// material `regular` and would one day spell a colour the same. Keying by name
+// material `regular` and would one day spell a color the same. Keying by name
 // alone makes that a collision rather than two resources, and the collision
 // would surface as a lookup that finds the wrong kind at paint time.
 function compareResourceKeys(left: borrow ResourceRecord, right: borrow ResourceRecord) -> Int {

@@ -25,9 +25,9 @@ function materialBar() -> String { return "bar" }
 // --- Vibrancy --------------------------------------------------------------
 //
 // What content set INTO glass is inked with: UIKit's vibrancy effect styles,
-// each a colour together with the way it composites, which is what makes it
-// vibrant rather than grey. A material because a material is exactly that — a
-// recipe the compositor applies, colour and blend at once.
+// each a color together with the way it composites, which is what makes it
+// vibrant rather than gray. A material because a material is exactly that — a
+// recipe the compositor applies, color and blend at once.
 
 function materialVibrantLabel() -> String { return "vibrantLabel" }
 function materialVibrantSecondaryLabel() -> String { return "vibrantSecondaryLabel" }

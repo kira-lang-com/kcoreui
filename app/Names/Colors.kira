@@ -1,6 +1,6 @@
 import Foundation
 
-// Apple's colour vocabulary, in SwiftUI's spelling.
+// Apple's color vocabulary, in SwiftUI's spelling.
 //
 // These are names, not values. Nothing here says what `label` looks like; a
 // catalog does, and a different catalog says something else. Swapping the whole
@@ -92,7 +92,7 @@ function colorSystemGray6() -> String { return "systemGray6" }
 
 // --- The whole surface -----------------------------------------------------
 
-// Every colour name this build declares.
+// Every color name this build declares.
 //
 // The integrity check walks this list against the default catalog, which is
 // what stops the hardcoded surface and the shipped blob from drifting: a name

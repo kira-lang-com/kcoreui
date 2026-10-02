@@ -86,25 +86,25 @@ function kcuRoundTrips(record: borrow CatalogRecord) -> Bool {
     return kcuBytesEqual(bytes, writeCatalog(catalog))
 }
 
-// A colour written the way a case reads it: sRGB, which is what a design tool
+// A color written the way a case reads it: sRGB, which is what a design tool
 // quotes and what an environment reporting the sRGB gamut resolves back to.
 function kcuColor(r: Float, g: Float, b: Float, a: Float) -> Color {
     return Color(r: r, g: g, b: b, a: a)
 }
 
-// The same colour as a catalog stores one.
+// The same color as a catalog stores one.
 //
 // A catalog is Display P3, so authoring converts. Every case that writes a
-// colour and then expects it back goes through this, which is what makes
+// color and then expects it back goes through this, which is what makes
 // "author this, resolve this" true rather than accidentally true for the
 // primaries and false for everything between them.
 function kcuAuthored(color: borrow Color) -> [U8] {
     return encodeColor(srgbToP3(color))
 }
 
-// How close two channels have to be to count as the same colour.
+// How close two channels have to be to count as the same color.
 //
-// A channel is stored to one part in 65536, and a colour that crosses gamuts
+// A channel is stored to one part in 65536, and a color that crosses gamuts
 // also passes through two transfer curves and a matrix. The curve is steep near
 // black, so a channel landing near zero carries the largest error: sRGB green
 // round-trips through Display P3 with about 6.5e-5 on its red channel and under
@@ -112,7 +112,7 @@ function kcuAuthored(color: borrow Color) -> [U8] {
 //
 // An eighth of an 8-bit step is the bar. That is 4.9e-4, seven times the worst
 // observed error and far below anything a display can show, so it catches a
-// wrong colour without asserting that a gamut conversion is lossless.
+// wrong color without asserting that a gamut conversion is lossless.
 function kcuNear(left: Float, right: Float) -> Bool {
     return abs(left - right) < 1.0 / 2048.0
 }
@@ -122,7 +122,7 @@ function kcuColorsEqual(left: borrow Color, right: borrow Color) -> Bool {
         && kcuNear(left.b, right.b) && kcuNear(left.a, right.a)
 }
 
-// A colour resource with one rendition per appearance.
+// A color resource with one rendition per appearance.
 function kcuAdaptive(name: borrow String, light: borrow Color, dark: borrow Color) -> ResourceRecord {
     var resource = ResourceRecord()
     resource.name = name
@@ -140,7 +140,7 @@ function kcuAdaptive(name: borrow String, light: borrow Color, dark: borrow Colo
     return resource
 }
 
-// A colour resource with a single unconstrained rendition.
+// A color resource with a single unconstrained rendition.
 function kcuFlat(name: borrow String, value: borrow Color) -> ResourceRecord {
     var resource = ResourceRecord()
     resource.name = name
@@ -151,7 +151,7 @@ function kcuFlat(name: borrow String, value: borrow Color) -> ResourceRecord {
     return resource
 }
 
-// A colour resource that is a reference to another name.
+// A color resource that is a reference to another name.
 function kcuAlias(name: borrow String, target: borrow String) -> ResourceRecord {
     var resource = ResourceRecord()
     resource.name = name

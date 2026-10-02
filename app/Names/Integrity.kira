@@ -4,7 +4,7 @@ import Foundation
 //
 // The surface is code and the catalog is data, so nothing but a check keeps
 // them agreeing. A name declared with no resource behind it resolves through
-// the floor and paints the debug colour; a resource in the catalog that no name
+// the floor and paints the debug color; a resource in the catalog that no name
 // declares is merely unused. The first is a defect and the second is not, which
 // is why they are reported separately.
 //

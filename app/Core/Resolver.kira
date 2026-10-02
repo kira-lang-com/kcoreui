@@ -94,7 +94,7 @@ function resolveResourceRendition(catalog: borrow Catalog, resourceIndex: Int, e
 // Catalogs are consulted highest first, and a catalog that names the resource
 // but has no rendition eligible for this environment does not stop the search:
 // the next catalog down is asked. That is what makes a partial override safe.
-// An override defining a colour for dark appearance only still lets the floor
+// An override defining a color for dark appearance only still lets the floor
 // answer in light.
 function resolveResource(stack: borrow CatalogStack, name: borrow String, kind: borrow ResourceKind, environment: borrow UIEnvironment) -> ResolvedRendition {
     var resolved = ResolvedRendition()

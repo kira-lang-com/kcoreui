@@ -13,7 +13,10 @@ construct KcuLittleEndianWordsRoundTrip() extends Test {
         appendU32(bytes, 0x12345678)
         return readU16(bytes, 0) == 0xBEEF && readU32(bytes, 2) == 0x12345678
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 construct KcuSignedWordsSignExtend() extends Test {
@@ -23,7 +26,10 @@ construct KcuSignedWordsSignExtend() extends Test {
         appendI32(bytes, 0 - 2147483648)
         return readI32(bytes, 0) == 0 - 1 && readI32(bytes, 4) == 0 - 2147483648
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 construct KcuReadingPastTheEndAnswersZeroRatherThanTrapping() extends Test {
@@ -32,7 +38,10 @@ construct KcuReadingPastTheEndAnswersZeroRatherThanTrapping() extends Test {
         appendU8(bytes, 9)
         return readU32(bytes, 40) == 0 && readU8(bytes, 0 - 3) == 0
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // --- Fixed point -----------------------------------------------------------
@@ -43,7 +52,10 @@ construct KcuFixedPointRoundTripsAValueItCanRepresent() extends Test {
             && floatFromFixed(fixedFromFloat(0.0 - 0.25)) == 0.0 - 0.25
             && floatFromFixed(fixedFromFloat(28.0)) == 28.0
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // A channel is stored to 1/65536, so a value authored in thousandths comes back
@@ -55,7 +67,10 @@ construct KcuFixedPointKeepsAuthoredChannelsWithinOneUnit() extends Test {
         let error = recovered - authored
         return abs(error) < 0.00002
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 construct KcuFixedPointRoundsAwayFromZeroOnBothSigns() extends Test {
@@ -64,7 +79,10 @@ construct KcuFixedPointRoundsAwayFromZeroOnBothSigns() extends Test {
         let negative = fixedFromFloat((0.0 - 1.5) / Float(fixedScale()))
         return positive == 2 && negative == 0 - 2
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // --- Text ------------------------------------------------------------------
@@ -74,7 +92,10 @@ construct KcuTextSurvivesTheByteRoundTrip() extends Test {
         let original = "systemGroupedBackground"
         return compareStrings(stringFromBytes(stringBytes(original)), original) == 0
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 construct KcuMultiByteTextSurvivesTheByteRoundTrip() extends Test {
@@ -82,7 +103,10 @@ construct KcuMultiByteTextSurvivesTheByteRoundTrip() extends Test {
         let original = "café 中文 😀"
         return compareStrings(stringFromBytes(stringBytes(original)), original) == 0
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 construct KcuNamesCompareAsBytesWithoutBeingRebuilt() extends Test {
@@ -92,7 +116,10 @@ construct KcuNamesCompareAsBytesWithoutBeingRebuilt() extends Test {
             && compareSliceToString(bytes, 0, bytes.count, "separatorX") < 0
             && compareSliceToString(bytes, 0, bytes.count, "sepa") > 0
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // --- Round trip ------------------------------------------------------------
@@ -107,12 +134,18 @@ function kcuMixedRecord() -> CatalogRecord {
 
 construct KcuWritingAndReadingBackReproducesTheBytes() extends Test {
     test { return kcuRoundTrips(kcuMixedRecord()) }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 construct KcuAnEmptyCatalogRoundTrips() extends Test {
     test { return kcuRoundTrips(CatalogRecord()) }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // The property that makes an editor safe: a resource whose kind this build has
@@ -123,7 +156,10 @@ construct KcuAnUndecodableKindSurvivesTheRoundTrip() extends Test {
         record.resources.append(kcuOpaqueResource("somethingElse"))
         return kcuRoundTrips(record)
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 construct KcuAnUndecodableKindKeepsItsPayloadBytes() extends Test {
@@ -138,7 +174,10 @@ construct KcuAnUndecodableKindKeepsItsPayloadBytes() extends Test {
         let stored = catalogRenditionPayload(catalog, catalog.resources[index].firstRendition)
         return kcuBytesEqual(stored, kcuOpaqueResource("x").renditions[0].payload)
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // Canonical output: the same resources given in a different order produce the
@@ -157,7 +196,10 @@ construct KcuResourceOrderDoesNotChangeTheBytes() extends Test {
 
         return kcuBytesEqual(writeCatalogRecord(forward), writeCatalogRecord(backward))
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 construct KcuRenditionOrderDoesNotChangeTheBytes() extends Test {
@@ -181,7 +223,10 @@ construct KcuRenditionOrderDoesNotChangeTheBytes() extends Test {
         backward.resources.append(swapped)
         return kcuBytesEqual(writeCatalogRecord(forward), writeCatalogRecord(backward))
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // One name may carry several kinds, because a resource is keyed by both.
@@ -205,5 +250,8 @@ construct KcuOneNameCarriesSeveralKinds() extends Test {
             && catalogFindResource(catalog, "regular", .Material) >= 0
             && kcuRoundTrips(record)
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }

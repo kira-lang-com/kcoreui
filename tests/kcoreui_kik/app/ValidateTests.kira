@@ -24,7 +24,10 @@ construct KcuACleanRecordHasNoIssues() extends Test {
         record.resources.append(kcuAlias("foreground", "label"))
         return validateRecord(record).count
     }
-    expect { let e: Result<Int, TestFailure> = Result.Ok(0); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(0)
+        return e
+    }
 }
 
 construct KcuADanglingReferenceIsReported() extends Test {
@@ -33,7 +36,10 @@ construct KcuADanglingReferenceIsReported() extends Test {
         record.resources.append(kcuAlias("foreground", "nothingDefinesThis"))
         return kcuIssueCount(record, ValidationKind.MissingReference)
     }
-    expect { let e: Result<Int, TestFailure> = Result.Ok(1); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(1)
+        return e
+    }
 }
 
 // The check that keeps a cycle out of a shipped blob rather than relying on the
@@ -45,7 +51,10 @@ construct KcuATwoStepCycleIsReported() extends Test {
         record.resources.append(kcuAlias("b", "a"))
         return kcuIssueCount(record, ValidationKind.ReferenceCycle)
     }
-    expect { let e: Result<Int, TestFailure> = Result.Ok(2); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(2)
+        return e
+    }
 }
 
 construct KcuASelfReferenceIsReported() extends Test {
@@ -54,7 +63,10 @@ construct KcuASelfReferenceIsReported() extends Test {
         record.resources.append(kcuAlias("a", "a"))
         return kcuIssueCount(record, ValidationKind.ReferenceCycle)
     }
-    expect { let e: Result<Int, TestFailure> = Result.Ok(1); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(1)
+        return e
+    }
 }
 
 construct KcuALongerCycleIsReported() extends Test {
@@ -65,7 +77,10 @@ construct KcuALongerCycleIsReported() extends Test {
         record.resources.append(kcuAlias("c", "a"))
         return kcuIssueCount(record, ValidationKind.ReferenceCycle)
     }
-    expect { let e: Result<Int, TestFailure> = Result.Ok(3); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(3)
+        return e
+    }
 }
 
 // A chain that never closes is not a cycle, however deep it goes.
@@ -79,10 +94,13 @@ construct KcuADeepChainIsNotACycle() extends Test {
         record.resources.append(kcuAlias("d", "c"))
         return validateRecord(record).count
     }
-    expect { let e: Result<Int, TestFailure> = Result.Ok(0); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(0)
+        return e
+    }
 }
 
-// A material's tint reference participates in the graph exactly as a colour
+// A material's tint reference participates in the graph exactly as a color
 // alias does, so a cycle through a recipe is caught too.
 construct KcuACycleThroughAMaterialIsReported() extends Test {
     test {
@@ -99,7 +117,10 @@ construct KcuACycleThroughAMaterialIsReported() extends Test {
         record.resources.append(material)
         return kcuIssueCount(record, ValidationKind.ReferenceCycle)
     }
-    expect { let e: Result<Int, TestFailure> = Result.Ok(1); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(1)
+        return e
+    }
 }
 
 construct KcuADuplicateNameOfTheSameKindIsReported() extends Test {
@@ -109,7 +130,10 @@ construct KcuADuplicateNameOfTheSameKindIsReported() extends Test {
         record.resources.append(kcuFlat("label", kcuColor(1.0, 1.0, 1.0, 1.0)))
         return kcuIssueCount(record, ValidationKind.DuplicateName)
     }
-    expect { let e: Result<Int, TestFailure> = Result.Ok(1); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(1)
+        return e
+    }
 }
 
 // The same name under two kinds is two resources, not a duplicate.
@@ -129,7 +153,10 @@ construct KcuTheSameNameUnderTwoKindsIsNotADuplicate() extends Test {
         record.resources.append(material)
         return validateRecord(record).count
     }
-    expect { let e: Result<Int, TestFailure> = Result.Ok(0); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(0)
+        return e
+    }
 }
 
 construct KcuAResourceWithNoRenditionsIsReported() extends Test {
@@ -141,7 +168,10 @@ construct KcuAResourceWithNoRenditionsIsReported() extends Test {
         record.resources.append(resource)
         return kcuIssueCount(record, ValidationKind.NoRenditions)
     }
-    expect { let e: Result<Int, TestFailure> = Result.Ok(1); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(1)
+        return e
+    }
 }
 
 construct KcuAReservedTraitValueIsReportedBeforeWriting() extends Test {
@@ -157,7 +187,10 @@ construct KcuAReservedTraitValueIsReportedBeforeWriting() extends Test {
         record.resources.append(resource)
         return kcuIssueCount(record, ValidationKind.ReservedTraitValue)
     }
-    expect { let e: Result<Int, TestFailure> = Result.Ok(1); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(1)
+        return e
+    }
 }
 
 construct KcuTwoRenditionsPinningTheSameTraitsAreReported() extends Test {
@@ -177,11 +210,14 @@ construct KcuTwoRenditionsPinningTheSameTraitsAreReported() extends Test {
         record.resources.append(resource)
         return kcuIssueCount(record, ValidationKind.DuplicateRendition)
     }
-    expect { let e: Result<Int, TestFailure> = Result.Ok(1); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(1)
+        return e
+    }
 }
 
 // A payload that does not decode for the kind it is filed under is caught at
-// authoring time rather than becoming a debug colour on screen.
+// authoring time rather than becoming a debug color on screen.
 construct KcuAPayloadThatDoesNotMatchItsKindIsReported() extends Test {
     test {
         var resource = ResourceRecord()
@@ -197,7 +233,10 @@ construct KcuAPayloadThatDoesNotMatchItsKindIsReported() extends Test {
         record.resources.append(resource)
         return kcuIssueCount(record, ValidationKind.UndecodablePayload)
     }
-    expect { let e: Result<Int, TestFailure> = Result.Ok(1); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(1)
+        return e
+    }
 }
 
 // A kind this build has no decoder for is not an error. The container is
@@ -208,5 +247,8 @@ construct KcuAnUndecodableKindIsNotAValidationFailure() extends Test {
         record.resources.append(kcuOpaqueResource("somethingElse"))
         return validateRecord(record).count
     }
-    expect { let e: Result<Int, TestFailure> = Result.Ok(0); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(0)
+        return e
+    }
 }

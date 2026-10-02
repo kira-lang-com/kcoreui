@@ -14,11 +14,11 @@ import Foundation
 
 function payloadVersion() -> Int { return 1 }
 
-// --- Colour sources --------------------------------------------------------
+// --- Color sources --------------------------------------------------------
 //
-// What one layer of a colour is made of: literal Display P3 channels, or the
+// What one layer of a color is made of: literal Display P3 channels, or the
 // name of another resource. The reference is what makes a material's tint
-// follow the colour it names — nothing is copied at author time, so a tint
+// follow the color it names — nothing is copied at author time, so a tint
 // written against `separator` is still right in dark appearance and in high
 // contrast, because the reference resolves against the same environment the
 // material did.
@@ -32,7 +32,7 @@ struct ColorSource {
     var reference: String = ""
 }
 
-// The colour a resolver answers with when a name is absent from every catalog
+// The color a resolver answers with when a name is absent from every catalog
 // on the stack, or when a reference chain does not terminate. Deliberately
 // loud: the bottom catalog is required to be complete and an integrity test
 // proves it, so seeing this on screen means the stack was built wrong.
@@ -111,25 +111,25 @@ function readColorSource(bytes: borrow [U8], offset: Int) -> ColorSourceRead {
     return read
 }
 
-// --- Colour resources ------------------------------------------------------
+// --- Color resources ------------------------------------------------------
 //
-// A colour is a **stack of layers**, bottom to top, each with its own alpha.
+// A color is a **stack of layers**, bottom to top, each with its own alpha.
 //
-// That is what a system colour actually is. A separator is ink at a tenth of an
+// That is what a system color actually is. A separator is ink at a tenth of an
 // opacity over whatever it sits on; a fill is a wash over a surface; a disabled
-// control is its own colour under a scrim. Flattening those into one RGBA at
+// control is its own color under a scrim. Flattening those into one RGBA at
 // author time throws away the structure and, worse, bakes in the backdrop —
 // which is exactly what a resource system must not do, because the backdrop
 // changes with the appearance.
 //
 // Layers composite source-over in linear light, in Display P3. A single-layer
-// colour is the common case and costs one layer.
+// color is the common case and costs one layer.
 
 struct ColorLayer {
     var source: ColorSource = ColorSource()
     // Multiplies the source's own alpha. A layer written as "this ink at 10%"
     // says so here rather than by editing the ink's alpha, so the ink stays the
-    // named colour it is.
+    // named color it is.
     var opacity: Float = 1.0
 }
 
@@ -169,7 +169,7 @@ function encodeColorValue(value: borrow ColorValue) -> [U8] {
     return bytes
 }
 
-// The common spellings, so a producer authoring one flat colour writes one call.
+// The common spellings, so a producer authoring one flat color writes one call.
 function encodeColor(color: borrow Color) -> [U8] {
     return encodeColorValue(singleLayer(color))
 }
@@ -241,7 +241,7 @@ struct GradientStop {
 }
 
 // Start and end are in the resource's unit space: a linear gradient runs from
-// start to end, a radial one is centred on start with end fixing its radius,
+// start to end, a radial one is centered on start with end fixing its radius,
 // and an angular one sweeps around start beginning at the angle to end.
 struct GradientValue {
     var kind: GradientKind = .Linear

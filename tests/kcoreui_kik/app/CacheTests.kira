@@ -5,7 +5,7 @@ import KCoreUI
 //
 // Every case here asks the same question twice: does the cached answer equal
 // the uncached one. A cache that is ever right about anything the resolver is
-// not is a cache that paints a stale colour after an appearance change, which
+// not is a cache that paints a stale color after an appearance change, which
 // is the exact bug the environment-in-the-key design exists to prevent.
 
 function kcuCacheRecord() -> CatalogRecord {
@@ -16,7 +16,7 @@ function kcuCacheRecord() -> CatalogRecord {
     return record
 }
 
-construct KcuACachedColourEqualsTheUncachedOne() extends Test {
+construct KcuACachedColorEqualsTheUncachedOne() extends Test {
     test {
         let stack = kcuStackOf(kcuCacheRecord())
         var cache = makeDefaultCache()
@@ -25,7 +25,10 @@ construct KcuACachedColourEqualsTheUncachedOne() extends Test {
         let again = cachedColor(cache, stack, "label", kcuLight())
         return kcuColorsEqual(direct, cached) && kcuColorsEqual(direct, again)
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // The environment is part of the key, so nothing has to be invalidated when the
@@ -42,7 +45,10 @@ construct KcuTheEnvironmentIsPartOfTheKey() extends Test {
             && kcuColorsEqual(dark, kcuColor(1.0, 1.0, 1.0, 1.0))
             && kcuColorsEqual(lightAgain, light)
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 construct KcuARepeatedLookupIsAHit() extends Test {
@@ -58,7 +64,10 @@ construct KcuARepeatedLookupIsAHit() extends Test {
         }
         return cache.misses == missesAfterFirst && cache.hits >= 50 && cacheHitRate(cache) > 90
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // Two kinds under one name must not share a slot.
@@ -83,7 +92,10 @@ construct KcuTheKindIsPartOfTheKey() extends Test {
             && asMaterial.found
             && resourceKindsEqual(asMaterial.kind, .Material)
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // Pushing a catalog can change what any name means, so the cache is dropped.
@@ -101,7 +113,10 @@ construct KcuPushingACatalogDropsTheCache() extends Test {
             && kcuColorsEqual(after, kcuColor(1.0, 0.0, 0.0, 1.0))
             && resources.cache.hits == 0
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // An appearance change needs no invalidation at all, which is the whole reason
@@ -118,7 +133,10 @@ construct KcuChangingTheAppearanceNeedsNoInvalidation() extends Test {
             && kcuColorsEqual(dark, kcuColor(0.5, 0.75, 1.0, 1.0))
             && kcuColorsEqual(lightAgain, light)
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // A cache smaller than the working set still answers correctly; it only stops
@@ -142,7 +160,10 @@ construct KcuASmallCacheStaysCorrectUnderEviction() extends Test {
         }
         return correct
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 construct KcuClearingTheCacheResetsItsCounters() extends Test {
@@ -154,5 +175,8 @@ construct KcuClearingTheCacheResetsItsCounters() extends Test {
         clearCache(cache)
         return cache.hits == 0 && cache.misses == 0 && cacheHitRate(cache) == 0
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }

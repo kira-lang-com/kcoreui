@@ -12,15 +12,15 @@ import KCoreUI
 //
 // Its edge is the one Apple's own design kit draws: a hairline ring all the way
 // round and a pair of side lines that weight the left and right, each burned
-// into what is behind it at a grey. The kit states the greys twice — for the
+// into what is behind it at a gray. The kit states the grays twice — for the
 // small glass of a 48-point control and for the medium and large glass of a
 // 160-point panel — so in the light appearance each is a line between those
-// two sizes, and the dark appearance burns both at one grey at every size.
+// two sizes, and the dark appearance burns both at one gray at every size.
 //
 // The kit lights the top and bottom edges too: a soft band along each, added
-// in a grey that is the same at every size and darker in the dark appearance,
+// in a gray that is the same at every size and darker in the dark appearance,
 // and on the small glass alone a wider band under the top edge burned in a
-// light grey. The burn is a line from that grey at 48 points to white — no
+// light gray. The burn is a line from that gray at 48 points to white — no
 // burn at all — at 160.
 
 function glassResource(name: borrow String, light: borrow GlassValue, dark: borrow GlassValue) -> ResourceRecord {
@@ -70,7 +70,9 @@ function darkEdge(value: GlassValue) -> GlassValue {
 
 // What the regular glass does at every size. Below 60 points it shows none of
 // its blur; by 167 it blurs fully, and by 120 it refracts as deeply as it ever
-// will.
+// will. How far it blurs is Apple's iOS 27 kit's frost: 6 on the small glass of
+// a 48-point control, 16 on the medium and large glass of a 160-point panel or
+// menu, and a line between.
 function regularGlass() -> GlassValue {
     var ramps: [GlassRamp] = []
     ramps.append(glassRamp(.InnerRefractionAmount, 0.0, -0.5, -60.0, -12.0))
@@ -78,7 +80,7 @@ function regularGlass() -> GlassValue {
     ramps.append(glassRamp(.OuterRefractionAmount, 0.0, 0.25, 16.0, 100.0))
     ramps.append(glassRamp(.OuterRefractionHeight, 0.0, 0.2, 16.0, 80.0))
     ramps.append(glassConstant(.RefractionOpacity, 0.6))
-    ramps.append(glassConstant(.BlurRadius, 5.0))
+    ramps.append(glassRamp(.BlurRadius, 1.714286, 0.0892857, 6.0, 16.0))
     ramps.append(glassRamp(.BlurDistance, 0.0, -0.5, -200.0, -12.0))
     ramps.append(glassRamp(.BlurOpacity, -0.45, 0.0075, 0.0, 0.8))
     ramps.append(glassRamp(.BlurOpacityFar, -0.225, 0.00375, 0.0, 0.4))

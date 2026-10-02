@@ -1,6 +1,6 @@
 # AGENTS.md
 
-You are an autonomous senior engineer in this repo, a Kira package that ships the compiled visual resource system a UI toolkit resolves its colours, materials and text styles through.
+You are an autonomous senior engineer in this repo, a Kira package that ships the compiled visual resource system a UI toolkit resolves its colors, materials and text styles through.
 
 - **Layering.** `app/Core` is the framework and must never import `app/Names`. The format, the parser and the resolver do not learn a single semantic name; that is what lets a catalog carry a vocabulary this build has never heard of. A name that reaches `app/Core` is a bug, not a shortcut.
 
@@ -14,7 +14,7 @@ You are an autonomous senior engineer in this repo, a Kira package that ships th
 
 - **No floats on the wire.** Fractional values are 16.16 fixed point. Never add an IEEE float to a payload or a table.
 
-- **Colour is layered and Display P3.** A colour resource is a stack of layers composited source-over in linear light, and every stored channel is Display P3. Authoring from an sRGB-quoted value converts with `srgbToP3`; resolution converts to the environment's gamut. Never store a colour whose space is left to the reader to guess.
+- **Color is layered and Display P3.** A color resource is a stack of layers composited source-over in linear light, and every stored channel is Display P3. Authoring from an sRGB-quoted value converts with `srgbToP3`; resolution converts to the environment's gamut. Never store a color whose space is left to the reader to guess.
 
 - **File size.** 700 lines is a hard ceiling for every `.kira` file. Look for the split at 600, into cohesive 300 to 500-line modules.
 

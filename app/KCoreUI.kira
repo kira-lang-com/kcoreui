@@ -10,7 +10,7 @@ import Foundation
 //             ├──▶ writer ──▶ .kcui ──▶ parser ──▶ catalog stack ──▶ resolver
 //     .kira ──┘                                                          │
 //                                                                        ▼
-//                                                    colour, material, typeface
+//                                                    color, material, typeface
 //
 // The writer and the parser are the framework's only entry point. An editor and
 // a program building records in Kira are peers above them; neither is
@@ -22,14 +22,14 @@ import Foundation
 // Two properties hold everything else up:
 //
 // **Round-trip is byte-exact.** The parser accepts exactly the canonical form
-// the writer emits, so opening a catalog, changing one colour and saving cannot
+// the writer emits, so opening a catalog, changing one color and saving cannot
 // perturb anything else in it, including resources this build has no decoder
 // for.
 //
 // **Resolution is total.** The lowest catalog on the stack is complete, an
 // integrity check proves it against the declared name surface, and a lookup
 // therefore always answers. Nothing above has to carry a failure path for a
-// colour.
+// color.
 //
 // This file is the facade. `app/Core` is the framework and knows no names;
 // `app/Names` is Apple's vocabulary and knows no format.
@@ -80,13 +80,13 @@ function setAppearance(resources: borrow mut UIResources, appearance: borrow App
 
 // --- Lookups ---------------------------------------------------------------
 
-// The colour a name means right now. Cached at both levels, so a repeat within
+// The color a name means right now. Cached at both levels, so a repeat within
 // a frame is a probe and a comparison.
 function color(resources: borrow mut UIResources, name: borrow String) -> Color {
     return cachedColor(resources.cache, resources.stack, name, resources.environment)
 }
 
-// The material recipe a name means right now, with every colour reference
+// The material recipe a name means right now, with every color reference
 // already followed against this environment.
 function material(resources: borrow UIResources, name: borrow String) -> ResolvedMaterial {
     return resolveMaterial(resources.stack, name, resources.environment)

@@ -89,7 +89,7 @@ function traitIdentifiersEqual(left: borrow TraitIdentifier, right: borrow Trait
     return traitIdentifierValue(left) == traitIdentifierValue(right)
 }
 
-// The interface's colour scheme.
+// The interface's color scheme.
 enum Appearance {
     Light
     Dark
@@ -101,7 +101,7 @@ enum Contrast {
     High
 }
 
-// The colour volume the display can actually show.
+// The color volume the display can actually show.
 enum DisplayGamut {
     SRGB
     P3
@@ -340,10 +340,10 @@ function environmentKey(environment: borrow UIEnvironment) -> UIEnvironmentKey {
 function environmentCustomKey(environment: borrow UIEnvironment) -> UICustomTraitKey {
     var fold = 0
     for entry in environment.custom {
-        var mixed = traitIdentifierValue(entry.identifier) * 2654435761
-        mixed = mixed ^ (entry.value * 40503)
+        var mixed = wrappingMul(traitIdentifierValue(entry.identifier), 2654435761)
+        mixed = mixed ^ wrappingMul(entry.value, 40503)
         mixed = mixed ^ (mixed >> 17)
-        fold = fold + mixed
+        fold = wrappingAdd(fold, mixed)
     }
     return UICustomTraitKey(fold)
 }

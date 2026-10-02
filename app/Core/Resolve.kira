@@ -9,9 +9,9 @@ import Foundation
 // never heard the word "sidebar".
 //
 // Resolution is total. A name no catalog on the stack answers for produces the
-// debug colour rather than a failure a paint loop would have to thread through
+// debug color rather than a failure a paint loop would have to thread through
 // every call site. The floor catalog is required to be complete and the
-// integrity check proves it, so a debug colour on screen means the stack was
+// integrity check proves it, so a debug color on screen means the stack was
 // assembled wrong, not that a lookup is allowed to fail.
 
 // How many references a chain may follow before it is treated as a cycle.
@@ -20,17 +20,17 @@ import Foundation
 // backstop for a blob that arrived from somewhere else, not the mechanism.
 function referenceDepthLimit() -> Int { return 16 }
 
-// --- Colours ---------------------------------------------------------------
+// --- Colors ---------------------------------------------------------------
 //
-// A colour is a stack of layers, so resolving one is: follow each layer's
+// A color is a stack of layers, so resolving one is: follow each layer's
 // source, composite them bottom to top in linear light, and hand the result
 // back in the gamut the environment reports.
 //
 // Everything between the catalog and that last step is linear-light Display P3.
-// A caller sees neither: what it receives is an encoded colour in its own
+// A caller sees neither: what it receives is an encoded color in its own
 // gamut, which is what a renderer draws.
 
-// One layer's colour, in linear Display P3, with its references followed.
+// One layer's color, in linear Display P3, with its references followed.
 function resolveSourceLinear(stack: borrow CatalogStack, source: borrow ColorSource, environment: borrow UIEnvironment, depth: Int) -> Color {
     if !source.isReference {
         return decodeColor(source.color)
@@ -52,7 +52,7 @@ function resolveSourceLinear(stack: borrow CatalogStack, source: borrow ColorSou
 // A layer stack composited, in linear Display P3.
 //
 // Bottom to top, source-over. An empty stack is fully transparent, which is a
-// colour a catalog is entitled to hold: a token meaning "draw nothing here"
+// color a catalog is entitled to hold: a token meaning "draw nothing here"
 // says so with no layers rather than with an alpha nobody can see.
 function compositeLayers(stack: borrow CatalogStack, value: borrow ColorValue, environment: borrow UIEnvironment, depth: Int) -> Color {
     var result = Color(r: 0.0, g: 0.0, b: 0.0, a: 0.0)
@@ -64,7 +64,7 @@ function compositeLayers(stack: borrow CatalogStack, value: borrow ColorValue, e
     return result
 }
 
-// A colour value composited and handed back in the environment's gamut.
+// A color value composited and handed back in the environment's gamut.
 function resolveColorValue(stack: borrow CatalogStack, value: borrow ColorValue, environment: borrow UIEnvironment, depth: Int) -> Color {
     let composited = compositeLayers(stack, value, environment, depth)
     return colorForGamut(encodeColorChannels(composited), environment.gamut)
@@ -77,7 +77,7 @@ function resolveColorSource(stack: borrow CatalogStack, source: borrow ColorSour
     return colorForGamut(encodeColorChannels(linear), environment.gamut)
 }
 
-// Whether a colour resolved, alongside the colour. For a debugger and for the
+// Whether a color resolved, alongside the color. For a debugger and for the
 // integrity check; ordinary drawing code wants `resolveColor`.
 struct ColorResolution {
     var color: Color = Color()
@@ -100,7 +100,7 @@ function resolveColorChecked(stack: borrow CatalogStack, name: borrow String, en
     return resolution
 }
 
-// The colour a semantic name means in this environment.
+// The color a semantic name means in this environment.
 function resolveColor(stack: borrow CatalogStack, name: borrow String, environment: borrow UIEnvironment) -> Color {
     return resolveColorChecked(stack, name, environment).color
 }

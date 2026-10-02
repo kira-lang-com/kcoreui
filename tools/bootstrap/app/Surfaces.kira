@@ -7,7 +7,7 @@ import KCoreUI
 // authored once and is correct in both appearances without a second table. That
 // is the property the whole design exists for: nothing below re-authors a
 // material when the appearance changes, because the material never carried a
-// colour in the first place.
+// color in the first place.
 //
 // Each material also carries a rendition for reduced transparency. When the
 // person using the interface has asked for it, the recipe is an opaque fill
@@ -58,9 +58,9 @@ function defaultMaterialResources() -> [ResourceRecord] {
 
 // --- Vibrancy --------------------------------------------------------------
 //
-// Apple's kit inks a control's symbol in its "Labels - Vibrant" greys, burned
+// Apple's kit inks a control's symbol in its "Labels - Vibrant" grays, burned
 // into the glass in the light appearance and dodged into it in the dark —
-// so one fill layer per appearance, the grey and the blend together.
+// so one fill layer per appearance, the gray and the blend together.
 function vibrancyResource(name: borrow String, light: Float, dark: Float) -> ResourceRecord {
     var resource = ResourceRecord()
     resource.name = name
@@ -141,7 +141,7 @@ function defaultTextStyleResources() -> [ResourceRecord] {
 
 // The text styles the toolkit has and Apple does not.
 //
-// `label` is one of them, and it is also a colour. That is not a collision: a
+// `label` is one of them, and it is also a color. That is not a collision: a
 // resource is keyed by name and kind together, so `label` the typeface and
 // `label` the ink are two resources and a lookup for one cannot return the
 // other.

@@ -6,7 +6,7 @@ import Foundation
 // out in one order and never another. The layout is canonical: for any blob the
 // parser accepts, writing the parsed catalog back reproduces the original bytes
 // exactly. That is not a nicety — an editor that opens a catalog, changes one
-// colour and saves must not perturb anything else in it, including resources it
+// color and saves must not perturb anything else in it, including resources it
 // has no decoder for.
 //
 //   header

@@ -1,10 +1,10 @@
 import Foundation
 import KCoreUI
 
-// Layered colour, and the colour space a catalog is authored in.
+// Layered color, and the color space a catalog is authored in.
 //
-// A colour is a stack of layers rather than one RGBA, because that is what a
-// system colour is: a separator is ink at a tenth of an opacity over whatever
+// A color is a stack of layers rather than one RGBA, because that is what a
+// system color is: a separator is ink at a tenth of an opacity over whatever
 // it sits on. Flattening that at author time bakes in the backdrop, and the
 // backdrop is exactly what changes with the appearance.
 //
@@ -19,7 +19,7 @@ function kcuLayered(layers: borrow [ColorLayer]) -> [U8] {
     return encodeColorValue(value)
 }
 
-// A layer holding a literal colour written in sRGB, at an opacity.
+// A layer holding a literal color written in sRGB, at an opacity.
 function kcuInkLayer(color: borrow Color, opacity: Float) -> ColorLayer {
     return colorLayer(literalColor(srgbToP3(color)), opacity)
 }
@@ -40,7 +40,7 @@ function kcuP3Environment() -> UIEnvironment {
     return environment
 }
 
-// --- The colour space ------------------------------------------------------
+// --- The color space ------------------------------------------------------
 
 construct KcuSrgbSurvivesTheTripThroughDisplayP3() extends Test {
     test {
@@ -56,17 +56,23 @@ construct KcuSrgbSurvivesTheTripThroughDisplayP3() extends Test {
         }
         return agrees
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
-// Display P3 is the wider space, so a saturated sRGB colour sits inside it with
+// Display P3 is the wider space, so a saturated sRGB color sits inside it with
 // room to spare: its P3 spelling is less saturated than its sRGB one.
 construct KcuDisplayP3IsWiderThanSrgb() extends Test {
     test {
         let stored = srgbToP3(kcuColor(0.0, 1.0, 0.0, 1.0))
         return stored.r > 0.0 && stored.b > 0.0 && stored.g < 1.0
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // Alpha is coverage, not light, so it never travels through a transfer curve.
@@ -75,7 +81,10 @@ construct KcuAlphaIsNotTransferEncoded() extends Test {
         let stored = srgbToP3(kcuColor(0.5, 0.5, 0.5, 0.25))
         return kcuNear(stored.a, 0.25) && kcuNear(p3ToSrgb(stored).a, 0.25)
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // The environment's gamut decides what a caller receives. A P3 display gets the
@@ -91,12 +100,15 @@ construct KcuTheEnvironmentGamutDecidesWhatIsHandedBack() extends Test {
             && !kcuColorsEqual(asP3, asSrgb)
             && asP3.r > 0.0
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // --- Layers ----------------------------------------------------------------
 
-construct KcuAOneLayerColourIsTheColour() extends Test {
+construct KcuAOneLayerColorIsTheColor() extends Test {
     test {
         var layers: [ColorLayer] = []
         layers.append(kcuInkLayer(kcuColor(0.2, 0.45, 0.96, 1.0), 1.0))
@@ -104,11 +116,14 @@ construct KcuAOneLayerColourIsTheColour() extends Test {
         record.resources.append(kcuLayeredResource("tint", layers))
         return kcuColorsEqual(resolveColor(kcuStackOf(record), "tint", kcuLight()), kcuColor(0.2, 0.45, 0.96, 1.0))
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // A layer's opacity multiplies its source's alpha, so an ink written at a tenth
-// stays the named ink rather than becoming a second, fainter colour.
+// stays the named ink rather than becoming a second, fainter color.
 construct KcuALayerOpacityMultipliesTheSourceAlpha() extends Test {
     test {
         var layers: [ColorLayer] = []
@@ -118,7 +133,10 @@ construct KcuALayerOpacityMultipliesTheSourceAlpha() extends Test {
         let resolved = resolveColor(kcuStackOf(record), "separator", kcuLight())
         return kcuNear(resolved.a, 0.1)
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // The case the whole design turns on: compositing happens in **linear light**.
@@ -136,7 +154,10 @@ construct KcuLayersCompositeInLinearLight() extends Test {
         let resolved = resolveColor(kcuStackOf(record), "wash", kcuLight())
         return kcuNear(resolved.r, 0.7354) && kcuNear(resolved.a, 1.0)
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // Bottom to top: the last layer is the one nearest the viewer.
@@ -149,7 +170,10 @@ construct KcuTheLastLayerIsOnTop() extends Test {
         record.resources.append(kcuLayeredResource("stack", layers))
         return kcuColorsEqual(resolveColor(kcuStackOf(record), "stack", kcuLight()), kcuColor(1.0, 1.0, 1.0, 1.0))
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // A layer may name another resource, so a wash over a named ink follows that
@@ -166,10 +190,13 @@ construct KcuALayerReferenceFollowsTheAppearance() extends Test {
         return kcuColorsEqual(resolveColor(stack, "separator", kcuLight()), kcuColor(0.0, 0.0, 0.0, 1.0))
             && kcuColorsEqual(resolveColor(stack, "separator", kcuDark()), kcuColor(1.0, 1.0, 1.0, 1.0))
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
-// A referenced colour is composited, not just read: a wash over a named ink is
+// A referenced color is composited, not just read: a wash over a named ink is
 // the ink at that opacity, and it still tracks the appearance.
 construct KcuAReferencedInkCompositesAtItsLayerOpacity() extends Test {
     test {
@@ -183,7 +210,10 @@ construct KcuAReferencedInkCompositesAtItsLayerOpacity() extends Test {
         let resolved = resolveColor(kcuStackOf(record), "wash", kcuLight())
         return kcuNear(resolved.r, 0.7354)
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // A stack with no layers covers nothing. A token meaning "draw nothing here"
@@ -196,11 +226,14 @@ construct KcuAnEmptyLayerStackIsTransparent() extends Test {
         let resolved = resolveColor(kcuStackOf(record), "clear", kcuLight())
         return kcuNear(resolved.a, 0.0)
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // Layers survive the container the way everything else does.
-construct KcuALayeredColourRoundTrips() extends Test {
+construct KcuALayeredColorRoundTrips() extends Test {
     test {
         var layers: [ColorLayer] = []
         layers.append(kcuInkLayer(kcuColor(1.0, 1.0, 1.0, 1.0), 1.0))
@@ -212,7 +245,10 @@ construct KcuALayeredColourRoundTrips() extends Test {
         record.resources.append(kcuLayeredResource("wash", layers))
         return kcuRoundTrips(record)
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // A layer stack decodes to the layers it was written with.
@@ -230,7 +266,10 @@ construct KcuALayeredPayloadDecodesToItsLayers() extends Test {
             && compareStrings(read.value.layers[1].source.reference, "label") == 0
             && kcuNear(read.value.layers[1].opacity, 0.25)
     }
-    expect { let e: Result<Bool, TestFailure> = Result.Ok(true); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
 }
 
 // The validator sees through a layer stack: a layer naming nothing is a
@@ -249,7 +288,10 @@ construct KcuAValidatorSeesReferencesInsideLayers() extends Test {
         }
         return missing
     }
-    expect { let e: Result<Int, TestFailure> = Result.Ok(1); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(1)
+        return e
+    }
 }
 
 construct KcuALayerCycleIsReported() extends Test {
@@ -266,5 +308,8 @@ construct KcuALayerCycleIsReported() extends Test {
         }
         return cycles
     }
-    expect { let e: Result<Int, TestFailure> = Result.Ok(1); return e }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(1)
+        return e
+    }
 }

@@ -155,14 +155,15 @@ function defaultMetricResources() -> [ResourceRecord] {
     // The button's glyph rides the glass out, gone by 35%.
     //
     // Home is two glasses fused, as UIKit's glass container fuses them,
-    // after Telegram's fit of the same motion (LensTransitionContainer): the
-    // menu's shrinks to the button's size on a critically damped 0.22 s
-    // spring, rounds on a 0.27 s one, and flies home on a 0.34 s spring at
-    // 0.88 damping, which lands without passing the button: Telegram's
-    // flight is a looser spring held to its end, never past it. The button's own glass
+    // after Telegram's fit of the same motion (LensTransitionContainer),
+    // brought from its 0.5 s to 0.4 s: the menu's
+    // shrinks to the button's size on a critically damped 0.18 s spring,
+    // rounds on a 0.22 s one, and flies home on a 0.27 s spring at 0.88
+    // damping, which lands without passing the button: Telegram's flight is
+    // a looser spring held to its end, never past it. The button's own glass
     // rides the line from the card's center to its home: it starts 8 points
     // deep inside the menu's edge, comes up to that edge over the first 35%
-    // of the 0.5 s it takes, leads the menu out of it by up to 20 points from
+    // of the 0.4 s it takes, leads the menu out of it by up to 20 points from
     // 10% on, and is drawn back into the menu's center as both land, the two
     // fused by a 14-point reach. The rows fade out over its first 30%; the
     // glyph comes back on the button's glass over its first 60%, out of a
@@ -175,13 +176,13 @@ function defaultMetricResources() -> [ResourceRecord] {
     records.append(metricResource(metricMenuMorphDropResponse(), 0.34))
     records.append(metricResource(metricMenuMorphDropDamping(), 0.72))
     records.append(metricResource(metricMenuMorphDropLaunch(), 4.0))
-    records.append(metricResource(metricMenuMorphCloseResponse(), 0.22))
+    records.append(metricResource(metricMenuMorphCloseResponse(), 0.18))
     records.append(metricResource(metricMenuMorphCloseDamping(), 1.0))
-    records.append(metricResource(metricMenuMorphFlightResponse(), 0.34))
+    records.append(metricResource(metricMenuMorphFlightResponse(), 0.27))
     records.append(metricResource(metricMenuMorphFlightDamping(), 0.88))
     records.append(metricResource(metricMenuMorphCornerResponse(), 0.34))
-    records.append(metricResource(metricMenuMorphCloseCornerResponse(), 0.27))
-    records.append(metricResource(metricMenuMorphCloseDuration(), 0.5))
+    records.append(metricResource(metricMenuMorphCloseCornerResponse(), 0.22))
+    records.append(metricResource(metricMenuMorphCloseDuration(), 0.4))
     records.append(metricResource(metricMenuMorphRoundness(), 0.3))
     records.append(metricResource(metricMenuMorphContentOpen(), 0.4))
     records.append(metricResource(metricMenuMorphContentClose(), 0.3))

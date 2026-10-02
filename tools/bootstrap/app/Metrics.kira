@@ -149,14 +149,25 @@ function defaultMetricResources() -> [ResourceRecord] {
     // lengths a second, so it drops a little past the card and settles back.
     // It leaves as an ellipse and squares off along a 0.34 s spring of its
     // own from 30% of the way, its ends straightening and its corners closing
-    // in to the card's. Home, width and center across ride a 0.4 s spring at
-    // 0.9 damping, height a 0.4 s one at 0.95, and the center a 0.4 s one at
-    // 0.85 set off away from the button at 8 lengths a second: the card sinks
-    // a touch before it flies home. The rows are there from 40% grown, at
-    // 1 + 0.1 x what is left to grow, under a 12-point blur that clears as
-    // the glass finishes; home they blur away by 80%. The button's glyph
-    // rides the glass, gone by 35% and back from 60% to 35% left. The blur
-    // and the rows' size are read by eye, not measured.
+    // in to the card's. The rows are there from 40% grown, under a 12-point
+    // blur that clears as the glass finishes, and 14% over their size until
+    // the corner spring is 80% along, easing to their own size by its end.
+    // The button's glyph rides the glass out, gone by 35%.
+    //
+    // Home is two glasses fused, as UIKit's glass container fuses them,
+    // after Telegram's fit of the same motion (LensTransitionContainer): the
+    // menu's shrinks to the button's size on a critically damped 0.22 s
+    // spring, rounds on a 0.27 s one, and flies home on a 0.34 s spring at
+    // 0.88 damping, which lands without passing the button: Telegram's
+    // flight is a looser spring held to its end, never past it. The button's own glass
+    // rides the line from the card's center to its home: it starts 8 points
+    // deep inside the menu's edge, comes up to that edge over the first 35%
+    // of the 0.5 s it takes, leads the menu out of it by up to 20 points from
+    // 10% on, and is drawn back into the menu's center as both land, the two
+    // fused by a 14-point reach. The rows fade out over its first 30%; the
+    // glyph comes back on the button's glass over its first 60%, out of a
+    // 4-point blur. The rows' size is measured off the recording, the blur
+    // read by eye.
     records.append(metricResource(metricMenuMorphGrowthResponse(), 0.27))
     records.append(metricResource(metricMenuMorphGrowthDamping(), 0.95))
     records.append(metricResource(metricMenuMorphHeightResponse(), 0.17))
@@ -164,21 +175,27 @@ function defaultMetricResources() -> [ResourceRecord] {
     records.append(metricResource(metricMenuMorphDropResponse(), 0.34))
     records.append(metricResource(metricMenuMorphDropDamping(), 0.72))
     records.append(metricResource(metricMenuMorphDropLaunch(), 4.0))
-    records.append(metricResource(metricMenuMorphCloseResponse(), 0.4))
-    records.append(metricResource(metricMenuMorphCloseDamping(), 0.9))
-    records.append(metricResource(metricMenuMorphCloseHeightResponse(), 0.4))
-    records.append(metricResource(metricMenuMorphCloseHeightDamping(), 0.95))
-    records.append(metricResource(metricMenuMorphSinkResponse(), 0.4))
-    records.append(metricResource(metricMenuMorphSinkDamping(), 0.85))
-    records.append(metricResource(metricMenuMorphSinkLaunch(), 8.0))
+    records.append(metricResource(metricMenuMorphCloseResponse(), 0.22))
+    records.append(metricResource(metricMenuMorphCloseDamping(), 1.0))
+    records.append(metricResource(metricMenuMorphFlightResponse(), 0.34))
+    records.append(metricResource(metricMenuMorphFlightDamping(), 0.88))
     records.append(metricResource(metricMenuMorphCornerResponse(), 0.34))
+    records.append(metricResource(metricMenuMorphCloseCornerResponse(), 0.27))
+    records.append(metricResource(metricMenuMorphCloseDuration(), 0.5))
     records.append(metricResource(metricMenuMorphRoundness(), 0.3))
     records.append(metricResource(metricMenuMorphContentOpen(), 0.4))
-    records.append(metricResource(metricMenuMorphContentClose(), 0.8))
-    records.append(metricResource(metricMenuMorphContentZoom(), 0.1))
+    records.append(metricResource(metricMenuMorphContentClose(), 0.3))
+    records.append(metricResource(metricMenuMorphContentZoom(), 0.14))
     records.append(metricResource(metricMenuMorphContentBlur(), 12.0))
     records.append(metricResource(metricMenuMorphGlyphGone(), 0.35))
     records.append(metricResource(metricMenuMorphGlyphReturn(), 0.6))
+    records.append(metricResource(metricMenuMorphGlyphBack(), 0.6))
+    records.append(metricResource(metricMenuMorphGlyphBlur(), 4.0))
+    records.append(metricResource(metricMenuMorphHomeReach(), 20.0))
+    records.append(metricResource(metricMenuMorphHomeDepth(), 8.0))
+    records.append(metricResource(metricMenuMorphHomeSurface(), 0.35))
+    records.append(metricResource(metricMenuMorphHomeLead(), 0.1))
+    records.append(metricResource(metricMenuMorphHomeBlend(), 14.0))
 
     // A submenu, measured frame by frame off the iOS 26 Music playlist menu at
     // 60 fps. Its card is the menu's full width, its header 30 points under its

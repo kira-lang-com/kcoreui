@@ -158,12 +158,11 @@ function metricMenuMorphDropDamping() -> String { return "menuMorphDropDamping" 
 function metricMenuMorphDropLaunch() -> String { return "menuMorphDropLaunch" }
 function metricMenuMorphCloseResponse() -> String { return "menuMorphCloseResponse" }
 function metricMenuMorphCloseDamping() -> String { return "menuMorphCloseDamping" }
-function metricMenuMorphCloseHeightResponse() -> String { return "menuMorphCloseHeightResponse" }
-function metricMenuMorphCloseHeightDamping() -> String { return "menuMorphCloseHeightDamping" }
-function metricMenuMorphSinkResponse() -> String { return "menuMorphSinkResponse" }
-function metricMenuMorphSinkDamping() -> String { return "menuMorphSinkDamping" }
-function metricMenuMorphSinkLaunch() -> String { return "menuMorphSinkLaunch" }
+function metricMenuMorphFlightResponse() -> String { return "menuMorphFlightResponse" }
+function metricMenuMorphFlightDamping() -> String { return "menuMorphFlightDamping" }
 function metricMenuMorphCornerResponse() -> String { return "menuMorphCornerResponse" }
+function metricMenuMorphCloseCornerResponse() -> String { return "menuMorphCloseCornerResponse" }
+function metricMenuMorphCloseDuration() -> String { return "menuMorphCloseDuration" }
 function metricMenuMorphRoundness() -> String { return "menuMorphRoundness" }
 function metricMenuMorphContentOpen() -> String { return "menuMorphContentOpen" }
 function metricMenuMorphContentClose() -> String { return "menuMorphContentClose" }
@@ -171,6 +170,13 @@ function metricMenuMorphContentZoom() -> String { return "menuMorphContentZoom" 
 function metricMenuMorphContentBlur() -> String { return "menuMorphContentBlur" }
 function metricMenuMorphGlyphGone() -> String { return "menuMorphGlyphGone" }
 function metricMenuMorphGlyphReturn() -> String { return "menuMorphGlyphReturn" }
+function metricMenuMorphGlyphBack() -> String { return "menuMorphGlyphBack" }
+function metricMenuMorphGlyphBlur() -> String { return "menuMorphGlyphBlur" }
+function metricMenuMorphHomeReach() -> String { return "menuMorphHomeReach" }
+function metricMenuMorphHomeDepth() -> String { return "menuMorphHomeDepth" }
+function metricMenuMorphHomeSurface() -> String { return "menuMorphHomeSurface" }
+function metricMenuMorphHomeLead() -> String { return "menuMorphHomeLead" }
+function metricMenuMorphHomeBlend() -> String { return "menuMorphHomeBlend" }
 function metricMenuSubmenuOpenResponse() -> String { return "menuSubmenuOpenResponse" }
 function metricMenuSubmenuOpenDamping() -> String { return "menuSubmenuOpenDamping" }
 function metricMenuSubmenuCloseResponse() -> String { return "menuSubmenuCloseResponse" }
@@ -304,12 +310,11 @@ function allMetricNames() -> [String] {
     names.append(metricMenuMorphDropLaunch())
     names.append(metricMenuMorphCloseResponse())
     names.append(metricMenuMorphCloseDamping())
-    names.append(metricMenuMorphCloseHeightResponse())
-    names.append(metricMenuMorphCloseHeightDamping())
-    names.append(metricMenuMorphSinkResponse())
-    names.append(metricMenuMorphSinkDamping())
-    names.append(metricMenuMorphSinkLaunch())
+    names.append(metricMenuMorphFlightResponse())
+    names.append(metricMenuMorphFlightDamping())
     names.append(metricMenuMorphCornerResponse())
+    names.append(metricMenuMorphCloseCornerResponse())
+    names.append(metricMenuMorphCloseDuration())
     names.append(metricMenuMorphRoundness())
     names.append(metricMenuMorphContentOpen())
     names.append(metricMenuMorphContentClose())
@@ -317,6 +322,13 @@ function allMetricNames() -> [String] {
     names.append(metricMenuMorphContentBlur())
     names.append(metricMenuMorphGlyphGone())
     names.append(metricMenuMorphGlyphReturn())
+    names.append(metricMenuMorphGlyphBack())
+    names.append(metricMenuMorphGlyphBlur())
+    names.append(metricMenuMorphHomeReach())
+    names.append(metricMenuMorphHomeDepth())
+    names.append(metricMenuMorphHomeSurface())
+    names.append(metricMenuMorphHomeLead())
+    names.append(metricMenuMorphHomeBlend())
     names.append(metricMenuSubmenuOpenResponse())
     names.append(metricMenuSubmenuOpenDamping())
     names.append(metricMenuSubmenuCloseResponse())

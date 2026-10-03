@@ -99,6 +99,8 @@ function metricSidebarSelectionRadius() -> String { return "sidebarSelectionRadi
 function metricSidebarIconColumn() -> String { return "sidebarIconColumn" }
 function metricSidebarTitleSpacing() -> String { return "sidebarTitleSpacing" }
 function metricSidebarSymbolSize() -> String { return "sidebarSymbolSize" }
+function metricSidebarToggleResponse() -> String { return "sidebarToggleResponse" }
+function metricSidebarToggleDamping() -> String { return "sidebarToggleDamping" }
 
 // --- The inset grouped list ------------------------------------------------
 //
@@ -188,6 +190,10 @@ function metricMenuSubmenuRecedeInResponse() -> String { return "menuSubmenuRece
 function metricMenuSubmenuRecedeInDamping() -> String { return "menuSubmenuRecedeInDamping" }
 function metricMenuSubmenuRecedeOutResponse() -> String { return "menuSubmenuRecedeOutResponse" }
 function metricMenuSubmenuRecedeOutDamping() -> String { return "menuSubmenuRecedeOutDamping" }
+function metricMenuSubmenuShrinkResponse() -> String { return "menuSubmenuShrinkResponse" }
+function metricMenuSubmenuShrinkDamping() -> String { return "menuSubmenuShrinkDamping" }
+function metricMenuSubmenuRise() -> String { return "menuSubmenuRise" }
+function metricMenuSubmenuRiseLaunch() -> String { return "menuSubmenuRiseLaunch" }
 function metricMenuSubmenuHeaderCenter() -> String { return "menuSubmenuHeaderCenter" }
 function metricMenuSubmenuChevronTurn() -> String { return "menuSubmenuChevronTurn" }
 function metricMenuSubmenuCardAppear() -> String { return "menuSubmenuCardAppear" }
@@ -282,6 +288,8 @@ function allMetricNames() -> [String] {
     names.append(metricSidebarIconColumn())
     names.append(metricSidebarTitleSpacing())
     names.append(metricSidebarSymbolSize())
+    names.append(metricSidebarToggleResponse())
+    names.append(metricSidebarToggleDamping())
     names.append(metricListReadableWidth())
     names.append(metricListSectionSpacing())
     names.append(metricListTopInset())
@@ -340,6 +348,10 @@ function allMetricNames() -> [String] {
     names.append(metricMenuSubmenuRecedeInDamping())
     names.append(metricMenuSubmenuRecedeOutResponse())
     names.append(metricMenuSubmenuRecedeOutDamping())
+    names.append(metricMenuSubmenuShrinkResponse())
+    names.append(metricMenuSubmenuShrinkDamping())
+    names.append(metricMenuSubmenuRise())
+    names.append(metricMenuSubmenuRiseLaunch())
     names.append(metricMenuSubmenuHeaderCenter())
     names.append(metricMenuSubmenuChevronTurn())
     names.append(metricMenuSubmenuCardAppear())

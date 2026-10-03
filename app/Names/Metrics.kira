@@ -101,6 +101,7 @@ function metricSidebarTitleSpacing() -> String { return "sidebarTitleSpacing" }
 function metricSidebarSymbolSize() -> String { return "sidebarSymbolSize" }
 function metricSidebarToggleResponse() -> String { return "sidebarToggleResponse" }
 function metricSidebarToggleDamping() -> String { return "sidebarToggleDamping" }
+function metricSidebarGlassBleed() -> String { return "sidebarGlassBleed" }
 
 // --- The inset grouped list ------------------------------------------------
 //
@@ -290,6 +291,7 @@ function allMetricNames() -> [String] {
     names.append(metricSidebarSymbolSize())
     names.append(metricSidebarToggleResponse())
     names.append(metricSidebarToggleDamping())
+    names.append(metricSidebarGlassBleed())
     names.append(metricListReadableWidth())
     names.append(metricListSectionSpacing())
     names.append(metricListTopInset())

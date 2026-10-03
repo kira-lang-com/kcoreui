@@ -104,6 +104,7 @@ function defaultMetricResources() -> [ResourceRecord] {
     records.append(metricResource(metricSidebarSymbolSize(), 17.0))
     records.append(metricResource(metricSidebarToggleResponse(), 0.42))
     records.append(metricResource(metricSidebarToggleDamping(), 1.0))
+    records.append(metricResource(metricSidebarGlassBleed(), 6.0))
 
     // The kit's list screen: a 648-point column, 10 between a header, its
     // card and the next section, 10 above the first. The card's corner is 26;

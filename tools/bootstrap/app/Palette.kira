@@ -144,6 +144,15 @@ function surfaceResources() -> [ResourceRecord] {
 
     records.append(adaptiveColor(colorSeparator(), rgba255(0.0, 0.0, 0.0, 0.12), rgba255(255.0, 255.0, 255.0, 0.17)))
     records.append(adaptiveColor(colorOpaqueSeparator(), rgba255(198.0, 198.0, 200.0, 1.0), rgba255(56.0, 56.0, 58.0, 1.0)))
+
+    // UIKit's default indicator style: black at 35% in the light appearance,
+    // white at half in the dark.
+    records.append(adaptiveColor(colorScrollIndicator(), rgba255(0.0, 0.0, 0.0, 0.35), rgba255(255.0, 255.0, 255.0, 0.5)))
+    // The kit's hard scroll edge effect, at a top edge.
+    records.append(adaptiveColor(colorScrollEdgeFill(), rgba255(255.0, 255.0, 255.0, 0.85), rgba255(31.0, 31.0, 31.0, 0.55)))
+    records.append(adaptiveColor(colorScrollEdgeBorder(), rgba255(0.0, 0.0, 0.0, 0.05), rgba255(255.0, 255.0, 255.0, 0.1)))
+    // The shadow the detail casts into the sidebar along its trailing edge.
+    records.append(adaptiveColor(colorSidebarShadow(), rgba255(0.0, 0.0, 0.0, 0.05), rgba255(0.0, 0.0, 0.0, 0.2)))
     return records
 }
 
@@ -231,6 +240,10 @@ function toolkitResources() -> [ResourceRecord] {
     // where it has less to darken.
     records.append(adaptiveColor("menuShadow",
         rgba255(0.0, 0.0, 0.0, 0.25), rgba255(0.0, 0.0, 0.0, 0.45)))
+    // A menu row held down: a gray pill over the glass, darker in light and
+    // lighter in dark, faint enough that the glass still reads through it.
+    records.append(adaptiveColor("menuRowHighlight",
+        rgba255(120.0, 120.0, 128.0, 0.12), rgba255(255.0, 255.0, 255.0, 0.08)))
     return records
 }
 

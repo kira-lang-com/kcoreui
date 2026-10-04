@@ -16,7 +16,7 @@ import Foundation
 // this build has no name for, so a layer blending in a mode this build cannot
 // composite still round-trips through load and write-back unchanged.
 
-enum BlendMode {
+public enum BlendMode {
     Normal
     LinearDodge
     ColorDodge
@@ -30,7 +30,7 @@ enum BlendMode {
     Unknown(Int)
 }
 
-function blendModeValue(blend: borrow BlendMode) -> Int {
+public function blendModeValue(blend: borrow BlendMode) -> Int {
     match blend {
         Normal -> return 0
         LinearDodge -> return 1
@@ -46,7 +46,7 @@ function blendModeValue(blend: borrow BlendMode) -> Int {
     }
 }
 
-function blendModeFromValue(value: Int) -> BlendMode {
+public function blendModeFromValue(value: Int) -> BlendMode {
     if value == 0 { return .Normal }
     if value == 1 { return .LinearDodge }
     if value == 2 { return .ColorDodge }
@@ -62,7 +62,7 @@ function blendModeFromValue(value: Int) -> BlendMode {
 
 // --- Materials -------------------------------------------------------------
 
-enum MaterialLayerKind {
+public enum MaterialLayerKind {
     BackdropBlur
     Saturation
     Tint
@@ -71,7 +71,7 @@ enum MaterialLayerKind {
     Fill
 }
 
-function materialLayerValue(kind: borrow MaterialLayerKind) -> Int {
+public function materialLayerValue(kind: borrow MaterialLayerKind) -> Int {
     match kind {
         BackdropBlur -> return 1
         Saturation -> return 2
@@ -82,7 +82,7 @@ function materialLayerValue(kind: borrow MaterialLayerKind) -> Int {
     }
 }
 
-function materialLayerFromValue(value: Int) -> MaterialLayerKind {
+public function materialLayerFromValue(value: Int) -> MaterialLayerKind {
     if value == 2 { return .Saturation }
     if value == 3 { return .Tint }
     if value == 4 { return .Noise }
@@ -94,7 +94,7 @@ function materialLayerFromValue(value: Int) -> MaterialLayerKind {
 // One layer. Which fields carry meaning is decided by `kind`: `amount` is a
 // blur radius, a saturation multiplier, a noise level or a border width, and
 // `color`, `opacity` and `blend` are read only by the layers that composite.
-struct MaterialLayer {
+public struct MaterialLayer {
     var kind: MaterialLayerKind = .Fill
     var amount: Float = 0.0
     var color: ColorSource = ColorSource()
@@ -102,25 +102,25 @@ struct MaterialLayer {
     var blend: BlendMode = .Normal
 }
 
-struct MaterialValue {
+public struct MaterialValue {
     var layers: [MaterialLayer] = []
 }
 
-function backdropBlurLayer(radius: Float) -> MaterialLayer {
+public function backdropBlurLayer(radius: Float) -> MaterialLayer {
     var layer = MaterialLayer()
     layer.kind = .BackdropBlur
     layer.amount = radius
     return layer
 }
 
-function saturationLayer(amount: Float) -> MaterialLayer {
+public function saturationLayer(amount: Float) -> MaterialLayer {
     var layer = MaterialLayer()
     layer.kind = .Saturation
     layer.amount = amount
     return layer
 }
 
-function tintLayer(color: borrow ColorSource, opacity: Float, blend: borrow BlendMode) -> MaterialLayer {
+public function tintLayer(color: borrow ColorSource, opacity: Float, blend: borrow BlendMode) -> MaterialLayer {
     var layer = MaterialLayer()
     layer.kind = .Tint
     layer.color = color
@@ -129,14 +129,14 @@ function tintLayer(color: borrow ColorSource, opacity: Float, blend: borrow Blen
     return layer
 }
 
-function noiseLayer(amount: Float) -> MaterialLayer {
+public function noiseLayer(amount: Float) -> MaterialLayer {
     var layer = MaterialLayer()
     layer.kind = .Noise
     layer.amount = amount
     return layer
 }
 
-function borderLayer(color: borrow ColorSource, width: Float) -> MaterialLayer {
+public function borderLayer(color: borrow ColorSource, width: Float) -> MaterialLayer {
     var layer = MaterialLayer()
     layer.kind = .Border
     layer.color = color
@@ -145,7 +145,7 @@ function borderLayer(color: borrow ColorSource, width: Float) -> MaterialLayer {
     return layer
 }
 
-function fillLayer(color: borrow ColorSource, opacity: Float, blend: borrow BlendMode) -> MaterialLayer {
+public function fillLayer(color: borrow ColorSource, opacity: Float, blend: borrow BlendMode) -> MaterialLayer {
     var layer = MaterialLayer()
     layer.kind = .Fill
     layer.color = color
@@ -154,7 +154,7 @@ function fillLayer(color: borrow ColorSource, opacity: Float, blend: borrow Blen
     return layer
 }
 
-function appendMaterialLayer(bytes: borrow mut [U8], layer: borrow MaterialLayer) {
+public function appendMaterialLayer(bytes: borrow mut [U8], layer: borrow MaterialLayer) {
     appendU8(bytes, materialLayerValue(layer.kind))
     appendI32(bytes, fixedFromFloat(layer.amount))
     appendI32(bytes, fixedFromFloat(layer.opacity))
@@ -162,7 +162,7 @@ function appendMaterialLayer(bytes: borrow mut [U8], layer: borrow MaterialLayer
     appendColorSource(bytes, layer.color)
 }
 
-function encodeMaterial(material: borrow MaterialValue) -> [U8] {
+public function encodeMaterial(material: borrow MaterialValue) -> [U8] {
     var bytes: [U8] = []
     appendU8(bytes, payloadVersion())
     appendU16(bytes, material.layers.count)
@@ -172,12 +172,12 @@ function encodeMaterial(material: borrow MaterialValue) -> [U8] {
     return bytes
 }
 
-struct MaterialRead {
+public struct MaterialRead {
     var value: MaterialValue = MaterialValue()
     var ok: Bool = false
 }
 
-function decodeMaterial(bytes: borrow [U8]) -> MaterialRead {
+public function decodeMaterial(bytes: borrow [U8]) -> MaterialRead {
     var read = MaterialRead()
     if bytes.count < 3 || readU8(bytes, 0) != payloadVersion() {
         return read
@@ -211,14 +211,14 @@ function decodeMaterial(bytes: borrow [U8]) -> MaterialRead {
 
 // --- Effects ---------------------------------------------------------------
 
-enum EffectOpKind {
+public enum EffectOpKind {
     Blur
     Shadow
     InnerShadow
     Opacity
 }
 
-function effectOpValue(kind: borrow EffectOpKind) -> Int {
+public function effectOpValue(kind: borrow EffectOpKind) -> Int {
     match kind {
         Blur -> return 1
         Shadow -> return 2
@@ -227,14 +227,14 @@ function effectOpValue(kind: borrow EffectOpKind) -> Int {
     }
 }
 
-function effectOpFromValue(value: Int) -> EffectOpKind {
+public function effectOpFromValue(value: Int) -> EffectOpKind {
     if value == 2 { return .Shadow }
     if value == 3 { return .InnerShadow }
     if value == 4 { return .Opacity }
     return .Blur
 }
 
-struct EffectOp {
+public struct EffectOp {
     var kind: EffectOpKind = .Blur
     var radius: Float = 0.0
     var offsetX: Float = 0.0
@@ -244,18 +244,18 @@ struct EffectOp {
     var color: ColorSource = ColorSource()
 }
 
-struct EffectValue {
+public struct EffectValue {
     var ops: [EffectOp] = []
 }
 
-function blurOp(radius: Float) -> EffectOp {
+public function blurOp(radius: Float) -> EffectOp {
     var op = EffectOp()
     op.kind = .Blur
     op.radius = radius
     return op
 }
 
-function shadowOp(color: borrow ColorSource, offsetX: Float, offsetY: Float, radius: Float, spread: Float) -> EffectOp {
+public function shadowOp(color: borrow ColorSource, offsetX: Float, offsetY: Float, radius: Float, spread: Float) -> EffectOp {
     var op = EffectOp()
     op.kind = .Shadow
     op.color = color
@@ -266,20 +266,20 @@ function shadowOp(color: borrow ColorSource, offsetX: Float, offsetY: Float, rad
     return op
 }
 
-function innerShadowOp(color: borrow ColorSource, offsetX: Float, offsetY: Float, radius: Float, spread: Float) -> EffectOp {
+public function innerShadowOp(color: borrow ColorSource, offsetX: Float, offsetY: Float, radius: Float, spread: Float) -> EffectOp {
     var op = shadowOp(color, offsetX, offsetY, radius, spread)
     op.kind = .InnerShadow
     return op
 }
 
-function opacityOp(amount: Float) -> EffectOp {
+public function opacityOp(amount: Float) -> EffectOp {
     var op = EffectOp()
     op.kind = .Opacity
     op.amount = amount
     return op
 }
 
-function encodeEffect(effect: borrow EffectValue) -> [U8] {
+public function encodeEffect(effect: borrow EffectValue) -> [U8] {
     var bytes: [U8] = []
     appendU8(bytes, payloadVersion())
     appendU16(bytes, effect.ops.count)
@@ -295,12 +295,12 @@ function encodeEffect(effect: borrow EffectValue) -> [U8] {
     return bytes
 }
 
-struct EffectRead {
+public struct EffectRead {
     var value: EffectValue = EffectValue()
     var ok: Bool = false
 }
 
-function decodeEffect(bytes: borrow [U8]) -> EffectRead {
+public function decodeEffect(bytes: borrow [U8]) -> EffectRead {
     var read = EffectRead()
     if bytes.count < 3 || readU8(bytes, 0) != payloadVersion() {
         return read
@@ -341,7 +341,7 @@ function decodeEffect(bytes: borrow [U8]) -> EffectRead {
 // Size, tracking and line height are all points, so a text style carries the
 // same three numbers a font implementation already does and nothing has to be
 // multiplied out at the boundary.
-struct TypographyValue {
+public struct TypographyValue {
     var family: String = ""
     var size: Float = 0.0
     var weight: Int = 400
@@ -350,7 +350,7 @@ struct TypographyValue {
     var lineHeight: Float = 0.0
 }
 
-function encodeTypography(typography: borrow TypographyValue) -> [U8] {
+public function encodeTypography(typography: borrow TypographyValue) -> [U8] {
     var bytes: [U8] = []
     appendU8(bytes, payloadVersion())
     appendU16(bytes, typography.family.count)
@@ -363,12 +363,12 @@ function encodeTypography(typography: borrow TypographyValue) -> [U8] {
     return bytes
 }
 
-struct TypographyRead {
+public struct TypographyRead {
     var value: TypographyValue = TypographyValue()
     var ok: Bool = false
 }
 
-function decodeTypography(bytes: borrow [U8]) -> TypographyRead {
+public function decodeTypography(bytes: borrow [U8]) -> TypographyRead {
     var read = TypographyRead()
     if bytes.count < 3 || readU8(bytes, 0) != payloadVersion() {
         return read
@@ -397,23 +397,23 @@ function decodeTypography(bytes: borrow [U8]) -> TypographyRead {
 // literal in a toolkit for the same reason a color is — the number differs by
 // platform, by idiom and by size class, and the toolkit asking for it should
 // not have to know which of those it is running under.
-struct MetricValue {
+public struct MetricValue {
     var points: Float = 0.0
 }
 
-function encodeMetric(metric: borrow MetricValue) -> [U8] {
+public function encodeMetric(metric: borrow MetricValue) -> [U8] {
     var bytes: [U8] = []
     appendU8(bytes, payloadVersion())
     appendI32(bytes, fixedFromFloat(metric.points))
     return bytes
 }
 
-struct MetricRead {
+public struct MetricRead {
     var value: MetricValue = MetricValue()
     var ok: Bool = false
 }
 
-function decodeMetric(bytes: borrow [U8]) -> MetricRead {
+public function decodeMetric(bytes: borrow [U8]) -> MetricRead {
     var read = MetricRead()
     if bytes.count < 5 || readU8(bytes, 0) != payloadVersion() {
         return read
@@ -436,7 +436,7 @@ function decodeMetric(bytes: borrow [U8]) -> MetricRead {
 // off it is written down without translation. A renderer reads the ones it
 // draws and leaves the rest; `Unknown` carries an input this build has no name
 // for through load and write-back unchanged.
-enum GlassInput {
+public enum GlassInput {
     InnerRefractionAmount
     InnerRefractionHeight
     OuterRefractionAmount
@@ -455,7 +455,7 @@ enum GlassInput {
     Unknown(Int)
 }
 
-function glassInputValue(input: borrow GlassInput) -> Int {
+public function glassInputValue(input: borrow GlassInput) -> Int {
     match input {
         InnerRefractionAmount -> return 1
         InnerRefractionHeight -> return 2
@@ -476,7 +476,7 @@ function glassInputValue(input: borrow GlassInput) -> Int {
     }
 }
 
-function glassInputFromValue(value: Int) -> GlassInput {
+public function glassInputFromValue(value: Int) -> GlassInput {
     if value == 1 { return .InnerRefractionAmount }
     if value == 2 { return .InnerRefractionHeight }
     if value == 3 { return .OuterRefractionAmount }
@@ -498,7 +498,7 @@ function glassInputFromValue(value: Int) -> GlassInput {
 // One input as a function of size: `base + slope * extent`, held between
 // `minimum` and `maximum`, where the extent is the surface's shorter side in
 // points. A figure that does not change with size has a slope of zero.
-struct GlassRamp {
+public struct GlassRamp {
     var input: GlassInput = .InnerRefractionAmount
     var base: Float = 0.0
     var slope: Float = 0.0
@@ -506,7 +506,7 @@ struct GlassRamp {
     var maximum: Float = 0.0
 }
 
-function glassRamp(input: GlassInput, base: Float, slope: Float, minimum: Float, maximum: Float) -> GlassRamp {
+public function glassRamp(input: GlassInput, base: Float, slope: Float, minimum: Float, maximum: Float) -> GlassRamp {
     var ramp = GlassRamp()
     ramp.input = move input
     ramp.base = base
@@ -516,20 +516,20 @@ function glassRamp(input: GlassInput, base: Float, slope: Float, minimum: Float,
     return ramp
 }
 
-function glassConstant(input: GlassInput, value: Float) -> GlassRamp {
+public function glassConstant(input: GlassInput, value: Float) -> GlassRamp {
     return glassRamp(move input, value, 0.0, value, value)
 }
 
 // What a ramp comes to on a surface whose shorter side is `extent`.
-function glassRampAt(ramp: borrow GlassRamp, extent: Float) -> Float {
+public function glassRampAt(ramp: borrow GlassRamp, extent: Float) -> Float {
     return clamp(ramp.base + ramp.slope * extent, ramp.minimum, ramp.maximum)
 }
 
-struct GlassValue {
+public struct GlassValue {
     var ramps: [GlassRamp] = []
 }
 
-function encodeGlass(glass: borrow GlassValue) -> [U8] {
+public function encodeGlass(glass: borrow GlassValue) -> [U8] {
     var bytes: [U8] = []
     appendU8(bytes, payloadVersion())
     appendU16(bytes, glass.ramps.count)
@@ -543,12 +543,12 @@ function encodeGlass(glass: borrow GlassValue) -> [U8] {
     return bytes
 }
 
-struct GlassRead {
+public struct GlassRead {
     var value: GlassValue = GlassValue()
     var ok: Bool = false
 }
 
-function decodeGlass(bytes: borrow [U8]) -> GlassRead {
+public function decodeGlass(bytes: borrow [U8]) -> GlassRead {
     var read = GlassRead()
     if bytes.count < 3 || readU8(bytes, 0) != payloadVersion() {
         return read

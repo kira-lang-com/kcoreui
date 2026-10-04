@@ -15,63 +15,63 @@ import Foundation
 
 // The unified title and toolbar band. Content runs underneath it; this is the
 // top safe-area inset a window's content is laid out against.
-function metricToolbarHeight() -> String { return "toolbarHeight" }
+public function metricToolbarHeight() -> String { return "toolbarHeight" }
+public function metricToolbarCompactHeight() -> String { return "toolbarCompactHeight" }
+public function metricToolbarCompactBandHeight() -> String { return "toolbarCompactBandHeight" }
 
 // One piece of glass on the bar, and the width of an item holding an icon.
-function metricToolbarItemHeight() -> String { return "toolbarItemHeight" }
-function metricToolbarItemWidth() -> String { return "toolbarItemWidth" }
+public function metricToolbarItemHeight() -> String { return "toolbarItemHeight" }
+public function metricToolbarItemWidth() -> String { return "toolbarItemWidth" }
 
 // The gap between two items sharing one piece of glass, and how far the glass
 // holds the first and last of them off its ends. An item alone on its glass
 // is the glass.
-function metricToolbarGroupSpacing() -> String { return "toolbarGroupSpacing" }
-function metricToolbarGroupInset() -> String { return "toolbarGroupInset" }
+public function metricToolbarGroupSpacing() -> String { return "toolbarGroupSpacing" }
+public function metricToolbarGroupInset() -> String { return "toolbarGroupInset" }
 
 // The gap between two pieces of glass, and the width a fixed spacer holds open.
-function metricToolbarItemSpacing() -> String { return "toolbarItemSpacing" }
-function metricToolbarSpacerWidth() -> String { return "toolbarSpacerWidth" }
+public function metricToolbarItemSpacing() -> String { return "toolbarItemSpacing" }
+public function metricToolbarSpacerWidth() -> String { return "toolbarSpacerWidth" }
 
 // How far the outermost glass sits from the edge of its section.
-function metricToolbarEdgeInset() -> String { return "toolbarEdgeInset" }
+public function metricToolbarEdgeInset() -> String { return "toolbarEdgeInset" }
+public function metricToolbarCompactEdgeInset() -> String { return "toolbarCompactEdgeInset" }
 
 // How far a column's title sits from the column's leading edge, and from a
 // piece of glass before it -- a back button -- when there is one.
-function metricToolbarTitleInset() -> String { return "toolbarTitleInset" }
-function metricToolbarTitleSpacing() -> String { return "toolbarTitleSpacing" }
 
 // How a back button leaves once its stack is back where there is nowhere
 // further back: it swells to this scale as it fades, over this many seconds.
-function metricToolbarBackRemovalScale() -> String { return "toolbarBackRemovalScale" }
-function metricToolbarBackRemovalDuration() -> String { return "toolbarBackRemovalDuration" }
+public function metricToolbarBackRemovalScale() -> String { return "toolbarBackRemovalScale" }
+public function metricToolbarBackRemovalDuration() -> String { return "toolbarBackRemovalDuration" }
 
 // The search field `.searchable` puts on the bar: how wide its glass is, how
 // far its magnifier and its end sit inside the glass, and the gap between the
 // magnifier and the text.
-function metricToolbarSearchWidth() -> String { return "toolbarSearchWidth" }
-function metricToolbarSearchLeading() -> String { return "toolbarSearchLeading" }
-function metricToolbarSearchTrailing() -> String { return "toolbarSearchTrailing" }
-function metricToolbarSearchSpacing() -> String { return "toolbarSearchSpacing" }
+public function metricToolbarSearchWidth() -> String { return "toolbarSearchWidth" }
+public function metricToolbarSearchLeading() -> String { return "toolbarSearchLeading" }
+public function metricToolbarSearchTrailing() -> String { return "toolbarSearchTrailing" }
+public function metricToolbarSearchSpacing() -> String { return "toolbarSearchSpacing" }
 
 // What a piece of glass holds an item's label off its ends by, and the point
 // size and weight its symbols are set at.
-function metricToolbarItemLabelInset() -> String { return "toolbarItemLabelInset" }
-function metricToolbarSymbolSize() -> String { return "toolbarSymbolSize" }
-function metricToolbarSymbolWeight() -> String { return "toolbarSymbolWeight" }
+public function metricToolbarItemLabelInset() -> String { return "toolbarItemLabelInset" }
+public function metricToolbarSymbolSize() -> String { return "toolbarSymbolSize" }
+public function metricToolbarSymbolWeight() -> String { return "toolbarSymbolWeight" }
 
 // --- The window ------------------------------------------------------------
 
-function metricWindowCornerRadius() -> String { return "windowCornerRadius" }
+public function metricWindowCornerRadius() -> String { return "windowCornerRadius" }
 
 // The close, minimize and zoom buttons: where the first one starts, how large
 // each one is, the gap between them, and the room left after the last before
 // anything else on the bar.
-function metricWindowControlsLeading() -> String { return "windowControlsLeading" }
-function metricWindowControlDiameter() -> String { return "windowControlDiameter" }
-function metricWindowControlSpacing() -> String { return "windowControlSpacing" }
-function metricWindowControlsTrailing() -> String { return "windowControlsTrailing" }
+public function metricWindowControlsLeading() -> String { return "windowControlsLeading" }
+public function metricWindowControlDiameter() -> String { return "windowControlDiameter" }
+public function metricWindowControlSpacing() -> String { return "windowControlSpacing" }
+public function metricWindowControlsTrailing() -> String { return "windowControlsTrailing" }
 
 // The line between two columns of a split view.
-function metricSplitDividerThickness() -> String { return "splitDividerThickness" }
 
 // --- The sidebar -----------------------------------------------------------
 //
@@ -81,27 +81,28 @@ function metricSplitDividerThickness() -> String { return "splitDividerThickness
 // A section's header row, how far its title sits from the column's edge, and
 // how far down the row the title's line starts: a header sits low in its row,
 // close to the rows it heads.
-function metricSidebarHeaderHeight() -> String { return "sidebarHeaderHeight" }
-function metricSidebarHeaderInset() -> String { return "sidebarHeaderInset" }
-function metricSidebarHeaderTopInset() -> String { return "sidebarHeaderTopInset" }
+public function metricSidebarHeaderHeight() -> String { return "sidebarHeaderHeight" }
+public function metricSidebarHeaderInset() -> String { return "sidebarHeaderInset" }
+public function metricSidebarHeaderTopInset() -> String { return "sidebarHeaderTopInset" }
 
 // One row, and how far its content sits from each edge of the column.
-function metricSidebarRowHeight() -> String { return "sidebarRowHeight" }
-function metricSidebarRowInset() -> String { return "sidebarRowInset" }
+public function metricSidebarRowHeight() -> String { return "sidebarRowHeight" }
+public function metricSidebarRowInset() -> String { return "sidebarRowInset" }
 
 // The band behind the selected row: how far it sits from each edge of the
 // column, and its corner radius. The corner is continuous.
-function metricSidebarSelectionInset() -> String { return "sidebarSelectionInset" }
-function metricSidebarSelectionRadius() -> String { return "sidebarSelectionRadius" }
+public function metricSidebarSelectionInset() -> String { return "sidebarSelectionInset" }
+public function metricSidebarSelectionRadius() -> String { return "sidebarSelectionRadius" }
 
 // A row's symbol column, the gap after it to the title, and the point size
 // the symbol is set at.
-function metricSidebarIconColumn() -> String { return "sidebarIconColumn" }
-function metricSidebarTitleSpacing() -> String { return "sidebarTitleSpacing" }
-function metricSidebarSymbolSize() -> String { return "sidebarSymbolSize" }
-function metricSidebarToggleResponse() -> String { return "sidebarToggleResponse" }
-function metricSidebarToggleDamping() -> String { return "sidebarToggleDamping" }
-function metricSidebarGlassBleed() -> String { return "sidebarGlassBleed" }
+public function metricSidebarIconColumn() -> String { return "sidebarIconColumn" }
+public function metricSidebarTitleSpacing() -> String { return "sidebarTitleSpacing" }
+public function metricSidebarSymbolSize() -> String { return "sidebarSymbolSize" }
+public function metricSidebarToggleResponse() -> String { return "sidebarToggleResponse" }
+public function metricSidebarToggleDamping() -> String { return "sidebarToggleDamping" }
+public function metricSidebarGlassBleed() -> String { return "sidebarGlassBleed" }
+public function metricSidebarShadowRadius() -> String { return "sidebarShadowRadius" }
 
 // --- The inset grouped list ------------------------------------------------
 //
@@ -111,31 +112,36 @@ function metricSidebarGlassBleed() -> String { return "sidebarGlassBleed" }
 
 // The widest the column grows, the gap between a header, its card and the next
 // section, and the room above the first section.
-function metricListReadableWidth() -> String { return "listReadableWidth" }
-function metricListSectionSpacing() -> String { return "listSectionSpacing" }
-function metricListTopInset() -> String { return "listTopInset" }
+public function metricListReadableWidth() -> String { return "listReadableWidth" }
+public function metricListSectionSpacing() -> String { return "listSectionSpacing" }
+public function metricListTopInset() -> String { return "listTopInset" }
 
 // The card: its continuous corner, a row's least height, how far a row's
 // content and its separator sit from the card's edges, the separator's
 // thickness, and the gap between a row's trailing accessories.
-function metricListCornerRadius() -> String { return "listCornerRadius" }
-function metricListRowHeight() -> String { return "listRowHeight" }
-function metricListRowInset() -> String { return "listRowInset" }
-function metricListSeparatorThickness() -> String { return "listSeparatorThickness" }
-function metricListAccessorySpacing() -> String { return "listAccessorySpacing" }
+public function metricListCornerRadius() -> String { return "listCornerRadius" }
+public function metricListRowHeight() -> String { return "listRowHeight" }
+public function metricListRowInset() -> String { return "listRowInset" }
+public function metricListSeparatorThickness() -> String { return "listSeparatorThickness" }
+public function metricListAccessorySpacing() -> String { return "listAccessorySpacing" }
 
 // What a header holds above and below its title, and what a footer holds
 // above and below its text. Both start at the row inset.
-function metricListHeaderPadding() -> String { return "listHeaderPadding" }
-function metricListFooterTopInset() -> String { return "listFooterTopInset" }
-function metricListFooterBottomInset() -> String { return "listFooterBottomInset" }
+public function metricListHeaderPadding() -> String { return "listHeaderPadding" }
+public function metricListFooterTopInset() -> String { return "listFooterTopInset" }
+public function metricListFooterBottomInset() -> String { return "listFooterBottomInset" }
 
 // --- The large title ---------------------------------------------------------
 //
 // A column's title set large under the bar: how far below the bar its line
 // starts, and the room under it before the content.
-function metricLargeTitleTopInset() -> String { return "largeTitleTopInset" }
-function metricLargeTitleBottomInset() -> String { return "largeTitleBottomInset" }
+public function metricLargeTitleTopInset() -> String { return "largeTitleTopInset" }
+public function metricLargeTitleBottomInset() -> String { return "largeTitleBottomInset" }
+public function metricLargeTitleFadeDuration() -> String { return "largeTitleFadeDuration" }
+public function metricLargeTitleInlineTravel() -> String { return "largeTitleInlineTravel" }
+public function metricLargeTitleInlineBlur() -> String { return "largeTitleInlineBlur" }
+public function metricScrollEdgeBlurRadius() -> String { return "scrollEdgeBlurRadius" }
+public function metricScrollEdgeBorderWidth() -> String { return "scrollEdgeBorderWidth" }
 
 // --- The navigation transition -----------------------------------------------
 //
@@ -146,115 +152,140 @@ function metricLargeTitleBottomInset() -> String { return "largeTitleBottomInset
 // throws faster than the commit velocity (points a second), goes back; one
 // that does neither settles where it started. A swipe is only a swipe once it
 // has moved the slop, and moved it more across than down.
-function metricNavigationPageCornerRadius() -> String { return "navigationPageCornerRadius" }
-function metricNavigationCoveredDim() -> String { return "navigationCoveredDim" }
-function metricNavigationCoveredParallax() -> String { return "navigationCoveredParallax" }
-function metricNavigationSwipeCommitFraction() -> String { return "navigationSwipeCommitFraction" }
-function metricNavigationSwipeCommitVelocity() -> String { return "navigationSwipeCommitVelocity" }
-function metricNavigationSwipeSlop() -> String { return "navigationSwipeSlop" }
-function metricMenuMorphGrowthResponse() -> String { return "menuMorphGrowthResponse" }
-function metricMenuMorphGrowthDamping() -> String { return "menuMorphGrowthDamping" }
-function metricMenuMorphHeightResponse() -> String { return "menuMorphHeightResponse" }
-function metricMenuMorphHeightDamping() -> String { return "menuMorphHeightDamping" }
-function metricMenuMorphDropResponse() -> String { return "menuMorphDropResponse" }
-function metricMenuMorphDropDamping() -> String { return "menuMorphDropDamping" }
-function metricMenuMorphDropLaunch() -> String { return "menuMorphDropLaunch" }
-function metricMenuMorphCloseResponse() -> String { return "menuMorphCloseResponse" }
-function metricMenuMorphCloseDamping() -> String { return "menuMorphCloseDamping" }
-function metricMenuMorphFlightResponse() -> String { return "menuMorphFlightResponse" }
-function metricMenuMorphFlightDamping() -> String { return "menuMorphFlightDamping" }
-function metricMenuMorphCornerResponse() -> String { return "menuMorphCornerResponse" }
-function metricMenuMorphCloseCornerResponse() -> String { return "menuMorphCloseCornerResponse" }
-function metricMenuMorphCloseDuration() -> String { return "menuMorphCloseDuration" }
-function metricMenuMorphRoundness() -> String { return "menuMorphRoundness" }
-function metricMenuMorphContentOpen() -> String { return "menuMorphContentOpen" }
-function metricMenuMorphContentClose() -> String { return "menuMorphContentClose" }
-function metricMenuMorphContentZoom() -> String { return "menuMorphContentZoom" }
-function metricMenuMorphContentBlur() -> String { return "menuMorphContentBlur" }
-function metricMenuMorphGlyphGone() -> String { return "menuMorphGlyphGone" }
-function metricMenuMorphGlyphReturn() -> String { return "menuMorphGlyphReturn" }
-function metricMenuMorphGlyphBack() -> String { return "menuMorphGlyphBack" }
-function metricMenuMorphGlyphBlur() -> String { return "menuMorphGlyphBlur" }
-function metricMenuMorphHomeReach() -> String { return "menuMorphHomeReach" }
-function metricMenuMorphHomeDepth() -> String { return "menuMorphHomeDepth" }
-function metricMenuMorphHomeSurface() -> String { return "menuMorphHomeSurface" }
-function metricMenuMorphHomeLead() -> String { return "menuMorphHomeLead" }
-function metricMenuMorphHomeBlend() -> String { return "menuMorphHomeBlend" }
-function metricMenuSubmenuOpenResponse() -> String { return "menuSubmenuOpenResponse" }
-function metricMenuSubmenuOpenDamping() -> String { return "menuSubmenuOpenDamping" }
-function metricMenuSubmenuCloseResponse() -> String { return "menuSubmenuCloseResponse" }
-function metricMenuSubmenuCloseDamping() -> String { return "menuSubmenuCloseDamping" }
-function metricMenuSubmenuRecededOpacity() -> String { return "menuSubmenuRecededOpacity" }
-function metricMenuSubmenuRecedeScale() -> String { return "menuSubmenuRecedeScale" }
-function metricMenuSubmenuRecedeHold() -> String { return "menuSubmenuRecedeHold" }
-function metricMenuSubmenuRecedeInResponse() -> String { return "menuSubmenuRecedeInResponse" }
-function metricMenuSubmenuRecedeInDamping() -> String { return "menuSubmenuRecedeInDamping" }
-function metricMenuSubmenuRecedeOutResponse() -> String { return "menuSubmenuRecedeOutResponse" }
-function metricMenuSubmenuRecedeOutDamping() -> String { return "menuSubmenuRecedeOutDamping" }
-function metricMenuSubmenuShrinkResponse() -> String { return "menuSubmenuShrinkResponse" }
-function metricMenuSubmenuShrinkDamping() -> String { return "menuSubmenuShrinkDamping" }
-function metricMenuSubmenuRise() -> String { return "menuSubmenuRise" }
-function metricMenuSubmenuRiseLaunch() -> String { return "menuSubmenuRiseLaunch" }
-function metricMenuSubmenuHeaderCenter() -> String { return "menuSubmenuHeaderCenter" }
-function metricMenuSubmenuChevronTurn() -> String { return "menuSubmenuChevronTurn" }
-function metricMenuSubmenuCardAppear() -> String { return "menuSubmenuCardAppear" }
-function metricMenuSubmenuCardAppearSpan() -> String { return "menuSubmenuCardAppearSpan" }
-function metricMenuSubmenuCardVanish() -> String { return "menuSubmenuCardVanish" }
-function metricMenuSubmenuItemsAppear() -> String { return "menuSubmenuItemsAppear" }
-function metricMenuSubmenuItemsAppearSpan() -> String { return "menuSubmenuItemsAppearSpan" }
-function metricMenuSubmenuItemsVanish() -> String { return "menuSubmenuItemsVanish" }
-function metricMenuSubmenuItemsVanishSpan() -> String { return "menuSubmenuItemsVanishSpan" }
+public function metricNavigationPageCornerRadius() -> String { return "navigationPageCornerRadius" }
+public function metricNavigationCoveredDim() -> String { return "navigationCoveredDim" }
+public function metricNavigationCoveredParallax() -> String { return "navigationCoveredParallax" }
+public function metricNavigationPushResponse() -> String { return "navigationPushResponse" }
+public function metricNavigationPushDamping() -> String { return "navigationPushDamping" }
+public function metricNavigationSwipeCommitFraction() -> String { return "navigationSwipeCommitFraction" }
+public function metricNavigationSwipeCommitVelocity() -> String { return "navigationSwipeCommitVelocity" }
+public function metricNavigationSwipeSlop() -> String { return "navigationSwipeSlop" }
+
+// --- The scroll indicator ----------------------------------------------------
+//
+// The bar along a scroll view's trailing edge while it scrolls: its thickness,
+// and its thickness while the pointer holds it to scrub; the shortest it gets
+// over long content, and the shortest it squeezes to pulled past an end; how
+// far beyond it a pointer still takes it, across and along; and how long it
+// stays after scrolling stops, how long it takes to fade, and how long it
+// takes to swell and to thin back.
+public function metricScrollIndicatorThickness() -> String { return "scrollIndicatorThickness" }
+public function metricScrollIndicatorExpandedThickness() -> String { return "scrollIndicatorExpandedThickness" }
+public function metricScrollIndicatorMinimumLength() -> String { return "scrollIndicatorMinimumLength" }
+public function metricScrollIndicatorOverscrolledLength() -> String { return "scrollIndicatorOverscrolledLength" }
+public function metricScrollIndicatorHitOutsetAcross() -> String { return "scrollIndicatorHitOutsetAcross" }
+public function metricScrollIndicatorHitOutsetAlong() -> String { return "scrollIndicatorHitOutsetAlong" }
+public function metricScrollIndicatorHideDelay() -> String { return "scrollIndicatorHideDelay" }
+public function metricScrollIndicatorFadeDuration() -> String { return "scrollIndicatorFadeDuration" }
+public function metricScrollIndicatorExpandDuration() -> String { return "scrollIndicatorExpandDuration" }
+public function metricScrollIndicatorCollapseDuration() -> String { return "scrollIndicatorCollapseDuration" }
+public function metricMenuMorphGrowthResponse() -> String { return "menuMorphGrowthResponse" }
+public function metricMenuMorphGrowthDamping() -> String { return "menuMorphGrowthDamping" }
+public function metricMenuMorphHeightResponse() -> String { return "menuMorphHeightResponse" }
+public function metricMenuMorphHeightDamping() -> String { return "menuMorphHeightDamping" }
+public function metricMenuMorphDropResponse() -> String { return "menuMorphDropResponse" }
+public function metricMenuMorphDropDamping() -> String { return "menuMorphDropDamping" }
+public function metricMenuMorphDropLaunch() -> String { return "menuMorphDropLaunch" }
+public function metricMenuMorphCloseResponse() -> String { return "menuMorphCloseResponse" }
+public function metricMenuMorphCloseDamping() -> String { return "menuMorphCloseDamping" }
+public function metricMenuMorphFlightResponse() -> String { return "menuMorphFlightResponse" }
+public function metricMenuMorphFlightDamping() -> String { return "menuMorphFlightDamping" }
+public function metricMenuMorphCornerResponse() -> String { return "menuMorphCornerResponse" }
+public function metricMenuMorphCloseCornerResponse() -> String { return "menuMorphCloseCornerResponse" }
+public function metricMenuMorphCloseDuration() -> String { return "menuMorphCloseDuration" }
+public function metricMenuMorphRoundness() -> String { return "menuMorphRoundness" }
+public function metricMenuMorphContentOpen() -> String { return "menuMorphContentOpen" }
+public function metricMenuMorphContentClose() -> String { return "menuMorphContentClose" }
+public function metricMenuMorphContentZoom() -> String { return "menuMorphContentZoom" }
+public function metricMenuMorphContentBlur() -> String { return "menuMorphContentBlur" }
+public function metricMenuMorphGlyphGone() -> String { return "menuMorphGlyphGone" }
+public function metricMenuMorphGlyphReturn() -> String { return "menuMorphGlyphReturn" }
+public function metricMenuMorphGlyphBack() -> String { return "menuMorphGlyphBack" }
+public function metricMenuMorphGlyphBlur() -> String { return "menuMorphGlyphBlur" }
+public function metricMenuMorphHomeReach() -> String { return "menuMorphHomeReach" }
+public function metricMenuMorphHomeDepth() -> String { return "menuMorphHomeDepth" }
+public function metricMenuMorphHomeSurface() -> String { return "menuMorphHomeSurface" }
+public function metricMenuMorphHomeLead() -> String { return "menuMorphHomeLead" }
+public function metricMenuMorphHomeBlend() -> String { return "menuMorphHomeBlend" }
+public function metricMenuSubmenuOpenResponse() -> String { return "menuSubmenuOpenResponse" }
+public function metricMenuSubmenuOpenDamping() -> String { return "menuSubmenuOpenDamping" }
+public function metricMenuSubmenuCloseResponse() -> String { return "menuSubmenuCloseResponse" }
+public function metricMenuSubmenuCloseDamping() -> String { return "menuSubmenuCloseDamping" }
+public function metricMenuSubmenuRecededOpacity() -> String { return "menuSubmenuRecededOpacity" }
+public function metricMenuSubmenuRecedeScale() -> String { return "menuSubmenuRecedeScale" }
+public function metricMenuSubmenuRecedeHold() -> String { return "menuSubmenuRecedeHold" }
+public function metricMenuSubmenuDwell() -> String { return "menuSubmenuDwell" }
+public function metricMenuSubmenuWiden() -> String { return "menuSubmenuWiden" }
+public function metricMenuSubmenuRecedeInResponse() -> String { return "menuSubmenuRecedeInResponse" }
+public function metricMenuSubmenuRecedeInDamping() -> String { return "menuSubmenuRecedeInDamping" }
+public function metricMenuSubmenuRecedeOutResponse() -> String { return "menuSubmenuRecedeOutResponse" }
+public function metricMenuSubmenuRecedeOutDamping() -> String { return "menuSubmenuRecedeOutDamping" }
+public function metricMenuSubmenuShrinkResponse() -> String { return "menuSubmenuShrinkResponse" }
+public function metricMenuSubmenuShrinkDamping() -> String { return "menuSubmenuShrinkDamping" }
+public function metricMenuSubmenuRise() -> String { return "menuSubmenuRise" }
+public function metricMenuSubmenuRiseLaunch() -> String { return "menuSubmenuRiseLaunch" }
+public function metricMenuSubmenuHeaderCenter() -> String { return "menuSubmenuHeaderCenter" }
+public function metricMenuSubmenuChevronTurn() -> String { return "menuSubmenuChevronTurn" }
+public function metricMenuSubmenuCardAppear() -> String { return "menuSubmenuCardAppear" }
+public function metricMenuSubmenuCardAppearSpan() -> String { return "menuSubmenuCardAppearSpan" }
+public function metricMenuSubmenuCardVanish() -> String { return "menuSubmenuCardVanish" }
+public function metricMenuSubmenuItemsAppear() -> String { return "menuSubmenuItemsAppear" }
+public function metricMenuSubmenuItemsAppearSpan() -> String { return "menuSubmenuItemsAppearSpan" }
+public function metricMenuSubmenuItemsVanish() -> String { return "menuSubmenuItemsVanish" }
+public function metricMenuSubmenuItemsVanishSpan() -> String { return "menuSubmenuItemsVanishSpan" }
 
 // --- Menus -------------------------------------------------------------------
 //
 // How far under the control that opened it a menu's card hangs.
-function metricMenuAnchorSpacing() -> String { return "menuAnchorSpacing" }
+public function metricMenuAnchorSpacing() -> String { return "menuAnchorSpacing" }
 
 // --- The tab bar -------------------------------------------------------------
 //
 // The bar a `TabView` floats in the toolbar's row: its height and what it
 // holds its tabs off its glass by, then a tab's height and what a tab holds its
 // title, or a symbol tab its symbol, off its own ends.
-function metricTabBarHeight() -> String { return "tabBarHeight" }
-function metricTabBarInset() -> String { return "tabBarInset" }
-function metricTabHeight() -> String { return "tabHeight" }
-function metricTabLabelInset() -> String { return "tabLabelInset" }
-function metricTabSymbolInset() -> String { return "tabSymbolInset" }
+public function metricTabBarHeight() -> String { return "tabBarHeight" }
+public function metricTabBarInset() -> String { return "tabBarInset" }
+public function metricTabHeight() -> String { return "tabHeight" }
+public function metricTabLabelInset() -> String { return "tabLabelInset" }
+public function metricTabSymbolInset() -> String { return "tabSymbolInset" }
 
 // --- Switches, sliders and progress bars ---------------------------------------
 //
 // A switch's track and the knob held inside it; a slider's height, the track
 // running through its middle and the knob riding it; a progress bar's track.
-function metricSwitchWidth() -> String { return "switchWidth" }
-function metricSwitchHeight() -> String { return "switchHeight" }
-function metricSwitchKnobWidth() -> String { return "switchKnobWidth" }
-function metricSwitchKnobInset() -> String { return "switchKnobInset" }
-function metricSliderHeight() -> String { return "sliderHeight" }
-function metricSliderTrackHeight() -> String { return "sliderTrackHeight" }
-function metricSliderKnobWidth() -> String { return "sliderKnobWidth" }
-function metricSliderKnobHeight() -> String { return "sliderKnobHeight" }
-function metricSliderKnobInset() -> String { return "sliderKnobInset" }
-function metricSliderHeldKnobWidth() -> String { return "sliderHeldKnobWidth" }
-function metricSliderHeldKnobHeight() -> String { return "sliderHeldKnobHeight" }
-function metricProgressTrackHeight() -> String { return "progressTrackHeight" }
+public function metricSwitchWidth() -> String { return "switchWidth" }
+public function metricSwitchHeight() -> String { return "switchHeight" }
+public function metricSwitchKnobWidth() -> String { return "switchKnobWidth" }
+public function metricSwitchKnobInset() -> String { return "switchKnobInset" }
+public function metricSliderHeight() -> String { return "sliderHeight" }
+public function metricSliderTrackHeight() -> String { return "sliderTrackHeight" }
+public function metricSliderKnobWidth() -> String { return "sliderKnobWidth" }
+public function metricSliderKnobHeight() -> String { return "sliderKnobHeight" }
+public function metricSliderKnobInset() -> String { return "sliderKnobInset" }
+public function metricSliderHeldKnobWidth() -> String { return "sliderHeldKnobWidth" }
+public function metricSliderHeldKnobHeight() -> String { return "sliderHeldKnobHeight" }
+public function metricProgressTrackHeight() -> String { return "progressTrackHeight" }
 // The two shadows under a slider's knob: a soft one that falls away from it,
 // and a tight one where it meets the track.
 // The insertion point in a focused field.
-function metricCaretWidth() -> String { return "caretWidth" }
-function metricCaretHeight() -> String { return "caretHeight" }
+public function metricCaretWidth() -> String { return "caretWidth" }
+public function metricCaretHeight() -> String { return "caretHeight" }
 // How opaque a switch or slider stands while it is disabled.
-function metricDisabledControlOpacity() -> String { return "disabledControlOpacity" }
-function metricKnobShadowRadius() -> String { return "knobShadowRadius" }
-function metricKnobShadowOffset() -> String { return "knobShadowOffset" }
-function metricKnobContactShadowRadius() -> String { return "knobContactShadowRadius" }
-function metricKnobContactShadowOffset() -> String { return "knobContactShadowOffset" }
+public function metricDisabledControlOpacity() -> String { return "disabledControlOpacity" }
+public function metricKnobShadowRadius() -> String { return "knobShadowRadius" }
+public function metricKnobShadowOffset() -> String { return "knobShadowOffset" }
+public function metricKnobContactShadowRadius() -> String { return "knobContactShadowRadius" }
+public function metricKnobContactShadowOffset() -> String { return "knobContactShadowOffset" }
 // The shadow a menu's card casts: how far it blurs, and how far below the card it falls.
-function metricMenuShadowRadius() -> String { return "menuShadowRadius" }
-function metricMenuShadowOffset() -> String { return "menuShadowOffset" }
+public function metricMenuShadowRadius() -> String { return "menuShadowRadius" }
+public function metricMenuShadowOffset() -> String { return "menuShadowOffset" }
 
-function allMetricNames() -> [String] {
+public function allMetricNames() -> [String] {
     var names: [String] = []
     names.append(metricToolbarHeight())
+    names.append(metricToolbarCompactHeight())
+    names.append(metricToolbarCompactBandHeight())
     names.append(metricToolbarItemHeight())
     names.append(metricToolbarItemWidth())
     names.append(metricToolbarGroupSpacing())
@@ -262,8 +293,7 @@ function allMetricNames() -> [String] {
     names.append(metricToolbarItemSpacing())
     names.append(metricToolbarSpacerWidth())
     names.append(metricToolbarEdgeInset())
-    names.append(metricToolbarTitleInset())
-    names.append(metricToolbarTitleSpacing())
+    names.append(metricToolbarCompactEdgeInset())
     names.append(metricToolbarBackRemovalScale())
     names.append(metricToolbarBackRemovalDuration())
     names.append(metricToolbarSearchWidth())
@@ -278,7 +308,6 @@ function allMetricNames() -> [String] {
     names.append(metricWindowControlDiameter())
     names.append(metricWindowControlSpacing())
     names.append(metricWindowControlsTrailing())
-    names.append(metricSplitDividerThickness())
     names.append(metricSidebarHeaderHeight())
     names.append(metricSidebarHeaderInset())
     names.append(metricSidebarHeaderTopInset())
@@ -292,6 +321,7 @@ function allMetricNames() -> [String] {
     names.append(metricSidebarToggleResponse())
     names.append(metricSidebarToggleDamping())
     names.append(metricSidebarGlassBleed())
+    names.append(metricSidebarShadowRadius())
     names.append(metricListReadableWidth())
     names.append(metricListSectionSpacing())
     names.append(metricListTopInset())
@@ -305,12 +335,29 @@ function allMetricNames() -> [String] {
     names.append(metricListFooterBottomInset())
     names.append(metricLargeTitleTopInset())
     names.append(metricLargeTitleBottomInset())
+    names.append(metricLargeTitleFadeDuration())
+    names.append(metricLargeTitleInlineTravel())
+    names.append(metricLargeTitleInlineBlur())
+    names.append(metricScrollEdgeBlurRadius())
+    names.append(metricScrollEdgeBorderWidth())
     names.append(metricNavigationPageCornerRadius())
     names.append(metricNavigationCoveredDim())
     names.append(metricNavigationCoveredParallax())
+    names.append(metricNavigationPushResponse())
+    names.append(metricNavigationPushDamping())
     names.append(metricNavigationSwipeCommitFraction())
     names.append(metricNavigationSwipeCommitVelocity())
     names.append(metricNavigationSwipeSlop())
+    names.append(metricScrollIndicatorThickness())
+    names.append(metricScrollIndicatorExpandedThickness())
+    names.append(metricScrollIndicatorMinimumLength())
+    names.append(metricScrollIndicatorOverscrolledLength())
+    names.append(metricScrollIndicatorHitOutsetAcross())
+    names.append(metricScrollIndicatorHitOutsetAlong())
+    names.append(metricScrollIndicatorHideDelay())
+    names.append(metricScrollIndicatorFadeDuration())
+    names.append(metricScrollIndicatorExpandDuration())
+    names.append(metricScrollIndicatorCollapseDuration())
     names.append(metricMenuMorphGrowthResponse())
     names.append(metricMenuMorphGrowthDamping())
     names.append(metricMenuMorphHeightResponse())
@@ -346,6 +393,8 @@ function allMetricNames() -> [String] {
     names.append(metricMenuSubmenuRecededOpacity())
     names.append(metricMenuSubmenuRecedeScale())
     names.append(metricMenuSubmenuRecedeHold())
+    names.append(metricMenuSubmenuDwell())
+    names.append(metricMenuSubmenuWiden())
     names.append(metricMenuSubmenuRecedeInResponse())
     names.append(metricMenuSubmenuRecedeInDamping())
     names.append(metricMenuSubmenuRecedeOutResponse())

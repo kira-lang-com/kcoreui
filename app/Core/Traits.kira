@@ -19,7 +19,7 @@ import Foundation
 // build has no name for. KCoreUI carries both through resolution by the same
 // rules without knowing what they mean.
 
-enum TraitIdentifier {
+public enum TraitIdentifier {
     Appearance
     Contrast
     Gamut
@@ -38,14 +38,14 @@ enum TraitIdentifier {
 }
 
 // The first trait identifier KCoreUI itself will never claim.
-function traitIdentifierCustomBase() -> Int { return 64 }
+public function traitIdentifierCustomBase() -> Int { return 64 }
 
 // Trait identifier order is resolution priority order, highest first. A
 // rendition that pins `appearance` beats one that pins only `contrast`, and the
 // comparison walks identifiers ascending, so priority is a property of the wire
 // numbering rather than a table that could disagree with it.
 
-function traitIdentifierValue(identifier: borrow TraitIdentifier) -> Int {
+public function traitIdentifierValue(identifier: borrow TraitIdentifier) -> Int {
     match identifier {
         Appearance -> return 0
         Contrast -> return 1
@@ -65,7 +65,7 @@ function traitIdentifierValue(identifier: borrow TraitIdentifier) -> Int {
     }
 }
 
-function traitIdentifierFromValue(value: Int) -> TraitIdentifier {
+public function traitIdentifierFromValue(value: Int) -> TraitIdentifier {
     if value == 0 { return .Appearance }
     if value == 1 { return .Contrast }
     if value == 2 { return .Gamut }
@@ -85,38 +85,38 @@ function traitIdentifierFromValue(value: Int) -> TraitIdentifier {
 
 // Identifier identity is wire identity: the mapping is bijective, so two
 // identifiers name the same trait exactly when they share a wire value.
-function traitIdentifiersEqual(left: borrow TraitIdentifier, right: borrow TraitIdentifier) -> Bool {
+public function traitIdentifiersEqual(left: borrow TraitIdentifier, right: borrow TraitIdentifier) -> Bool {
     return traitIdentifierValue(left) == traitIdentifierValue(right)
 }
 
 // The interface's color scheme.
-enum Appearance {
+public enum Appearance {
     Light
     Dark
 }
 
 // Whether the person using this asked for increased contrast.
-enum Contrast {
+public enum Contrast {
     Standard
     High
 }
 
 // The color volume the display can actually show.
-enum DisplayGamut {
+public enum DisplayGamut {
     SRGB
     P3
 }
 
 // Backing-store scale. A rendition authored for one scale is not resized to
 // serve another; it either matches or it is not eligible.
-enum DisplayScale {
+public enum DisplayScale {
     X1
     X2
     X3
 }
 
 // The shape of the device the interface is running on.
-enum Idiom {
+public enum Idiom {
     Phone
     Pad
     Mac
@@ -130,7 +130,7 @@ enum Idiom {
 // The operating system underneath. Distinct from `Idiom`: a Mac idiom runs on
 // macOS and a Desktop idiom runs on three different systems that do not agree
 // about what a window looks like.
-enum Platform {
+public enum Platform {
     MacOS
     IOS
     IPadOS
@@ -144,19 +144,19 @@ enum Platform {
 }
 
 // Reading order.
-enum LayoutDirection {
+public enum LayoutDirection {
     LeftToRight
     RightToLeft
 }
 
 // How much room there is along one axis.
-enum SizeClass {
+public enum SizeClass {
     Compact
     Regular
 }
 
 // A trait this build of KCoreUI has no name for, carried by identifier.
-struct CustomTrait {
+public struct CustomTrait {
     let identifier: TraitIdentifier = .Custom(64)
     let value: Int = 0
 }
@@ -167,7 +167,7 @@ struct CustomTrait {
 // keyed by; custom traits ride in an array and fold into a second integer. A
 // lookup therefore compares two words rather than a struct, which matters
 // because a paint pass performs one per drawn value.
-struct UIEnvironment {
+public struct UIEnvironment {
     var appearance: Appearance = .Light
     var contrast: Contrast = .Standard
     var gamut: DisplayGamut = .SRGB
@@ -190,28 +190,28 @@ struct UIEnvironment {
 // would be indistinguishable from an absent constraint, and absence already
 // means "matches anything".
 
-function appearanceValue(appearance: borrow Appearance) -> Int {
+public function appearanceValue(appearance: borrow Appearance) -> Int {
     match appearance {
         Light -> return 1
         Dark -> return 2
     }
 }
 
-function contrastValue(contrast: borrow Contrast) -> Int {
+public function contrastValue(contrast: borrow Contrast) -> Int {
     match contrast {
         Standard -> return 1
         High -> return 2
     }
 }
 
-function gamutValue(gamut: borrow DisplayGamut) -> Int {
+public function gamutValue(gamut: borrow DisplayGamut) -> Int {
     match gamut {
         SRGB -> return 1
         P3 -> return 2
     }
 }
 
-function scaleValue(scale: borrow DisplayScale) -> Int {
+public function scaleValue(scale: borrow DisplayScale) -> Int {
     match scale {
         X1 -> return 1
         X2 -> return 2
@@ -219,7 +219,7 @@ function scaleValue(scale: borrow DisplayScale) -> Int {
     }
 }
 
-function idiomValue(idiom: borrow Idiom) -> Int {
+public function idiomValue(idiom: borrow Idiom) -> Int {
     match idiom {
         Phone -> return 1
         Pad -> return 2
@@ -232,7 +232,7 @@ function idiomValue(idiom: borrow Idiom) -> Int {
     }
 }
 
-function platformValue(platform: borrow Platform) -> Int {
+public function platformValue(platform: borrow Platform) -> Int {
     match platform {
         MacOS -> return 1
         IOS -> return 2
@@ -247,27 +247,27 @@ function platformValue(platform: borrow Platform) -> Int {
     }
 }
 
-function layoutDirectionValue(direction: borrow LayoutDirection) -> Int {
+public function layoutDirectionValue(direction: borrow LayoutDirection) -> Int {
     match direction {
         LeftToRight -> return 1
         RightToLeft -> return 2
     }
 }
 
-function sizeClassValue(sizeClass: borrow SizeClass) -> Int {
+public function sizeClassValue(sizeClass: borrow SizeClass) -> Int {
     match sizeClass {
         Compact -> return 1
         Regular -> return 2
     }
 }
 
-function flagValue(flag: Bool) -> Int {
+public function flagValue(flag: Bool) -> Int {
     return flag ? 2 : 1
 }
 
 // The environment's value for an identifier answered by the custom array,
 // looked up by wire value. Zero when the environment does not carry it.
-function environmentCustomValue(environment: borrow UIEnvironment, wire: Int) -> Int {
+public function environmentCustomValue(environment: borrow UIEnvironment, wire: Int) -> Int {
     for entry in environment.custom {
         if traitIdentifierValue(entry.identifier) == wire {
             return entry.value
@@ -280,7 +280,7 @@ function environmentCustomValue(environment: borrow UIEnvironment, wire: Int) ->
 // environment says nothing about it, which makes every constraint on it fail:
 // a rendition asking for a trait the environment does not carry is not a match
 // for that environment.
-function environmentTraitValue(environment: borrow UIEnvironment, identifier: borrow TraitIdentifier) -> Int {
+public function environmentTraitValue(environment: borrow UIEnvironment, identifier: borrow TraitIdentifier) -> Int {
     match identifier {
         Appearance -> return appearanceValue(environment.appearance)
         Contrast -> return contrastValue(environment.contrast)
@@ -312,12 +312,12 @@ function environmentTraitValue(environment: borrow UIEnvironment, identifier: bo
 //
 // Neither is ever written to a blob, so widening a field costs nothing beyond a
 // stale cache, and `.raw` appears exactly where the number is genuinely mixed.
-distinct UIEnvironmentKey = Int
-distinct UICustomTraitKey = Int
+public distinct UIEnvironmentKey = Int
+public distinct UICustomTraitKey = Int
 
 // The fixed traits as one integer. Field widths are fixed here and nowhere
 // else.
-function environmentKey(environment: borrow UIEnvironment) -> UIEnvironmentKey {
+public function environmentKey(environment: borrow UIEnvironment) -> UIEnvironmentKey {
     var key = appearanceValue(environment.appearance)
     key = key | (contrastValue(environment.contrast) << 2)
     key = key | (gamutValue(environment.gamut) << 4)
@@ -337,7 +337,7 @@ function environmentKey(environment: borrow UIEnvironment) -> UIEnvironmentKey {
 // The custom traits folded into one integer, order-independent so two
 // environments carrying the same set in a different order share a cache line.
 // Zero when there are none, which is the common case and costs one branch.
-function environmentCustomKey(environment: borrow UIEnvironment) -> UICustomTraitKey {
+public function environmentCustomKey(environment: borrow UIEnvironment) -> UICustomTraitKey {
     var fold = 0
     for entry in environment.custom {
         var mixed = wrappingMul(traitIdentifierValue(entry.identifier), 2654435761)

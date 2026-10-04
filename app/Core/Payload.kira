@@ -12,7 +12,7 @@ import Foundation
 // it does not know answers `ok: false` rather than reading the bytes as if it
 // did.
 
-function payloadVersion() -> Int { return 1 }
+public function payloadVersion() -> Int { return 1 }
 
 // --- Color sources --------------------------------------------------------
 //
@@ -23,10 +23,10 @@ function payloadVersion() -> Int { return 1 }
 // contrast, because the reference resolves against the same environment the
 // material did.
 
-function colorSourceLiteral() -> Int { return 1 }
-function colorSourceReference() -> Int { return 2 }
+public function colorSourceLiteral() -> Int { return 1 }
+public function colorSourceReference() -> Int { return 2 }
 
-struct ColorSource {
+public struct ColorSource {
     var isReference: Bool = false
     var color: Color = Color()
     var reference: String = ""
@@ -36,25 +36,25 @@ struct ColorSource {
 // on the stack, or when a reference chain does not terminate. Deliberately
 // loud: the bottom catalog is required to be complete and an integrity test
 // proves it, so seeing this on screen means the stack was built wrong.
-function debugColor() -> Color {
+public function debugColor() -> Color {
     return Color(r: 1.0, g: 0.0, b: 1.0, a: 1.0)
 }
 
-function literalColor(color: borrow Color) -> ColorSource {
+public function literalColor(color: borrow Color) -> ColorSource {
     var source = ColorSource()
     source.isReference = false
     source.color = color
     return source
 }
 
-function referenceColor(name: borrow String) -> ColorSource {
+public function referenceColor(name: borrow String) -> ColorSource {
     var source = ColorSource()
     source.isReference = true
     source.reference = name
     return source
 }
 
-function appendColorSource(bytes: borrow mut [U8], source: borrow ColorSource) {
+public function appendColorSource(bytes: borrow mut [U8], source: borrow ColorSource) {
     if source.isReference {
         appendU8(bytes, colorSourceReference())
         appendU16(bytes, source.reference.count)
@@ -70,13 +70,13 @@ function appendColorSource(bytes: borrow mut [U8], source: borrow ColorSource) {
 
 // A decoded source and where reading it ended. Kira has no tuples, so a reader
 // that advances a cursor answers one of these.
-struct ColorSourceRead {
+public struct ColorSourceRead {
     var value: ColorSource = ColorSource()
     var next: Int = 0
     var ok: Bool = false
 }
 
-function readColorSource(bytes: borrow [U8], offset: Int) -> ColorSourceRead {
+public function readColorSource(bytes: borrow [U8], offset: Int) -> ColorSourceRead {
     var read = ColorSourceRead()
     read.next = offset
     if offset < 0 || offset >= bytes.count {
@@ -125,7 +125,7 @@ function readColorSource(bytes: borrow [U8], offset: Int) -> ColorSourceRead {
 // Layers composite source-over in linear light, in Display P3. A single-layer
 // color is the common case and costs one layer.
 
-struct ColorLayer {
+public struct ColorLayer {
     var source: ColorSource = ColorSource()
     // Multiplies the source's own alpha. A layer written as "this ink at 10%"
     // says so here rather than by editing the ink's alpha, so the ink stays the
@@ -133,11 +133,11 @@ struct ColorLayer {
     var opacity: Float = 1.0
 }
 
-struct ColorValue {
+public struct ColorValue {
     var layers: [ColorLayer] = []
 }
 
-function colorLayer(source: borrow ColorSource, opacity: Float) -> ColorLayer {
+public function colorLayer(source: borrow ColorSource, opacity: Float) -> ColorLayer {
     var layer = ColorLayer()
     layer.source = source
     layer.opacity = opacity
@@ -145,20 +145,20 @@ function colorLayer(source: borrow ColorSource, opacity: Float) -> ColorLayer {
 }
 
 // The one-layer case, which is most of them.
-function singleLayer(color: borrow Color) -> ColorValue {
+public function singleLayer(color: borrow Color) -> ColorValue {
     var value = ColorValue()
     value.layers.append(colorLayer(literalColor(color), 1.0))
     return value
 }
 
 // One name meaning another, at full opacity.
-function aliasLayer(name: borrow String) -> ColorValue {
+public function aliasLayer(name: borrow String) -> ColorValue {
     var value = ColorValue()
     value.layers.append(colorLayer(referenceColor(name), 1.0))
     return value
 }
 
-function encodeColorValue(value: borrow ColorValue) -> [U8] {
+public function encodeColorValue(value: borrow ColorValue) -> [U8] {
     var bytes: [U8] = []
     appendU8(bytes, payloadVersion())
     appendU16(bytes, value.layers.count)
@@ -170,20 +170,20 @@ function encodeColorValue(value: borrow ColorValue) -> [U8] {
 }
 
 // The common spellings, so a producer authoring one flat color writes one call.
-function encodeColor(color: borrow Color) -> [U8] {
+public function encodeColor(color: borrow Color) -> [U8] {
     return encodeColorValue(singleLayer(color))
 }
 
-function encodeColorAlias(name: borrow String) -> [U8] {
+public function encodeColorAlias(name: borrow String) -> [U8] {
     return encodeColorValue(aliasLayer(name))
 }
 
-struct ColorValueRead {
+public struct ColorValueRead {
     var value: ColorValue = ColorValue()
     var ok: Bool = false
 }
 
-function decodeColorPayload(bytes: borrow [U8]) -> ColorValueRead {
+public function decodeColorPayload(bytes: borrow [U8]) -> ColorValueRead {
     var read = ColorValueRead()
     if bytes.count < 3 || readU8(bytes, 0) != payloadVersion() {
         return read
@@ -214,13 +214,13 @@ function decodeColorPayload(bytes: borrow [U8]) -> ColorValueRead {
 
 // --- Gradients -------------------------------------------------------------
 
-enum GradientKind {
+public enum GradientKind {
     Linear
     Radial
     Angular
 }
 
-function gradientKindValue(kind: borrow GradientKind) -> Int {
+public function gradientKindValue(kind: borrow GradientKind) -> Int {
     match kind {
         Linear -> return 1
         Radial -> return 2
@@ -228,14 +228,14 @@ function gradientKindValue(kind: borrow GradientKind) -> Int {
     }
 }
 
-function gradientKindFromValue(value: Int) -> GradientKind {
+public function gradientKindFromValue(value: Int) -> GradientKind {
     if value == 2 { return .Radial }
     if value == 3 { return .Angular }
     return .Linear
 }
 
 // One stop, at a position along the gradient's own 0-to-1 axis.
-struct GradientStop {
+public struct GradientStop {
     var position: Float = 0.0
     var color: ColorSource = ColorSource()
 }
@@ -243,7 +243,7 @@ struct GradientStop {
 // Start and end are in the resource's unit space: a linear gradient runs from
 // start to end, a radial one is centered on start with end fixing its radius,
 // and an angular one sweeps around start beginning at the angle to end.
-struct GradientValue {
+public struct GradientValue {
     var kind: GradientKind = .Linear
     var startX: Float = 0.0
     var startY: Float = 0.0
@@ -252,7 +252,7 @@ struct GradientValue {
     var stops: [GradientStop] = []
 }
 
-function encodeGradient(gradient: borrow GradientValue) -> [U8] {
+public function encodeGradient(gradient: borrow GradientValue) -> [U8] {
     var bytes: [U8] = []
     appendU8(bytes, payloadVersion())
     appendU8(bytes, gradientKindValue(gradient.kind))
@@ -268,12 +268,12 @@ function encodeGradient(gradient: borrow GradientValue) -> [U8] {
     return bytes
 }
 
-struct GradientRead {
+public struct GradientRead {
     var value: GradientValue = GradientValue()
     var ok: Bool = false
 }
 
-function decodeGradient(bytes: borrow [U8]) -> GradientRead {
+public function decodeGradient(bytes: borrow [U8]) -> GradientRead {
     var read = GradientRead()
     if bytes.count < 20 || readU8(bytes, 0) != payloadVersion() {
         return read

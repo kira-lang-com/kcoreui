@@ -20,7 +20,7 @@ import Foundation
 // means one rendition, deterministically, on every backend.
 
 // Whether a rendition can serve this environment at all.
-function renditionIsEligible(catalog: borrow Catalog, renditionIndex: Int, environment: borrow UIEnvironment) -> Bool {
+public function renditionIsEligible(catalog: borrow Catalog, renditionIndex: Int, environment: borrow UIEnvironment) -> Bool {
     if renditionIndex < 0 || renditionIndex >= catalog.renditions.count {
         return false
     }
@@ -42,7 +42,7 @@ function renditionIsEligible(catalog: borrow Catalog, renditionIndex: Int, envir
 // identifier only one of them pins decides it, and if neither ever does, the
 // one that pins more wins. Answers a negative number when the left rendition
 // is more specific.
-function compareSpecificity(catalog: borrow Catalog, leftIndex: Int, rightIndex: Int) -> Int {
+public function compareSpecificity(catalog: borrow Catalog, leftIndex: Int, rightIndex: Int) -> Int {
     let left = catalog.renditions[leftIndex]
     let right = catalog.renditions[rightIndex]
     var leftStep = 0
@@ -70,7 +70,7 @@ function compareSpecificity(catalog: borrow Catalog, leftIndex: Int, rightIndex:
 
 // The best rendition of one resource for this environment, or -1 when the
 // resource has none it can serve.
-function resolveResourceRendition(catalog: borrow Catalog, resourceIndex: Int, environment: borrow UIEnvironment) -> Int {
+public function resolveResourceRendition(catalog: borrow Catalog, resourceIndex: Int, environment: borrow UIEnvironment) -> Int {
     if resourceIndex < 0 || resourceIndex >= catalog.resources.count {
         return 0 - 1
     }
@@ -96,7 +96,7 @@ function resolveResourceRendition(catalog: borrow Catalog, resourceIndex: Int, e
 // the next catalog down is asked. That is what makes a partial override safe.
 // An override defining a color for dark appearance only still lets the floor
 // answer in light.
-function resolveResource(stack: borrow CatalogStack, name: borrow String, kind: borrow ResourceKind, environment: borrow UIEnvironment) -> ResolvedRendition {
+public function resolveResource(stack: borrow CatalogStack, name: borrow String, kind: borrow ResourceKind, environment: borrow UIEnvironment) -> ResolvedRendition {
     var resolved = ResolvedRendition()
     for catalogIndex in 0..stack.catalogs.count {
         let catalog = stack.catalogs[catalogIndex]
@@ -126,7 +126,7 @@ function resolveResource(stack: borrow CatalogStack, name: borrow String, kind: 
 // variant system is a value that is right everywhere except one combination of
 // traits nobody thought to look at.
 
-struct ResolutionTrace {
+public struct ResolutionTrace {
     var name: String = ""
     var found: Bool = false
     var catalogIndex: Int = 0
@@ -137,7 +137,7 @@ struct ResolutionTrace {
     var kind: ResourceKind = .Color
 }
 
-function traceResolution(stack: borrow CatalogStack, name: borrow String, kind: borrow ResourceKind, environment: borrow UIEnvironment) -> ResolutionTrace {
+public function traceResolution(stack: borrow CatalogStack, name: borrow String, kind: borrow ResourceKind, environment: borrow UIEnvironment) -> ResolutionTrace {
     var trace = ResolutionTrace()
     trace.name = name
     for catalogIndex in 0..stack.catalogs.count {
@@ -170,7 +170,7 @@ function traceResolution(stack: borrow CatalogStack, name: borrow String, kind: 
 // A trait identifier's name, for a trace a person reads. A custom identifier
 // has no name here on purpose: KCoreUI does not know what a producer's traits
 // mean and will not invent a word for one.
-function traitName(identifier: borrow TraitIdentifier) -> String {
+public function traitName(identifier: borrow TraitIdentifier) -> String {
     match identifier {
         Appearance -> return "appearance"
         Contrast -> return "contrast"
@@ -190,7 +190,7 @@ function traitName(identifier: borrow TraitIdentifier) -> String {
     }
 }
 
-function kindName(kind: borrow ResourceKind) -> String {
+public function kindName(kind: borrow ResourceKind) -> String {
     match kind {
         Color -> return "Color"
         Gradient -> return "Gradient"
@@ -205,7 +205,7 @@ function kindName(kind: borrow ResourceKind) -> String {
 }
 
 // The trace as one block of text.
-function traceText(trace: borrow ResolutionTrace) -> String {
+public function traceText(trace: borrow ResolutionTrace) -> String {
     var text = "requested: " + trace.name + "\n"
     if !trace.found {
         text = text + "matched:   nothing in " + String(trace.catalogsSearched) + " catalog(s)\n"

@@ -15,12 +15,12 @@ import Foundation
 
 // --- Materials -------------------------------------------------------------
 
-function materialUltraThin() -> String { return "ultraThin" }
-function materialThin() -> String { return "thin" }
-function materialRegular() -> String { return "regular" }
-function materialThick() -> String { return "thick" }
-function materialUltraThick() -> String { return "ultraThick" }
-function materialBar() -> String { return "bar" }
+public function materialUltraThin() -> String { return "ultraThin" }
+public function materialThin() -> String { return "thin" }
+public function materialRegular() -> String { return "regular" }
+public function materialThick() -> String { return "thick" }
+public function materialUltraThick() -> String { return "ultraThick" }
+public function materialBar() -> String { return "bar" }
 
 // --- Vibrancy --------------------------------------------------------------
 //
@@ -29,12 +29,12 @@ function materialBar() -> String { return "bar" }
 // vibrant rather than gray. A material because a material is exactly that — a
 // recipe the compositor applies, color and blend at once.
 
-function materialVibrantLabel() -> String { return "vibrantLabel" }
-function materialVibrantSecondaryLabel() -> String { return "vibrantSecondaryLabel" }
-function materialVibrantTertiaryLabel() -> String { return "vibrantTertiaryLabel" }
-function materialVibrantQuaternaryLabel() -> String { return "vibrantQuaternaryLabel" }
+public function materialVibrantLabel() -> String { return "vibrantLabel" }
+public function materialVibrantSecondaryLabel() -> String { return "vibrantSecondaryLabel" }
+public function materialVibrantTertiaryLabel() -> String { return "vibrantTertiaryLabel" }
+public function materialVibrantQuaternaryLabel() -> String { return "vibrantQuaternaryLabel" }
 
-function allMaterialNames() -> [String] {
+public function allMaterialNames() -> [String] {
     var names: [String] = []
     names.append(materialUltraThin())
     names.append(materialThin())
@@ -51,19 +51,19 @@ function allMaterialNames() -> [String] {
 
 // --- Text styles -----------------------------------------------------------
 
-function textLargeTitle() -> String { return "largeTitle" }
-function textTitle() -> String { return "title" }
-function textTitle2() -> String { return "title2" }
-function textTitle3() -> String { return "title3" }
-function textHeadline() -> String { return "headline" }
-function textSubheadline() -> String { return "subheadline" }
-function textBody() -> String { return "body" }
-function textCallout() -> String { return "callout" }
-function textFootnote() -> String { return "footnote" }
-function textCaption() -> String { return "caption" }
-function textCaption2() -> String { return "caption2" }
+public function textLargeTitle() -> String { return "largeTitle" }
+public function textTitle() -> String { return "title" }
+public function textTitle2() -> String { return "title2" }
+public function textTitle3() -> String { return "title3" }
+public function textHeadline() -> String { return "headline" }
+public function textSubheadline() -> String { return "subheadline" }
+public function textBody() -> String { return "body" }
+public function textCallout() -> String { return "callout" }
+public function textFootnote() -> String { return "footnote" }
+public function textCaption() -> String { return "caption" }
+public function textCaption2() -> String { return "caption2" }
 
-function allTextStyleNames() -> [String] {
+public function allTextStyleNames() -> [String] {
     var names: [String] = []
     names.append(textLargeTitle())
     names.append(textTitle())

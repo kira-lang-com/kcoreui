@@ -37,6 +37,11 @@ function defaultMetricResources() -> [ResourceRecord] {
     // box. A button group holds its symbols 20 apart and 6 off its ends, which
     // is 44-point items 12 apart, 2 off the ends: two buttons come to 104.
     records.append(metricResource(metricToolbarHeight(), 64.0))
+    // An iPhone has no window around the bar: UIKit's navigation bar is its
+    // 44-point row, flush under the status bar, and the band content is held
+    // under -- the scroll edge effect's depth -- runs 10 past it.
+    records.append(metricResource(metricToolbarCompactHeight(), 44.0))
+    records.append(metricResource(metricToolbarCompactBandHeight(), 54.0))
     records.append(metricResource(metricToolbarItemHeight(), 44.0))
     records.append(metricResource(metricToolbarItemWidth(), 44.0))
     records.append(metricResource(metricToolbarGroupSpacing(), 12.0))
@@ -47,11 +52,11 @@ function defaultMetricResources() -> [ResourceRecord] {
     records.append(metricResource(metricToolbarItemSpacing(), 12.0))
     records.append(metricResource(metricToolbarSpacerWidth(), 12.0))
     records.append(metricResource(metricToolbarEdgeInset(), 10.0))
+    // The iPhone kit's top toolbar holds its controls 16 off either side.
+    records.append(metricResource(metricToolbarCompactEdgeInset(), 16.0))
 
     // An inline title starts at the column's 20-point margin, or 12 past a
     // back button's glass.
-    records.append(metricResource(metricToolbarTitleInset(), 20.0))
-    records.append(metricResource(metricToolbarTitleSpacing(), 12.0))
 
     // A back button stays through the pop and leaves after it, swelling a
     // tenth as it fades in under a fifth of a second. Set by eye against the
@@ -84,7 +89,6 @@ function defaultMetricResources() -> [ResourceRecord] {
     records.append(metricResource(metricWindowControlSpacing(), 9.0))
     records.append(metricResource(metricWindowControlsTrailing(), 13.0))
 
-    records.append(metricResource(metricSplitDividerThickness(), 0.5))
 
     // A `List` in the sidebar column, from the iPadOS 27 kit's split view: the
     // column holds its rows 10 off each edge. A section's header row is 54
@@ -105,6 +109,7 @@ function defaultMetricResources() -> [ResourceRecord] {
     records.append(metricResource(metricSidebarToggleResponse(), 0.42))
     records.append(metricResource(metricSidebarToggleDamping(), 1.0))
     records.append(metricResource(metricSidebarGlassBleed(), 6.0))
+    records.append(metricResource(metricSidebarShadowRadius(), 24.0))
 
     // The kit's list screen: a 648-point column, 10 between a header, its
     // card and the next section, 10 above the first. The card's corner is 26;
@@ -128,6 +133,11 @@ function defaultMetricResources() -> [ResourceRecord] {
     // 10 under it before the content.
     records.append(metricResource(metricLargeTitleTopInset(), 4.0))
     records.append(metricResource(metricLargeTitleBottomInset(), 10.0))
+    records.append(metricResource(metricLargeTitleFadeDuration(), 0.25))
+    records.append(metricResource(metricLargeTitleInlineTravel(), 8.0))
+    records.append(metricResource(metricLargeTitleInlineBlur(), 5.0))
+    records.append(metricResource(metricScrollEdgeBlurRadius(), 6.0))
+    records.append(metricResource(metricScrollEdgeBorderWidth(), 0.67))
 
     // The platform's push, measured off Apple Music mid-swipe: the moving view
     // takes the display's corner, the covered one sits under an 11% black
@@ -138,9 +148,33 @@ function defaultMetricResources() -> [ResourceRecord] {
     records.append(metricResource(metricNavigationPageCornerRadius(), 18.0))
     records.append(metricResource(metricNavigationCoveredDim(), 0.11))
     records.append(metricResource(metricNavigationCoveredParallax(), 0.3))
+    // A push and a pop land on UIKit's spring, fitted to a
+    // UINavigationController sampled frame by frame on an iPhone (iOS 27):
+    // a little past critical damping on a 0.25 s response, so the view is
+    // within a point of home in 0.4 s. A swipe let go hands the spring the
+    // speed it was thrown at.
+    records.append(metricResource(metricNavigationPushResponse(), 0.25))
+    records.append(metricResource(metricNavigationPushDamping(), 1.1))
     records.append(metricResource(metricNavigationSwipeCommitFraction(), 0.5))
     records.append(metricResource(metricNavigationSwipeCommitVelocity(), 300.0))
     records.append(metricResource(metricNavigationSwipeSlop(), 10.0))
+
+    // UIKit's iOS scroll indicator, read out of iPadOS 26's UIKitCore: 3
+    // thick, 8 while scrubbed, never shorter than 36 over long content, and
+    // squeezed to no less than 7 pulled past an end; a pointer takes it from
+    // 10 to either side and 5 beyond either end. It stays a second after
+    // scrolling stops and fades over a quarter of one, and swells in 0.2
+    // seconds and thins back in 0.3, both critically damped.
+    records.append(metricResource(metricScrollIndicatorThickness(), 3.0))
+    records.append(metricResource(metricScrollIndicatorExpandedThickness(), 8.0))
+    records.append(metricResource(metricScrollIndicatorMinimumLength(), 36.0))
+    records.append(metricResource(metricScrollIndicatorOverscrolledLength(), 7.0))
+    records.append(metricResource(metricScrollIndicatorHitOutsetAcross(), 10.0))
+    records.append(metricResource(metricScrollIndicatorHitOutsetAlong(), 5.0))
+    records.append(metricResource(metricScrollIndicatorHideDelay(), 1.0))
+    records.append(metricResource(metricScrollIndicatorFadeDuration(), 0.25))
+    records.append(metricResource(metricScrollIndicatorExpandDuration(), 0.2))
+    records.append(metricResource(metricScrollIndicatorCollapseDuration(), 0.3))
 
     // A bar's menu growing out of its button, fit frame by frame to the
     // iOS 26 Photos menu slowed tenfold: the glass's box, center and fill
@@ -219,6 +253,12 @@ function defaultMetricResources() -> [ResourceRecord] {
     records.append(metricResource(metricMenuSubmenuRecededOpacity(), 0.64))
     records.append(metricResource(metricMenuSubmenuRecedeScale(), 0.972))
     records.append(metricResource(metricMenuSubmenuRecedeHold(), 0.07))
+    // How long a held press rests on a submenu's header before it opens or
+    // closes, or on the menu behind an open one before it closes.
+    records.append(metricResource(metricMenuSubmenuDwell(), 0.45))
+    // How much wider than its menu a submenu's card opens, all of it on the
+    // leading side.
+    records.append(metricResource(metricMenuSubmenuWiden(), 9.0))
     records.append(metricResource(metricMenuSubmenuRecedeInResponse(), 0.3))
     records.append(metricResource(metricMenuSubmenuRecedeInDamping(), 1.0))
     records.append(metricResource(metricMenuSubmenuRecedeOutResponse(), 0.12))

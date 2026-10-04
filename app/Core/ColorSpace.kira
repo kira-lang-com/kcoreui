@@ -28,7 +28,7 @@ import Foundation
 // the matrix in the middle.
 
 // An encoded channel to linear light.
-function transferDecode(channel: Float) -> Float {
+public function transferDecode(channel: Float) -> Float {
     if channel <= 0.04045 {
         return channel / 12.92
     }
@@ -36,7 +36,7 @@ function transferDecode(channel: Float) -> Float {
 }
 
 // Linear light back to an encoded channel.
-function transferEncode(channel: Float) -> Float {
+public function transferEncode(channel: Float) -> Float {
     if channel <= 0.0031308 {
         return channel * 12.92
     }
@@ -50,7 +50,7 @@ function transferEncode(channel: Float) -> Float {
 // the two RGB-to-XYZ matrices, written out rather than multiplied at run time.
 
 // Linear Display P3 to linear sRGB.
-function p3ToSrgbLinear(color: borrow Color) -> Color {
+public function p3ToSrgbLinear(color: borrow Color) -> Color {
     return Color {
         r: 1.2249401 * color.r - 0.2249404 * color.g + 0.0 * color.b,
         g: 0.0 - 0.0420569 * color.r + 1.0420571 * color.g + 0.0 * color.b,
@@ -60,7 +60,7 @@ function p3ToSrgbLinear(color: borrow Color) -> Color {
 }
 
 // Linear sRGB to linear Display P3, for authoring a value quoted in sRGB.
-function srgbToP3Linear(color: borrow Color) -> Color {
+public function srgbToP3Linear(color: borrow Color) -> Color {
     return Color {
         r: 0.8224621 * color.r + 0.1775380 * color.g + 0.0 * color.b,
         g: 0.0331941 * color.r + 0.9668058 * color.g + 0.0 * color.b,
@@ -75,7 +75,7 @@ function srgbToP3Linear(color: borrow Color) -> Color {
 //
 // Alpha is a coverage fraction rather than a light measurement, so it never
 // travels through a transfer curve.
-function decodeColor(color: borrow Color) -> Color {
+public function decodeColor(color: borrow Color) -> Color {
     return Color {
         r: transferDecode(color.r),
         g: transferDecode(color.g),
@@ -84,7 +84,7 @@ function decodeColor(color: borrow Color) -> Color {
     }
 }
 
-function encodeColorChannels(color: borrow Color) -> Color {
+public function encodeColorChannels(color: borrow Color) -> Color {
     return Color {
         r: transferEncode(color.r),
         g: transferEncode(color.g),
@@ -97,7 +97,7 @@ function encodeColorChannels(color: borrow Color) -> Color {
 //
 // Out-of-gamut channels are clamped after the matrix: a saturated P3 green has
 // no sRGB spelling, and the nearest one it does have is the edge of the space.
-function p3ToSrgb(color: borrow Color) -> Color {
+public function p3ToSrgb(color: borrow Color) -> Color {
     let converted = p3ToSrgbLinear(decodeColor(color))
     let clamped = Color {
         r: clampChannel(converted.r),
@@ -110,12 +110,12 @@ function p3ToSrgb(color: borrow Color) -> Color {
 
 // The inverse, which is what authors a P3 catalog from values quoted in sRGB.
 // Nothing is clamped: every sRGB color is inside P3.
-function srgbToP3(color: borrow Color) -> Color {
+public function srgbToP3(color: borrow Color) -> Color {
     return encodeColorChannels(srgbToP3Linear(decodeColor(color)))
 }
 
 // A color held to [0, 1] on every channel.
-function clampChannel(value: Float) -> Float {
+public function clampChannel(value: Float) -> Float {
     if value < 0.0 {
         return 0.0
     }
@@ -130,7 +130,7 @@ function clampChannel(value: Float) -> Float {
 // The one place a resolved color leaves Display P3. A renderer that is not
 // color managed is an sRGB one as far as this is concerned, which is what the
 // environment's default says.
-function colorForGamut(color: borrow Color, gamut: borrow DisplayGamut) -> Color {
+public function colorForGamut(color: borrow Color, gamut: borrow DisplayGamut) -> Color {
     match gamut {
         SRGB -> return p3ToSrgb(color)
         P3 -> return color
@@ -145,7 +145,7 @@ function colorForGamut(color: borrow Color, gamut: borrow DisplayGamut) -> Color
 // together, and each channel is weighted by how much of the result each layer
 // accounts for. A fully transparent result has no color to speak of and
 // answers black rather than dividing by zero.
-function compositeOver(source: borrow Color, backdrop: borrow Color) -> Color {
+public function compositeOver(source: borrow Color, backdrop: borrow Color) -> Color {
     let outAlpha = source.a + backdrop.a * (1.0 - source.a)
     if outAlpha <= 0.0 {
         return Color(r: 0.0, g: 0.0, b: 0.0, a: 0.0)

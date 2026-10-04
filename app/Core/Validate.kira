@@ -14,7 +14,7 @@ import Foundation
 // describing something a resolver cannot promise to terminate, and the report
 // is the right answer.
 
-enum ValidationKind {
+public enum ValidationKind {
     DuplicateName
     MissingReference
     ReferenceCycle
@@ -24,13 +24,13 @@ enum ValidationKind {
     UndecodablePayload
 }
 
-struct ValidationIssue {
+public struct ValidationIssue {
     var kind: ValidationKind = .DuplicateName
     var name: String = ""
     var detail: String = ""
 }
 
-function validationKindText(kind: borrow ValidationKind) -> String {
+public function validationKindText(kind: borrow ValidationKind) -> String {
     match kind {
         DuplicateName -> return "duplicate name"
         MissingReference -> return "reference to an undefined name"
@@ -42,7 +42,7 @@ function validationKindText(kind: borrow ValidationKind) -> String {
     }
 }
 
-function issue(kind: borrow ValidationKind, name: borrow String, detail: borrow String) -> ValidationIssue {
+public function issue(kind: borrow ValidationKind, name: borrow String, detail: borrow String) -> ValidationIssue {
     var made = ValidationIssue()
     made.kind = kind
     made.name = name
@@ -52,14 +52,14 @@ function issue(kind: borrow ValidationKind, name: borrow String, detail: borrow 
 
 // --- Reference extraction --------------------------------------------------
 
-function appendReference(names: borrow mut [String], source: borrow ColorSource) {
+public function appendReference(names: borrow mut [String], source: borrow ColorSource) {
     if source.isReference {
         names.append(source.reference)
     }
 }
 
 // Every name a color's layer stack points at.
-function appendLayerReferences(names: borrow mut [String], value: borrow ColorValue) {
+public function appendLayerReferences(names: borrow mut [String], value: borrow ColorValue) {
     for layer in value.layers {
         appendReference(names, layer.source)
     }
@@ -68,7 +68,7 @@ function appendLayerReferences(names: borrow mut [String], value: borrow ColorVa
 // Every name one payload points at. A kind this build cannot decode has no
 // references as far as KCoreUI is concerned, which is the honest answer: the
 // format does not read a payload it has no decoder for, so it cannot know.
-function payloadReferences(kind: borrow ResourceKind, bytes: borrow [U8]) -> [String] {
+public function payloadReferences(kind: borrow ResourceKind, bytes: borrow [U8]) -> [String] {
     var names: [String] = []
     match kind {
         Color -> {
@@ -115,7 +115,7 @@ function payloadReferences(kind: borrow ResourceKind, bytes: borrow [U8]) -> [St
 
 // Whether a payload decodes at all for its kind. A kind this build has no
 // decoder for always does: the container is agnostic about payload.
-function payloadDecodes(kind: borrow ResourceKind, bytes: borrow [U8]) -> Bool {
+public function payloadDecodes(kind: borrow ResourceKind, bytes: borrow [U8]) -> Bool {
     match kind {
         Color -> return decodeColorPayload(bytes).ok
         Gradient -> return decodeGradient(bytes).ok
@@ -131,7 +131,7 @@ function payloadDecodes(kind: borrow ResourceKind, bytes: borrow [U8]) -> Bool {
 
 // --- Record checks ---------------------------------------------------------
 
-function recordIndexOf(record: borrow CatalogRecord, name: borrow String, kind: borrow ResourceKind) -> Int {
+public function recordIndexOf(record: borrow CatalogRecord, name: borrow String, kind: borrow ResourceKind) -> Int {
     for index in 0..record.resources.count {
         if resourceKindsEqual(record.resources[index].kind, kind) && compareStrings(record.resources[index].name, name) == 0 {
             return index
@@ -141,7 +141,7 @@ function recordIndexOf(record: borrow CatalogRecord, name: borrow String, kind: 
 }
 
 // Every name reachable from one resource, one hop.
-function recordResourceReferences(record: borrow CatalogRecord, index: Int) -> [String] {
+public function recordResourceReferences(record: borrow CatalogRecord, index: Int) -> [String] {
     var names: [String] = []
     if index < 0 || index >= record.resources.count {
         return names
@@ -159,7 +159,7 @@ function recordResourceReferences(record: borrow CatalogRecord, index: Int) -> [
 //
 // A breadth-first walk with an explicit frontier rather than recursion, so the
 // bound is the resource count and a malformed graph cannot exhaust the stack.
-function referenceCycleFrom(record: borrow CatalogRecord, start: Int) -> Bool {
+public function referenceCycleFrom(record: borrow CatalogRecord, start: Int) -> Bool {
     var seen: [Int] = []
     var frontier: [Int] = []
     for name in recordResourceReferences(record, start) {
@@ -195,7 +195,7 @@ function referenceCycleFrom(record: borrow CatalogRecord, start: Int) -> Bool {
 }
 
 // Everything wrong with a set of records, in the order the resources were given.
-function validateRecord(record: borrow CatalogRecord) -> [ValidationIssue] {
+public function validateRecord(record: borrow CatalogRecord) -> [ValidationIssue] {
     var issues: [ValidationIssue] = []
     var index = 0
     while index < record.resources.count {
@@ -243,7 +243,7 @@ function validateRecord(record: borrow CatalogRecord) -> [ValidationIssue] {
 }
 
 // The issues as text, one per line.
-function validationText(issues: borrow [ValidationIssue]) -> String {
+public function validationText(issues: borrow [ValidationIssue]) -> String {
     var text = ""
     for entry in issues {
         text = text + validationKindText(entry.kind) + ": " + entry.name
@@ -261,7 +261,7 @@ function validationText(issues: borrow [ValidationIssue]) -> String {
 // name surface and a shipped catalog from drifting apart: a name declared in
 // `Names` with no resource behind it is a lookup that would fall through the
 // floor, and the floor is what makes resolution total.
-function missingNames(catalog: borrow Catalog, names: borrow [String], kind: borrow ResourceKind) -> [String] {
+public function missingNames(catalog: borrow Catalog, names: borrow [String], kind: borrow ResourceKind) -> [String] {
     var missing: [String] = []
     for name in names {
         if !catalogHasResource(catalog, name, kind) {
@@ -274,7 +274,7 @@ function missingNames(catalog: borrow Catalog, names: borrow [String], kind: bor
 // The reverse: what the catalog carries under one kind that the name surface
 // does not declare. Not an error — a catalog may hold resources for a consumer
 // this build does not contain — but an editor and a review want to see it.
-function undeclaredNames(catalog: borrow Catalog, names: borrow [String], kind: borrow ResourceKind) -> [String] {
+public function undeclaredNames(catalog: borrow Catalog, names: borrow [String], kind: borrow ResourceKind) -> [String] {
     var extra: [String] = []
     var index = 0
     while index < catalog.resources.count {

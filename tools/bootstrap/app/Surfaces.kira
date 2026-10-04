@@ -155,7 +155,9 @@ function toolkitTextStyleResources() -> [ResourceRecord] {
     records.append(textStyleResource("title1", 30.0, fontWeightBold(), 36.0, 0.0 - 0.3))
     // A window's title on the toolbar band, measured on macOS 27: SF Pro
     // semibold at 15 points on a 19-point line.
-    records.append(textStyleResource("windowTitle", 15.0, fontWeightSemiBold(), 19.0, 0.0))
+    records.append(textStyleResource("windowTitle", 15.0, fontWeightSemiBold(), 20.0, -0.23))
+    // The iPhone kit's toolbar title: SF Pro semibold at 17 on a 22-point line.
+    records.append(textStyleResource("windowTitleCompact", 17.0, fontWeightSemiBold(), 22.0, -0.43))
     return records
 }
 

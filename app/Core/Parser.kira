@@ -13,7 +13,7 @@ import Foundation
 // out one way, so writing it again reproduces it.
 
 // The constraint list of one rendition, copied out.
-function renditionConstraints(catalog: borrow Catalog, renditionIndex: Int) -> [CatalogConstraint] {
+public function renditionConstraints(catalog: borrow Catalog, renditionIndex: Int) -> [CatalogConstraint] {
     var list: [CatalogConstraint] = []
     if renditionIndex < 0 || renditionIndex >= catalog.renditions.count {
         return list
@@ -31,7 +31,7 @@ function renditionConstraints(catalog: borrow Catalog, renditionIndex: Int) -> [
 }
 
 // Header checks, before any table is trusted enough to read.
-function parseHeaderError(bytes: borrow [U8]) -> CatalogError {
+public function parseHeaderError(bytes: borrow [U8]) -> CatalogError {
     if bytes.count < blobHeaderSize() {
         return .TruncatedHeader
     }
@@ -47,7 +47,7 @@ function parseHeaderError(bytes: borrow [U8]) -> CatalogError {
     return .TruncatedHeader
 }
 
-function headerIsWellFormed(bytes: borrow [U8]) -> Bool {
+public function headerIsWellFormed(bytes: borrow [U8]) -> Bool {
     if bytes.count < blobHeaderSize() {
         return false
     }
@@ -64,7 +64,7 @@ function headerIsWellFormed(bytes: borrow [U8]) -> Bool {
 // have produced for these counts. Canonical layout is checked rather than
 // tolerated, because a blob with slack between sections would write back as a
 // different file.
-function sectionsAreCanonical(bytes: borrow [U8]) -> Bool {
+public function sectionsAreCanonical(bytes: borrow [U8]) -> Bool {
     let resourceCount = readU32(bytes, blobOffsetResourceCount())
     let renditionCount = readU32(bytes, blobOffsetRenditionCount())
     let constraintCount = readU32(bytes, blobOffsetConstraintCount())
@@ -88,7 +88,7 @@ function sectionsAreCanonical(bytes: borrow [U8]) -> Bool {
 }
 
 // Tables read verbatim. Every offset in them is checked afterwards.
-function readTables(bytes: borrow [U8]) -> Catalog {
+public function readTables(bytes: borrow [U8]) -> Catalog {
     var catalog = Catalog()
     catalog.majorVersion = readU16(bytes, blobOffsetMajor())
     catalog.minorVersion = readU16(bytes, blobOffsetMinor())
@@ -142,7 +142,7 @@ function readTables(bytes: borrow [U8]) -> Catalog {
 }
 
 // Names contiguous from zero, in ascending byte order.
-function namesAreCanonical(catalog: borrow Catalog) -> Bool {
+public function namesAreCanonical(catalog: borrow Catalog) -> Bool {
     var cursor = 0
     for index in 0..catalog.resources.count {
         let resource = catalog.resources[index]
@@ -170,7 +170,7 @@ function namesAreCanonical(catalog: borrow Catalog) -> Bool {
 }
 
 // Renditions and payloads contiguous in resource order.
-function spansAreContiguous(catalog: borrow Catalog) -> Bool {
+public function spansAreContiguous(catalog: borrow Catalog) -> Bool {
     var renditionCursor = 0
     for resource in catalog.resources {
         if resource.firstRendition != renditionCursor {
@@ -207,7 +207,7 @@ function spansAreContiguous(catalog: borrow Catalog) -> Bool {
 }
 
 // Constraints ascending by identifier, no identifier twice, no reserved value.
-function constraintsAreCanonical(catalog: borrow Catalog) -> Int {
+public function constraintsAreCanonical(catalog: borrow Catalog) -> Int {
     for rendition in catalog.renditions {
         var index = 0
         while index < rendition.constraintCount {
@@ -230,7 +230,7 @@ function constraintsAreCanonical(catalog: borrow Catalog) -> Int {
 // A resource's renditions in canonical order, and no two pinning the same
 // traits to the same values. A duplicate has no defined winner, so it is
 // refused at load rather than resolved arbitrarily at paint time.
-function renditionOrderIsCanonical(catalog: borrow Catalog) -> Int {
+public function renditionOrderIsCanonical(catalog: borrow Catalog) -> Int {
     for resource in catalog.resources {
         var index = 1
         while index < resource.renditionCount {
@@ -250,7 +250,7 @@ function renditionOrderIsCanonical(catalog: borrow Catalog) -> Int {
 }
 
 // The whole of loading, in the order the checks depend on each other.
-function parseCatalog(bytes: borrow [U8]) -> Result<Catalog, CatalogError> {
+public function parseCatalog(bytes: borrow [U8]) -> Result<Catalog, CatalogError> {
     if !headerIsWellFormed(bytes) {
         return .Error(parseHeaderError(bytes))
     }

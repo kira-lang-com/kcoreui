@@ -8,21 +8,21 @@ import Foundation
 // buffer copy and no parsing of text at all.
 
 // Load from bytes.
-function loadCatalog(bytes: borrow [U8]) -> Result<Catalog, CatalogError> {
+public function loadCatalog(bytes: borrow [U8]) -> Result<Catalog, CatalogError> {
     return parseCatalog(bytes)
 }
 
 // Load from a file. A file that is not there reads as an empty buffer, which
 // fails the magic check, so a missing catalog and a corrupt one are told apart
 // by the caller checking for the file rather than by two error paths here.
-function loadCatalogFile(path: borrow String) -> Result<Catalog, CatalogError> {
+public function loadCatalogFile(path: borrow String) -> Result<Catalog, CatalogError> {
     let size: Int = fileSize(path)
     let bytes = readFileRange(path, 0, size)
     return parseCatalog(bytes)
 }
 
 // Write a catalog to a file, byte-exact.
-function saveCatalogFile(path: borrow String, catalog: borrow Catalog) -> Bool {
+public function saveCatalogFile(path: borrow String, catalog: borrow Catalog) -> Bool {
     let bytes = writeCatalog(catalog)
     return writeBytesFile(path, bytes)
 }
@@ -38,7 +38,7 @@ function saveCatalogFile(path: borrow String, catalog: borrow Catalog) -> Bool {
 //
 // The table is sorted by that pair, which the parser has already verified, so
 // this is a binary search: a catalog of thousands costs a dozen comparisons.
-function catalogFindResource(catalog: borrow Catalog, name: borrow String, kind: borrow ResourceKind) -> Int {
+public function catalogFindResource(catalog: borrow Catalog, name: borrow String, kind: borrow ResourceKind) -> Int {
     var low = 0
     var high = catalog.resources.count - 1
     while low <= high {
@@ -61,13 +61,13 @@ function catalogFindResource(catalog: borrow Catalog, name: borrow String, kind:
 }
 
 // Whether this catalog carries the resource at all, regardless of environment.
-function catalogHasResource(catalog: borrow Catalog, name: borrow String, kind: borrow ResourceKind) -> Bool {
+public function catalogHasResource(catalog: borrow Catalog, name: borrow String, kind: borrow ResourceKind) -> Bool {
     return catalogFindResource(catalog, name, kind) >= 0
 }
 
 // The kinds this catalog carries under one name. A name usually has exactly
 // one; an editor showing what a name means asks for all of them.
-function catalogKindsForName(catalog: borrow Catalog, name: borrow String) -> [ResourceKind] {
+public function catalogKindsForName(catalog: borrow Catalog, name: borrow String) -> [ResourceKind] {
     var kinds: [ResourceKind] = []
     var index = 0
     while index < catalog.resources.count {
@@ -82,7 +82,7 @@ function catalogKindsForName(catalog: borrow Catalog, name: borrow String) -> [R
 
 // A resource's name, rebuilt. Costs a UTF-8 decode, so it belongs in a
 // debugger or an editor rather than on a paint path.
-function catalogResourceName(catalog: borrow Catalog, index: Int) -> String {
+public function catalogResourceName(catalog: borrow Catalog, index: Int) -> String {
     if index < 0 || index >= catalog.resources.count {
         return ""
     }
@@ -93,7 +93,7 @@ function catalogResourceName(catalog: borrow Catalog, index: Int) -> String {
 
 // Every name in the catalog, in byte order. For the integrity check that
 // proves a name surface and a catalog agree, and for an editor's outline.
-function catalogResourceNames(catalog: borrow Catalog) -> [String] {
+public function catalogResourceNames(catalog: borrow Catalog) -> [String] {
     var names: [String] = []
     var index = 0
     while index < catalog.resources.count {
@@ -104,7 +104,7 @@ function catalogResourceNames(catalog: borrow Catalog) -> [String] {
 }
 
 // The payload bytes of one rendition.
-function catalogRenditionPayload(catalog: borrow Catalog, renditionIndex: Int) -> [U8] {
+public function catalogRenditionPayload(catalog: borrow Catalog, renditionIndex: Int) -> [U8] {
     if renditionIndex < 0 || renditionIndex >= catalog.renditions.count {
         var empty: [U8] = []
         return empty
@@ -114,7 +114,7 @@ function catalogRenditionPayload(catalog: borrow Catalog, renditionIndex: Int) -
 }
 
 // The payload a resolution landed on.
-function resolvedPayload(stack: borrow CatalogStack, resolved: borrow ResolvedRendition) -> [U8] {
+public function resolvedPayload(stack: borrow CatalogStack, resolved: borrow ResolvedRendition) -> [U8] {
     var empty: [U8] = []
     if !resolved.found {
         return empty
@@ -129,7 +129,7 @@ function resolvedPayload(stack: borrow CatalogStack, resolved: borrow ResolvedRe
 
 // A stack of one. The lowest catalog is the floor and is expected to name
 // every resource the program asks for, which is what makes resolution total.
-function catalogStackOf(base: borrow Catalog) -> CatalogStack {
+public function catalogStackOf(base: borrow Catalog) -> CatalogStack {
     var stack = CatalogStack()
     var copied = Catalog()
     copied.majorVersion = base.majorVersion
@@ -147,7 +147,7 @@ function catalogStackOf(base: borrow Catalog) -> CatalogStack {
 // Put a catalog above everything already on the stack. An override is a blob,
 // so a theme, a package's resources and an application's own are the same kind
 // of thing arriving at different heights.
-function catalogStackOverride(stack: borrow CatalogStack, overlay: borrow Catalog) -> CatalogStack {
+public function catalogStackOverride(stack: borrow CatalogStack, overlay: borrow Catalog) -> CatalogStack {
     var raised = CatalogStack()
     var copied = Catalog()
     copied.majorVersion = overlay.majorVersion
@@ -166,6 +166,6 @@ function catalogStackOverride(stack: borrow CatalogStack, overlay: borrow Catalo
 }
 
 // How many catalogs a lookup would consult.
-function catalogStackDepth(stack: borrow CatalogStack) -> Int {
+public function catalogStackDepth(stack: borrow CatalogStack) -> Int {
     return stack.catalogs.count
 }

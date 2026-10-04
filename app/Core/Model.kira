@@ -17,7 +17,7 @@ import Foundation
 // write-back unchanged. That is what lets a blob hold resources this build has
 // no decoder for.
 
-enum ResourceKind {
+public enum ResourceKind {
     Color
     Gradient
     Material
@@ -30,9 +30,9 @@ enum ResourceKind {
 }
 
 // The first kind identifier KCoreUI itself will never claim.
-function resourceKindCustomBase() -> Int { return 1024 }
+public function resourceKindCustomBase() -> Int { return 1024 }
 
-function resourceKindValue(kind: borrow ResourceKind) -> Int {
+public function resourceKindValue(kind: borrow ResourceKind) -> Int {
     match kind {
         Color -> return 1
         Gradient -> return 2
@@ -46,7 +46,7 @@ function resourceKindValue(kind: borrow ResourceKind) -> Int {
     }
 }
 
-function resourceKindFromValue(value: Int) -> ResourceKind {
+public function resourceKindFromValue(value: Int) -> ResourceKind {
     if value == 1 { return .Color }
     if value == 2 { return .Gradient }
     if value == 3 { return .Material }
@@ -60,13 +60,13 @@ function resourceKindFromValue(value: Int) -> ResourceKind {
 
 // Kind identity is wire identity: the mapping is bijective, so two kinds are
 // the same resource kind exactly when they share a wire value.
-function resourceKindsEqual(left: borrow ResourceKind, right: borrow ResourceKind) -> Bool {
+public function resourceKindsEqual(left: borrow ResourceKind, right: borrow ResourceKind) -> Bool {
     return resourceKindValue(left) == resourceKindValue(right)
 }
 
 // Whether this build carries a decoder for a kind. A resolver answers for any
 // kind; only the typed accessors care.
-function resourceKindIsKnown(kind: borrow ResourceKind) -> Bool {
+public function resourceKindIsKnown(kind: borrow ResourceKind) -> Bool {
     match kind {
         Color -> return true
         Gradient -> return true
@@ -85,13 +85,13 @@ function resourceKindIsKnown(kind: borrow ResourceKind) -> Bool {
 // One trait a rendition pins. A rendition's constraints are sorted ascending by
 // identifier, which is what makes the specificity comparison a single merge
 // walk rather than a search.
-struct CatalogConstraint {
+public struct CatalogConstraint {
     var identifier: TraitIdentifier = .Appearance
     var value: Int = 0
 }
 
 // One authored variant of a resource. Offsets index the catalog's own arrays.
-struct CatalogRendition {
+public struct CatalogRendition {
     var firstConstraint: Int = 0
     var constraintCount: Int = 0
     var payloadOffset: Int = 0
@@ -100,7 +100,7 @@ struct CatalogRendition {
 
 // One semantic resource. `nameOffset`/`nameCount` index the catalog's name
 // bytes; resources are sorted by those bytes so a lookup binary-searches.
-struct CatalogResource {
+public struct CatalogResource {
     var nameOffset: Int = 0
     var nameCount: Int = 0
     var kind: ResourceKind = .Color
@@ -109,7 +109,7 @@ struct CatalogResource {
 }
 
 // One compiled resource database.
-struct Catalog {
+public struct Catalog {
     var majorVersion: Int = 0
     var minorVersion: Int = 0
     var flags: Int = 0
@@ -126,7 +126,7 @@ struct Catalog {
 // complete one overrides the resources it names and nothing else, so a theme is
 // a blob rather than an API. The lowest catalog is expected to be complete,
 // which is what makes resolution total.
-struct CatalogStack {
+public struct CatalogStack {
     var catalogs: [Catalog] = []
 }
 
@@ -136,18 +136,18 @@ struct CatalogStack {
 // inspects: an editor, a generator, or a program using the typed builders in
 // `Payload.kira` all arrive here the same way.
 
-struct RenditionRecord {
+public struct RenditionRecord {
     var constraints: [CatalogConstraint] = []
     var payload: [U8] = []
 }
 
-struct ResourceRecord {
+public struct ResourceRecord {
     var name: String = ""
     var kind: ResourceKind = .Color
     var renditions: [RenditionRecord] = []
 }
 
-struct CatalogRecord {
+public struct CatalogRecord {
     var resources: [ResourceRecord] = []
     var flags: Int = 0
 }
@@ -157,7 +157,7 @@ struct CatalogRecord {
 // Where a lookup landed. `found` is false only when no catalog on the stack
 // names the resource, or none of the ones that do has a rendition eligible for
 // the environment.
-struct ResolvedRendition {
+public struct ResolvedRendition {
     var found: Bool = false
     var catalogIndex: Int = 0
     var resourceIndex: Int = 0
@@ -171,7 +171,7 @@ struct ResolvedRendition {
 
 // Why a blob would not load. Every one of these is a property of the bytes, so
 // a caller can report which blob is wrong rather than that something is.
-enum CatalogError {
+public enum CatalogError {
     NotKira
     UnsupportedVersion
     TruncatedHeader
@@ -183,7 +183,7 @@ enum CatalogError {
     ReservedTraitValue
 }
 
-function catalogErrorText(failure: borrow CatalogError) -> String {
+public function catalogErrorText(failure: borrow CatalogError) -> String {
     match failure {
         NotKira -> return "not a KCoreUI catalog: wrong magic"
         UnsupportedVersion -> return "catalog major version is newer than this build"
@@ -200,7 +200,7 @@ function catalogErrorText(failure: borrow CatalogError) -> String {
 // --- Small helpers ---------------------------------------------------------
 
 // A constraint list in the canonical order the format requires.
-function sortedConstraints(input: borrow [CatalogConstraint]) -> [CatalogConstraint] {
+public function sortedConstraints(input: borrow [CatalogConstraint]) -> [CatalogConstraint] {
     var sorted: [CatalogConstraint] = []
     for entry in input {
         sorted.append(entry)
@@ -222,7 +222,7 @@ function sortedConstraints(input: borrow [CatalogConstraint]) -> [CatalogConstra
 // A rendition record with its constraints put in canonical order. Every path
 // into the writer goes through this, so a producer never has to know the order
 // exists.
-function canonicalRendition(record: borrow RenditionRecord) -> RenditionRecord {
+public function canonicalRendition(record: borrow RenditionRecord) -> RenditionRecord {
     var canonical = RenditionRecord()
     canonical.constraints = sortedConstraints(record.constraints)
     var payload: [U8] = []
@@ -234,23 +234,23 @@ function canonicalRendition(record: borrow RenditionRecord) -> RenditionRecord {
 }
 
 // A constraint, spelled the way a producer writes one.
-function constrain(identifier: borrow TraitIdentifier, value: Int) -> CatalogConstraint {
+public function constrain(identifier: borrow TraitIdentifier, value: Int) -> CatalogConstraint {
     return CatalogConstraint(identifier: identifier, value: value)
 }
 
 // The four builtin constraints an author reaches for most.
-function whenAppearance(appearance: borrow Appearance) -> CatalogConstraint {
+public function whenAppearance(appearance: borrow Appearance) -> CatalogConstraint {
     return constrain(.Appearance, appearanceValue(appearance))
 }
 
-function whenContrast(contrast: borrow Contrast) -> CatalogConstraint {
+public function whenContrast(contrast: borrow Contrast) -> CatalogConstraint {
     return constrain(.Contrast, contrastValue(contrast))
 }
 
-function whenGamut(gamut: borrow DisplayGamut) -> CatalogConstraint {
+public function whenGamut(gamut: borrow DisplayGamut) -> CatalogConstraint {
     return constrain(.Gamut, gamutValue(gamut))
 }
 
-function whenPlatform(platform: borrow Platform) -> CatalogConstraint {
+public function whenPlatform(platform: borrow Platform) -> CatalogConstraint {
     return constrain(.Platform, platformValue(platform))
 }

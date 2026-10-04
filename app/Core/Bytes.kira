@@ -10,13 +10,13 @@ import Foundation
 // resource database.
 
 // The scale of a 16.16 fixed-point value. One unit is 1/65536.
-function fixedScale() -> Int {
+public function fixedScale() -> Int {
     return 65536
 }
 
 // A fractional value as it is written to the wire. Rounds half away from zero
 // so the sign of a value never decides which way it rounds.
-function fixedFromFloat(value: Float) -> Int {
+public function fixedFromFloat(value: Float) -> Int {
     let scaled = value * Float(fixedScale())
     if scaled < 0.0 {
         return Int(scaled - 0.5)
@@ -25,22 +25,22 @@ function fixedFromFloat(value: Float) -> Int {
 }
 
 // The inverse, exact for every value `fixedFromFloat` can produce.
-function floatFromFixed(value: Int) -> Float {
+public function floatFromFixed(value: Int) -> Float {
     return Float(value) / Float(fixedScale())
 }
 
 // --- Writing ---------------------------------------------------------------
 
-function appendU8(bytes: borrow mut [U8], value: Int) {
+public function appendU8(bytes: borrow mut [U8], value: Int) {
     bytes.append(value & 255)
 }
 
-function appendU16(bytes: borrow mut [U8], value: Int) {
+public function appendU16(bytes: borrow mut [U8], value: Int) {
     bytes.append(value & 255)
     bytes.append((value >> 8) & 255)
 }
 
-function appendU32(bytes: borrow mut [U8], value: Int) {
+public function appendU32(bytes: borrow mut [U8], value: Int) {
     bytes.append(value & 255)
     bytes.append((value >> 8) & 255)
     bytes.append((value >> 16) & 255)
@@ -49,11 +49,11 @@ function appendU32(bytes: borrow mut [U8], value: Int) {
 
 // A signed 32-bit value, two's complement. Sign-extension on the way back out
 // is what `readI32` undoes.
-function appendI32(bytes: borrow mut [U8], value: Int) {
+public function appendI32(bytes: borrow mut [U8], value: Int) {
     appendU32(bytes, value)
 }
 
-function appendBytes(bytes: borrow mut [U8], extra: borrow [U8]) {
+public function appendBytes(bytes: borrow mut [U8], extra: borrow [U8]) {
     for byte in extra {
         bytes.append(byte)
     }
@@ -62,7 +62,7 @@ function appendBytes(bytes: borrow mut [U8], extra: borrow [U8]) {
 // A string as its own bytes, with no length and no terminator. Length is the
 // caller's to record, because every string in the format sits in a table whose
 // entries already carry offsets.
-function appendStringBytes(bytes: borrow mut [U8], text: borrow String) {
+public function appendStringBytes(bytes: borrow mut [U8], text: borrow String) {
     var index = 0
     while index < text.count {
         bytes.append(text.charAt(index) & 255)
@@ -77,7 +77,7 @@ function appendStringBytes(bytes: borrow mut [U8], text: borrow String) {
 // into a stopped program; the parser above these validates offsets and reports
 // a typed failure instead.
 
-function readU8(bytes: borrow [U8], offset: Int) -> Int {
+public function readU8(bytes: borrow [U8], offset: Int) -> Int {
     if offset < 0 || offset >= bytes.count {
         return 0
     }
@@ -85,11 +85,11 @@ function readU8(bytes: borrow [U8], offset: Int) -> Int {
     return value & 255
 }
 
-function readU16(bytes: borrow [U8], offset: Int) -> Int {
+public function readU16(bytes: borrow [U8], offset: Int) -> Int {
     return readU8(bytes, offset) | (readU8(bytes, offset + 1) << 8)
 }
 
-function readU32(bytes: borrow [U8], offset: Int) -> Int {
+public function readU32(bytes: borrow [U8], offset: Int) -> Int {
     var value = readU8(bytes, offset)
     value = value | (readU8(bytes, offset + 1) << 8)
     value = value | (readU8(bytes, offset + 2) << 16)
@@ -98,7 +98,7 @@ function readU32(bytes: borrow [U8], offset: Int) -> Int {
 }
 
 // The signed reading of the same four bytes.
-function readI32(bytes: borrow [U8], offset: Int) -> Int {
+public function readI32(bytes: borrow [U8], offset: Int) -> Int {
     let raw = readU32(bytes, offset)
     if raw >= 2147483648 {
         return raw - 4294967296
@@ -107,7 +107,7 @@ function readI32(bytes: borrow [U8], offset: Int) -> Int {
 }
 
 // A slice, clamped to what is there.
-function sliceBytes(bytes: borrow [U8], offset: Int, count: Int) -> [U8] {
+public function sliceBytes(bytes: borrow [U8], offset: Int, count: Int) -> [U8] {
     var slice: [U8] = []
     if count <= 0 {
         return slice
@@ -127,7 +127,7 @@ function sliceBytes(bytes: borrow [U8], offset: Int, count: Int) -> [U8] {
 
 // A string as bytes. `charAt` is already a byte read, so this is a copy rather
 // than an encoding.
-function stringBytes(text: borrow String) -> [U8] {
+public function stringBytes(text: borrow String) -> [U8] {
     var bytes: [U8] = []
     appendStringBytes(bytes, text)
     return bytes
@@ -136,7 +136,7 @@ function stringBytes(text: borrow String) -> [U8] {
 // How many bytes the scalar starting at `offset` occupies, by its lead byte.
 // A continuation byte or an invalid lead answers one, so a malformed sequence
 // advances rather than looping.
-function utf8SequenceLength(lead: Int) -> Int {
+public function utf8SequenceLength(lead: Int) -> Int {
     if lead < 128 { return 1 }
     if lead >= 240 { return 4 }
     if lead >= 224 { return 3 }
@@ -150,7 +150,7 @@ function utf8SequenceLength(lead: Int) -> Int {
 // only where a payload hands text back to a caller — a typeface family name.
 // A byte that begins no valid sequence is replaced rather than dropped, so the
 // result's length still tracks the input's shape.
-function stringFromBytes(bytes: borrow [U8]) -> String {
+public function stringFromBytes(bytes: borrow [U8]) -> String {
     var text = ""
     var cursor = 0
     while cursor < bytes.count {
@@ -192,7 +192,7 @@ function stringFromBytes(bytes: borrow [U8]) -> String {
 //
 // Answers a negative number when the slice sorts first, zero when they are
 // equal, and a positive number otherwise.
-function compareSliceToString(bytes: borrow [U8], offset: Int, count: Int, text: borrow String) -> Int {
+public function compareSliceToString(bytes: borrow [U8], offset: Int, count: Int, text: borrow String) -> Int {
     var index = 0
     let shorter = count < text.count ? count : text.count
     while index < shorter {
@@ -209,7 +209,7 @@ function compareSliceToString(bytes: borrow [U8], offset: Int, count: Int, text:
 
 // The same order over two slices of the same buffer, which is what the writer
 // sorts the name table with.
-function compareSlices(bytes: borrow [U8], leftOffset: Int, leftCount: Int, rightOffset: Int, rightCount: Int) -> Int {
+public function compareSlices(bytes: borrow [U8], leftOffset: Int, leftCount: Int, rightOffset: Int, rightCount: Int) -> Int {
     var index = 0
     let shorter = leftCount < rightCount ? leftCount : rightCount
     while index < shorter {
@@ -224,7 +224,7 @@ function compareSlices(bytes: borrow [U8], leftOffset: Int, leftCount: Int, righ
 }
 
 // Byte order over two strings, for the writer's own sort.
-function compareStrings(left: borrow String, right: borrow String) -> Int {
+public function compareStrings(left: borrow String, right: borrow String) -> Int {
     var index = 0
     let shorter = left.count < right.count ? left.count : right.count
     while index < shorter {

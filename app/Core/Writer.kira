@@ -13,7 +13,7 @@ import Foundation
 // Total order over two constraint lists, so a resource's renditions have one
 // correct arrangement rather than the arrangement they happened to arrive in.
 // Compares pairs in identifier order, then value, then length.
-function compareConstraintLists(left: borrow [CatalogConstraint], right: borrow [CatalogConstraint]) -> Int {
+public function compareConstraintLists(left: borrow [CatalogConstraint], right: borrow [CatalogConstraint]) -> Int {
     var index = 0
     let shorter = left.count < right.count ? left.count : right.count
     while index < shorter {
@@ -31,7 +31,7 @@ function compareConstraintLists(left: borrow [CatalogConstraint], right: borrow 
 }
 
 // Renditions in canonical order.
-function sortedRenditions(input: borrow [RenditionRecord]) -> [RenditionRecord] {
+public function sortedRenditions(input: borrow [RenditionRecord]) -> [RenditionRecord] {
     var sorted: [RenditionRecord] = []
     for entry in input {
         sorted.append(canonicalRendition(entry))
@@ -56,7 +56,7 @@ function sortedRenditions(input: borrow [RenditionRecord]) -> [RenditionRecord] 
 // material `regular` and would one day spell a color the same. Keying by name
 // alone makes that a collision rather than two resources, and the collision
 // would surface as a lookup that finds the wrong kind at paint time.
-function compareResourceKeys(left: borrow ResourceRecord, right: borrow ResourceRecord) -> Int {
+public function compareResourceKeys(left: borrow ResourceRecord, right: borrow ResourceRecord) -> Int {
     let order = compareStrings(left.name, right.name)
     if order != 0 {
         return order
@@ -67,7 +67,7 @@ function compareResourceKeys(left: borrow ResourceRecord, right: borrow Resource
 // Resources in canonical order: ascending by name bytes. Insertion sort keeps
 // this file free of a comparator-taking sort the language does not have, and a
 // catalog's resource count is in the hundreds.
-function sortedResources(input: borrow [ResourceRecord]) -> [ResourceRecord] {
+public function sortedResources(input: borrow [ResourceRecord]) -> [ResourceRecord] {
     var sorted: [ResourceRecord] = []
     for entry in input {
         var canonical = ResourceRecord()
@@ -94,7 +94,7 @@ function sortedResources(input: borrow [ResourceRecord]) -> [ResourceRecord] {
 
 // The counts a header needs, gathered before any section is written because
 // each section's start depends on the sizes of the ones before it.
-struct WriterLayout {
+public struct WriterLayout {
     var resourceCount: Int = 0
     var renditionCount: Int = 0
     var constraintCount: Int = 0
@@ -102,7 +102,7 @@ struct WriterLayout {
     var payloadCount: Int = 0
 }
 
-function measureRecords(resources: borrow [ResourceRecord]) -> WriterLayout {
+public function measureRecords(resources: borrow [ResourceRecord]) -> WriterLayout {
     var layout = WriterLayout()
     layout.resourceCount = resources.count
     for resource in resources {
@@ -118,7 +118,7 @@ function measureRecords(resources: borrow [ResourceRecord]) -> WriterLayout {
 
 // A whole catalog as bytes. The result is canonical, so two producers that
 // supply the same resources in different orders write the same file.
-function writeCatalogRecord(record: borrow CatalogRecord) -> [U8] {
+public function writeCatalogRecord(record: borrow CatalogRecord) -> [U8] {
     let resources = sortedResources(record.resources)
     let layout = measureRecords(resources)
 
@@ -205,7 +205,7 @@ function writeCatalogRecord(record: borrow CatalogRecord) -> [U8] {
 // whose kind this build cannot decode is written back exactly as it was read.
 // The sections are already canonical, because the parser refuses a blob whose
 // sections are not.
-function writeCatalog(catalog: borrow Catalog) -> [U8] {
+public function writeCatalog(catalog: borrow Catalog) -> [U8] {
     let resourceStart = blobHeaderSize()
     let renditionStart = resourceStart + catalog.resources.count * blobResourceEntrySize()
     let constraintStart = renditionStart + catalog.renditions.count * blobRenditionEntrySize()

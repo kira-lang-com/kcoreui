@@ -41,14 +41,14 @@ import Foundation
 // keyed by environment, so a value cached under light appearance is still there
 // after a change to dark and back, and nothing is invalidated when the
 // appearance changes.
-struct UIResources {
+public struct UIResources {
     var stack: CatalogStack = CatalogStack()
     var environment: UIEnvironment = UIEnvironment()
     var cache: ResolutionCache = ResolutionCache()
 }
 
 // Resources over one catalog, which becomes the floor.
-function makeResources(base: borrow Catalog, environment: borrow UIEnvironment) -> UIResources {
+public function makeResources(base: borrow Catalog, environment: borrow UIEnvironment) -> UIResources {
     var resources = UIResources()
     resources.stack = catalogStackOf(base)
     resources.environment = environment
@@ -61,20 +61,20 @@ function makeResources(base: borrow Catalog, environment: borrow UIEnvironment) 
 // heights, not as an override API.
 //
 // The cache is dropped, because a new catalog can change what any name means.
-function pushCatalog(resources: borrow mut UIResources, overlay: borrow Catalog) {
+public function pushCatalog(resources: borrow mut UIResources, overlay: borrow Catalog) {
     resources.stack = catalogStackOverride(resources.stack, overlay)
     clearCache(resources.cache)
 }
 
 // Change the environment. Nothing is invalidated: the environment is part of
 // every cache key, so the new one simply fills different slots.
-function setEnvironment(resources: borrow mut UIResources, environment: borrow UIEnvironment) {
+public function setEnvironment(resources: borrow mut UIResources, environment: borrow UIEnvironment) {
     resources.environment = environment
 }
 
 // The appearance alone, which is the trait that changes most and the one a
 // platform hands a toolkit on its own.
-function setAppearance(resources: borrow mut UIResources, appearance: borrow Appearance) {
+public function setAppearance(resources: borrow mut UIResources, appearance: borrow Appearance) {
     resources.environment.appearance = appearance
 }
 
@@ -82,37 +82,37 @@ function setAppearance(resources: borrow mut UIResources, appearance: borrow App
 
 // The color a name means right now. Cached at both levels, so a repeat within
 // a frame is a probe and a comparison.
-function color(resources: borrow mut UIResources, name: borrow String) -> Color {
+public function color(resources: borrow mut UIResources, name: borrow String) -> Color {
     return cachedColor(resources.cache, resources.stack, name, resources.environment)
 }
 
 // The material recipe a name means right now, with every color reference
 // already followed against this environment.
-function material(resources: borrow UIResources, name: borrow String) -> ResolvedMaterial {
+public function material(resources: borrow UIResources, name: borrow String) -> ResolvedMaterial {
     return resolveMaterial(resources.stack, name, resources.environment)
 }
 
-function gradient(resources: borrow UIResources, name: borrow String) -> ResolvedGradient {
+public function gradient(resources: borrow UIResources, name: borrow String) -> ResolvedGradient {
     return resolveGradient(resources.stack, name, resources.environment)
 }
 
-function effect(resources: borrow UIResources, name: borrow String) -> ResolvedEffect {
+public function effect(resources: borrow UIResources, name: borrow String) -> ResolvedEffect {
     return resolveEffect(resources.stack, name, resources.environment)
 }
 
-function typography(resources: borrow UIResources, name: borrow String) -> ResolvedTypography {
+public function typography(resources: borrow UIResources, name: borrow String) -> ResolvedTypography {
     return resolveTypography(resources.stack, name, resources.environment)
 }
 
 // The length a metric name means right now, in points.
-function metric(resources: borrow UIResources, name: borrow String) -> Float {
+public function metric(resources: borrow UIResources, name: borrow String) -> Float {
     return resolveMetric(resources.stack, name, resources.environment).points
 }
 
 // The glass recipe a name means right now: each input with the ramp that
 // carries it across sizes. The size itself is the caller's, applied with
 // `glassFigure` once the surface is laid out.
-function glass(resources: borrow UIResources, name: borrow String) -> ResolvedGlass {
+public function glass(resources: borrow UIResources, name: borrow String) -> ResolvedGlass {
     return resolveGlass(resources.stack, name, resources.environment)
 }
 
@@ -121,15 +121,15 @@ function glass(resources: borrow UIResources, name: borrow String) -> ResolvedGl
 // Why a name resolved the way it did, as text. The failure mode of a variant
 // system is a value that is right everywhere except one combination of traits,
 // and this is what finds it.
-function explain(resources: borrow UIResources, name: borrow String, kind: borrow ResourceKind) -> String {
+public function explain(resources: borrow UIResources, name: borrow String, kind: borrow ResourceKind) -> String {
     return traceText(traceResolution(resources.stack, name, kind, resources.environment))
 }
 
-function explainColor(resources: borrow UIResources, name: borrow String) -> String {
+public function explainColor(resources: borrow UIResources, name: borrow String) -> String {
     return explain(resources, name, .Color)
 }
 
-function explainMaterial(resources: borrow UIResources, name: borrow String) -> String {
+public function explainMaterial(resources: borrow UIResources, name: borrow String) -> String {
     return explain(resources, name, .Material)
 }
 
@@ -145,7 +145,7 @@ function explainMaterial(resources: borrow UIResources, name: borrow String) -> 
 //
 // There is nothing special about the file. It is a `.kcui` like any other, and
 // it is the floor only because a program puts it at the bottom of its stack.
-function defaultCatalogPath() -> String {
+public function defaultCatalogPath() -> String {
     return "Resources/Default.kcui"
 }
 
@@ -153,6 +153,6 @@ function defaultCatalogPath() -> String {
 //
 // A file read and a parse. A program does this once, keeps the `UIResources` it
 // builds, and never asks again.
-function loadDefaultCatalog() -> Result<Catalog, CatalogError> {
+public function loadDefaultCatalog() -> Result<Catalog, CatalogError> {
     return loadCatalogFile(defaultCatalogPath())
 }

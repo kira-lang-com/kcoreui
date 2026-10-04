@@ -11,7 +11,7 @@ import Foundation
 // The test package runs this against the default catalog on every build. It is
 // the whole reason the floor can be promised to be complete.
 
-struct IntegrityReport {
+public struct IntegrityReport {
     var missingColors: [String] = []
     var missingMaterials: [String] = []
     var missingTextStyles: [String] = []
@@ -26,7 +26,7 @@ struct IntegrityReport {
 
 // Whether every declared name has a resource behind it. Undeclared extras do
 // not fail: a catalog is allowed to carry more than this build knows about.
-function integrityHolds(report: borrow IntegrityReport) -> Bool {
+public function integrityHolds(report: borrow IntegrityReport) -> Bool {
     if report.missingColors.count > 0 { return false }
     if report.missingMaterials.count > 0 { return false }
     if report.missingTextStyles.count > 0 { return false }
@@ -34,7 +34,7 @@ function integrityHolds(report: borrow IntegrityReport) -> Bool {
     return report.missingGlass.count == 0
 }
 
-function checkIntegrity(catalog: borrow Catalog) -> IntegrityReport {
+public function checkIntegrity(catalog: borrow Catalog) -> IntegrityReport {
     var report = IntegrityReport()
     let colors = allColorNames()
     let materials = allMaterialNames()
@@ -54,7 +54,7 @@ function checkIntegrity(catalog: borrow Catalog) -> IntegrityReport {
     return report
 }
 
-function appendNameList(text: borrow String, label: borrow String, names: borrow [String]) -> String {
+public function appendNameList(text: borrow String, label: borrow String, names: borrow [String]) -> String {
     if names.count == 0 {
         return text
     }
@@ -65,7 +65,7 @@ function appendNameList(text: borrow String, label: borrow String, names: borrow
     return built + "\n"
 }
 
-function integrityText(report: borrow IntegrityReport) -> String {
+public function integrityText(report: borrow IntegrityReport) -> String {
     var text = ""
     text = appendNameList(text, "missing colors:", report.missingColors)
     text = appendNameList(text, "missing materials:", report.missingMaterials)
@@ -85,7 +85,7 @@ function integrityText(report: borrow IntegrityReport) -> String {
 
 // Every name this build declares, across every kind. For an editor's outline
 // and for a catalog author checking coverage.
-function allDeclaredNames() -> [String] {
+public function allDeclaredNames() -> [String] {
     var names: [String] = []
     for name in allColorNames() {
         names.append(name)

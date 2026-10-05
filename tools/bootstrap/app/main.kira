@@ -21,14 +21,14 @@ import KCoreUI
 //     kira run tools/bootstrap
 
 function reportFailure(message: borrow String) -> Int {
-    printLine("bootstrap: " + message)
+    print("bootstrap: " + message)
     return 1
 }
 
 function checkRoundTrip(bytes: borrow [U8], catalog: borrow Catalog) -> Bool {
     let rewritten = writeCatalog(catalog)
     if rewritten.count != bytes.count {
-        printLine("bootstrap: round trip changed the length: " + String(bytes.count) + " to " + String(rewritten.count))
+        print("bootstrap: round trip changed the length: " + String(bytes.count) + " to " + String(rewritten.count))
         return false
     }
     var index = 0
@@ -36,7 +36,7 @@ function checkRoundTrip(bytes: borrow [U8], catalog: borrow Catalog) -> Bool {
         let original: Int = bytes[index]
         let again: Int = rewritten[index]
         if original != again {
-            printLine("bootstrap: round trip changed byte " + String(index))
+            print("bootstrap: round trip changed byte " + String(index))
             return false
         }
         index = index + 1
@@ -50,7 +50,7 @@ function main() -> Int {
 
     let issues = validateRecord(record)
     if issues.count > 0 {
-        printLine(validationText(issues))
+        print(validationText(issues))
         return reportFailure("the default catalog does not validate")
     }
 
@@ -64,7 +64,7 @@ function main() -> Int {
 
         let report = checkIntegrity(catalog)
         if !integrityHolds(report) {
-            printLine(integrityText(report))
+            print(integrityText(report))
             return reportFailure("the default catalog does not cover the declared name surface")
         }
 
@@ -72,11 +72,11 @@ function main() -> Int {
         if !writeBytesFile(path, bytes) {
             return reportFailure("could not write " + path)
         }
-        printLine("bootstrap: wrote " + path)
-        printLine("bootstrap: " + String(catalog.resources.count) + " resources, "
+        print("bootstrap: wrote " + path)
+        print("bootstrap: " + String(catalog.resources.count) + " resources, "
             + String(catalog.renditions.count) + " renditions, "
             + String(bytes.count) + " bytes")
-        printLine(integrityText(report))
+        print(integrityText(report))
         return 0
     } handle {
         NotKira { return reportFailure("the bytes just written are not a catalog") }

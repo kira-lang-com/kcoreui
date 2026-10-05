@@ -20,11 +20,11 @@ function catalogPath() -> String {
 }
 
 function describe(label: borrow String, resources: borrow UIResources) {
-    printLine("")
-    printLine("=== " + label + " ===")
-    printLine(explainColor(resources, colorLabel()))
-    printLine(explainColor(resources, colorForeground()))
-    printLine(explainMaterial(resources, materialRegular()))
+    print("")
+    print("=== " + label + " ===")
+    print(explainColor(resources, colorLabel()))
+    print(explainColor(resources, colorForeground()))
+    print(explainMaterial(resources, materialRegular()))
 }
 
 function channel(value: Float) -> String {
@@ -33,13 +33,13 @@ function channel(value: Float) -> String {
 
 function showColor(resources: borrow mut UIResources, name: borrow String) {
     let value = color(resources, name)
-    printLine("  " + name + "  rgba(" + channel(value.r) + ", " + channel(value.g)
+    print("  " + name + "  rgba(" + channel(value.r) + ", " + channel(value.g)
         + ", " + channel(value.b) + ", " + String(value.a) + ")")
 }
 
 function showRecipe(resources: borrow UIResources, name: borrow String) {
     let recipe = material(resources, name)
-    printLine("  " + name + "  " + String(recipe.layers.count) + " layer(s), blur "
+    print("  " + name + "  " + String(recipe.layers.count) + " layer(s), blur "
         + String(materialBlurRadius(recipe)))
     for layer in recipe.layers {
         var line = "    "
@@ -51,7 +51,7 @@ function showRecipe(resources: borrow UIResources, name: borrow String) {
             Border -> { line = line + "border " + String(layer.amount) + "pt" }
             Fill -> { line = line + "fill rgba(" + channel(layer.color.r) + ", " + channel(layer.color.g) + ", " + channel(layer.color.b) + ") at " + String(layer.opacity) }
         }
-        printLine(line)
+        print(line)
     }
 }
 
@@ -67,15 +67,15 @@ function environmentFor(appearance: borrow Appearance, contrast: borrow Contrast
 
 function walk(label: borrow String, catalog: borrow Catalog, environment: borrow UIEnvironment) {
     var resources = makeResources(catalog, environment)
-    printLine("")
-    printLine("--- " + label + " ---")
+    print("")
+    print("--- " + label + " ---")
     showColor(resources, colorLabel())
     showColor(resources, colorSecondaryLabel())
     showColor(resources, colorSystemBackground())
     showColor(resources, colorForeground())
     showColor(resources, colorAccentColor())
     showRecipe(resources, materialRegular())
-    printLine("  cache: " + String(resources.cache.hits) + " hit(s), "
+    print("  cache: " + String(resources.cache.hits) + " hit(s), "
         + String(resources.cache.misses) + " miss(es)")
 }
 
@@ -85,8 +85,8 @@ function main() -> Int {
     let size: Int = fileSize(path)
     attempt {
         let catalog = try parseCatalog(readFileRange(path, 0, size))
-        printLine("catalog: " + path)
-        printLine("resources: " + String(catalog.resources.count)
+        print("catalog: " + path)
+        print("resources: " + String(catalog.resources.count)
             + ", renditions: " + String(catalog.renditions.count))
 
         walk("light", catalog, environmentFor(.Light, .Standard, false))
@@ -97,14 +97,14 @@ function main() -> Int {
         describe("why, in dark", makeResources(catalog, environmentFor(.Dark, .Standard, false)))
         return 0
     } handle {
-        NotKira { printLine("not a catalog: " + path); return 1 }
-        UnsupportedVersion { printLine("catalog is newer than this build"); return 1 }
-        TruncatedHeader { printLine("catalog is truncated"); return 1 }
-        TruncatedTable { printLine("catalog table runs past the end"); return 1 }
-        OffsetOutOfRange { printLine("catalog layout is not canonical"); return 1 }
-        NamesUnsorted { printLine("catalog name table is out of order"); return 1 }
-        ConstraintsUnsorted { printLine("catalog constraints are out of order"); return 1 }
-        DuplicateRendition { printLine("catalog has a duplicate rendition"); return 1 }
-        ReservedTraitValue { printLine("catalog uses the reserved trait value"); return 1 }
+        NotKira { print("not a catalog: " + path); return 1 }
+        UnsupportedVersion { print("catalog is newer than this build"); return 1 }
+        TruncatedHeader { print("catalog is truncated"); return 1 }
+        TruncatedTable { print("catalog table runs past the end"); return 1 }
+        OffsetOutOfRange { print("catalog layout is not canonical"); return 1 }
+        NamesUnsorted { print("catalog name table is out of order"); return 1 }
+        ConstraintsUnsorted { print("catalog constraints are out of order"); return 1 }
+        DuplicateRendition { print("catalog has a duplicate rendition"); return 1 }
+        ReservedTraitValue { print("catalog uses the reserved trait value"); return 1 }
     }
 }

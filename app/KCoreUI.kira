@@ -122,7 +122,7 @@ public function glass(resources: borrow UIResources, name: borrow String) -> Res
 // system is a value that is right everywhere except one combination of traits,
 // and this is what finds it.
 public function explain(resources: borrow UIResources, name: borrow String, kind: borrow ResourceKind) -> String {
-    return traceText(traceResolution(resources.stack, name, kind, resources.environment))
+    return resolutionReport(traceResolution(resources.stack, name, kind, resources.environment))
 }
 
 public function explainColor(resources: borrow UIResources, name: borrow String) -> String {
@@ -153,6 +153,6 @@ public function defaultCatalogPath() -> String {
 //
 // A file read and a parse. A program does this once, keeps the `UIResources` it
 // builds, and never asks again.
-public function loadDefaultCatalog() -> Result<Catalog, CatalogError> {
+public function loadDefaultCatalog() -> Result<Catalog, CatalogLoadFailure> {
     return loadCatalogFile(defaultCatalogPath())
 }

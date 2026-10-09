@@ -205,7 +205,7 @@ public function kindName(kind: borrow ResourceKind) -> String {
 }
 
 // The trace as one block of text.
-public function traceText(trace: borrow ResolutionTrace) -> String {
+public function resolutionReport(trace: borrow ResolutionTrace) -> String {
     var text = "requested: " + trace.name + "\n"
     if !trace.found {
         text = text + "matched:   nothing in " + String(trace.catalogsSearched) + " catalog(s)\n"

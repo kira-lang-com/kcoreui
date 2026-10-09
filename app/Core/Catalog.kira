@@ -12,19 +12,29 @@ public function loadCatalog(bytes: borrow [U8]) -> Result<Catalog, CatalogError>
     return parseCatalog(bytes)
 }
 
-// Load from a file. A file that is not there reads as an empty buffer, which
-// fails the magic check, so a missing catalog and a corrupt one are told apart
-// by the caller checking for the file rather than by two error paths here.
-public function loadCatalogFile(path: borrow String) -> Result<Catalog, CatalogError> {
-    let size: Int = fileSize(path)
-    let bytes = readFileRange(path, 0, size)
-    return parseCatalog(bytes)
+// Why a catalog file did not load: the file could not be read, or its bytes
+// are not a catalog.
+public enum CatalogLoadFailure {
+    Unreadable(FileFailure)
+    Invalid(CatalogError)
+}
+
+extend CatalogLoadFailure {
+    function from(failure: FileFailure) -> CatalogLoadFailure { return .Unreadable(failure) }
+    function from(failure: CatalogError) -> CatalogLoadFailure { return .Invalid(failure) }
+}
+
+// Load from a file.
+public function loadCatalogFile(path: borrow String) -> Result<Catalog, CatalogLoadFailure> {
+    let size = try fileSize(path)
+    let bytes = try readFileRange(path, 0, size)
+    let catalog = try parseCatalog(bytes)
+    return .Ok(catalog)
 }
 
 // Write a catalog to a file, byte-exact.
-public function saveCatalogFile(path: borrow String, catalog: borrow Catalog) -> Bool {
-    let bytes = writeCatalog(catalog)
-    return writeBytesFile(path, bytes)
+public function saveCatalogFile(path: borrow String, catalog: borrow Catalog) -> Result<Void, FileFailure> {
+    return writeBytesFile(path, writeCatalog(catalog))
 }
 
 // --- Lookup ----------------------------------------------------------------

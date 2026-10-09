@@ -23,3 +23,7 @@ You are an autonomous senior engineer in this repo, a Kira package that ships th
 - **Verification.** Prove a change with `kira check .`, then `kira test --backend vm tests/kcoreui_kik` and `kira test --backend llvm tests/kcoreui_kik`. Both backends must agree: a catalog that resolves differently interpreted than compiled is the exact bug the deterministic specificity rule exists to make impossible.
 
 - **Enum variants.** Write a leading dot, `.Dark`, wherever the expected type is known.
+
+# Specs
+
+Any spec is the rule. Read it before changing what it covers and do exactly what it says. If the spec does not say it, it does not exist: never invent a layout, encoding, convention or meaning to make a case work, and never route around a limit the spec sets. A case the spec does not cover is a question for the user, not a decision.

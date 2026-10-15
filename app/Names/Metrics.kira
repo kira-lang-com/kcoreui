@@ -15,429 +15,483 @@ import Foundation
 
 // The unified title and toolbar band. Content runs underneath it; this is the
 // top safe-area inset a window's content is laid out against.
-public function metricToolbarHeight() -> String { return "toolbarHeight" }
-public function metricToolbarCompactHeight() -> String { return "toolbarCompactHeight" }
-public function metricToolbarCompactBandHeight() -> String { return "toolbarCompactBandHeight" }
+public namespace MetricName {
+    let toolbarHeight: String = "toolbarHeight"
+    let toolbarCompactHeight: String = "toolbarCompactHeight"
+    let toolbarCompactBandHeight: String = "toolbarCompactBandHeight"
 
-// One piece of glass on the bar, and the width of an item holding an icon.
-public function metricToolbarItemHeight() -> String { return "toolbarItemHeight" }
-public function metricToolbarItemWidth() -> String { return "toolbarItemWidth" }
+    // One piece of glass on the bar, and the width of an item holding an icon.
+    let toolbarItemHeight: String = "toolbarItemHeight"
+    let toolbarItemWidth: String = "toolbarItemWidth"
 
-// The gap between two items sharing one piece of glass, and how far the glass
-// holds the first and last of them off its ends. An item alone on its glass
-// is the glass.
-public function metricToolbarGroupSpacing() -> String { return "toolbarGroupSpacing" }
-public function metricToolbarGroupInset() -> String { return "toolbarGroupInset" }
+    // The gap between two items sharing one piece of glass, and how far the glass
+    // holds the first and last of them off its ends. An item alone on its glass
+    // is the glass.
+    let toolbarGroupSpacing: String = "toolbarGroupSpacing"
+    let toolbarGroupInset: String = "toolbarGroupInset"
 
-// The gap between two pieces of glass, and the width a fixed spacer holds open.
-public function metricToolbarItemSpacing() -> String { return "toolbarItemSpacing" }
-public function metricToolbarSpacerWidth() -> String { return "toolbarSpacerWidth" }
+    // The gap between two pieces of glass, and the width a fixed spacer holds open.
+    let toolbarItemSpacing: String = "toolbarItemSpacing"
+    let toolbarSpacerWidth: String = "toolbarSpacerWidth"
 
-// How far the outermost glass sits from the edge of its section.
-public function metricToolbarEdgeInset() -> String { return "toolbarEdgeInset" }
-public function metricToolbarCompactEdgeInset() -> String { return "toolbarCompactEdgeInset" }
+    // How far the outermost glass sits from the edge of its section.
+    let toolbarEdgeInset: String = "toolbarEdgeInset"
+    let toolbarCompactEdgeInset: String = "toolbarCompactEdgeInset"
 
-// How far a column's title sits from the column's leading edge, and from a
-// piece of glass before it -- a back button -- when there is one.
+    // How far a column's title sits from the column's leading edge, and from a
+    // piece of glass before it -- a back button -- when there is one.
 
-// How a back button leaves once its stack is back where there is nowhere
-// further back: it swells to this scale as it fades, over this many seconds.
-public function metricToolbarBackRemovalScale() -> String { return "toolbarBackRemovalScale" }
-public function metricToolbarBackRemovalDuration() -> String { return "toolbarBackRemovalDuration" }
+    // How a back button leaves once its stack is back where there is nowhere
+    // further back: it swells to this scale as it fades, over this many seconds.
+    let toolbarBackRemovalScale: String = "toolbarBackRemovalScale"
+    let toolbarBackRemovalDuration: String = "toolbarBackRemovalDuration"
 
-// The search field `.searchable` puts on the bar: how wide its glass is, how
-// far its magnifier and its end sit inside the glass, and the gap between the
-// magnifier and the text.
-public function metricToolbarSearchWidth() -> String { return "toolbarSearchWidth" }
-public function metricToolbarSearchLeading() -> String { return "toolbarSearchLeading" }
-public function metricToolbarSearchTrailing() -> String { return "toolbarSearchTrailing" }
-public function metricToolbarSearchSpacing() -> String { return "toolbarSearchSpacing" }
+    // The search field `.searchable` puts on the bar: how wide its glass is, how
+    // far its magnifier and its end sit inside the glass, and the gap between the
+    // magnifier and the text.
+    let toolbarSearchWidth: String = "toolbarSearchWidth"
+    let toolbarSearchLeading: String = "toolbarSearchLeading"
+    let toolbarSearchTrailing: String = "toolbarSearchTrailing"
+    let toolbarSearchSpacing: String = "toolbarSearchSpacing"
 
-// What a piece of glass holds an item's label off its ends by, and the point
-// size and weight its symbols are set at.
-public function metricToolbarItemLabelInset() -> String { return "toolbarItemLabelInset" }
-public function metricToolbarSymbolSize() -> String { return "toolbarSymbolSize" }
-public function metricToolbarSymbolWeight() -> String { return "toolbarSymbolWeight" }
+    // What a piece of glass holds an item's label off its ends by, and the point
+    // size and weight its symbols are set at.
+    let toolbarItemLabelInset: String = "toolbarItemLabelInset"
+    let toolbarSymbolSize: String = "toolbarSymbolSize"
+    let toolbarSymbolWeight: String = "toolbarSymbolWeight"
 
-// --- The window ------------------------------------------------------------
+    // --- The window ------------------------------------------------------------
 
-public function metricWindowCornerRadius() -> String { return "windowCornerRadius" }
+    let windowCornerRadius: String = "windowCornerRadius"
 
-// The close, minimize and zoom buttons: where the first one starts, how large
-// each one is, the gap between them, and the room left after the last before
-// anything else on the bar.
-public function metricWindowControlsLeading() -> String { return "windowControlsLeading" }
-public function metricWindowControlDiameter() -> String { return "windowControlDiameter" }
-public function metricWindowControlSpacing() -> String { return "windowControlSpacing" }
-public function metricWindowControlsTrailing() -> String { return "windowControlsTrailing" }
+    // The close, minimize and zoom buttons: where the first one starts, how large
+    // each one is, the gap between them, and the room left after the last before
+    // anything else on the bar.
+    let windowControlsLeading: String = "windowControlsLeading"
+    let windowControlDiameter: String = "windowControlDiameter"
+    let windowControlSpacing: String = "windowControlSpacing"
+    let windowControlsTrailing: String = "windowControlsTrailing"
 
-// The line between two columns of a split view.
+    // The line between two columns of a split view.
 
-// --- The sidebar -----------------------------------------------------------
-//
-// A source list in a split view's sidebar column. It starts under the bar;
-// each section opens with a header row, then rows that touch.
+    // --- The sidebar -----------------------------------------------------------
+    //
+    // A source list in a split view's sidebar column. It starts under the bar;
+    // each section opens with a header row, then rows that touch.
 
-// A section's header row, how far its title sits from the column's edge, and
-// how far down the row the title's line starts: a header sits low in its row,
-// close to the rows it heads.
-public function metricSidebarHeaderHeight() -> String { return "sidebarHeaderHeight" }
-public function metricSidebarHeaderInset() -> String { return "sidebarHeaderInset" }
-public function metricSidebarHeaderTopInset() -> String { return "sidebarHeaderTopInset" }
+    // How wide the column opens: in a window of regular width, and in an expanded
+    // one.
+    let sidebarWidth: String = "sidebarWidth"
+    let sidebarExpandedWidth: String = "sidebarExpandedWidth"
 
-// One row, and how far its content sits from each edge of the column.
-public function metricSidebarRowHeight() -> String { return "sidebarRowHeight" }
-public function metricSidebarRowInset() -> String { return "sidebarRowInset" }
+    // A section's header row, how far its title sits from the column's edge, and
+    // how far down the row the title's line starts: a header sits low in its row,
+    // close to the rows it heads.
+    let sidebarHeaderHeight: String = "sidebarHeaderHeight"
+    let sidebarHeaderInset: String = "sidebarHeaderInset"
+    let sidebarHeaderTopInset: String = "sidebarHeaderTopInset"
 
-// The band behind the selected row: how far it sits from each edge of the
-// column, and its corner radius. The corner is continuous.
-public function metricSidebarSelectionInset() -> String { return "sidebarSelectionInset" }
-public function metricSidebarSelectionRadius() -> String { return "sidebarSelectionRadius" }
+    // One row, and how far its content sits from each edge of the column.
+    let sidebarRowHeight: String = "sidebarRowHeight"
+    let sidebarRowInset: String = "sidebarRowInset"
 
-// A row's symbol column, the gap after it to the title, and the point size
-// the symbol is set at.
-public function metricSidebarIconColumn() -> String { return "sidebarIconColumn" }
-public function metricSidebarTitleSpacing() -> String { return "sidebarTitleSpacing" }
-public function metricSidebarSymbolSize() -> String { return "sidebarSymbolSize" }
-public function metricSidebarToggleResponse() -> String { return "sidebarToggleResponse" }
-public function metricSidebarToggleDamping() -> String { return "sidebarToggleDamping" }
-public function metricSidebarGlassBleed() -> String { return "sidebarGlassBleed" }
-public function metricSidebarShadowRadius() -> String { return "sidebarShadowRadius" }
+    // The band behind the selected row: how far it sits from each edge of the
+    // column, and its corner radius. The corner is continuous.
+    let sidebarSelectionInset: String = "sidebarSelectionInset"
+    let sidebarSelectionRadius: String = "sidebarSelectionRadius"
 
-// --- The inset grouped list ------------------------------------------------
-//
-// SwiftUI's `Form`, and a `List` in the inset grouped style: sections, each a
-// header over a card of rows over a footer, in one readable column centered in
-// the room it has.
+    // A row's symbol column, the gap after it to the title, and the point size
+    // the symbol is set at.
+    let sidebarIconColumn: String = "sidebarIconColumn"
+    let sidebarTitleSpacing: String = "sidebarTitleSpacing"
+    let sidebarSymbolSize: String = "sidebarSymbolSize"
+    let sidebarToggleResponse: String = "sidebarToggleResponse"
+    let sidebarToggleDamping: String = "sidebarToggleDamping"
+    let sidebarGlassBleed: String = "sidebarGlassBleed"
+    let sidebarShadowRadius: String = "sidebarShadowRadius"
 
-// The widest the column grows, the gap between a header, its card and the next
-// section, and the room above the first section.
-public function metricListReadableWidth() -> String { return "listReadableWidth" }
-public function metricListSectionSpacing() -> String { return "listSectionSpacing" }
-public function metricListTopInset() -> String { return "listTopInset" }
+    // --- The inset grouped list ------------------------------------------------
+    //
+    // SwiftUI's `Form`, and a `List` in the inset grouped style: sections, each a
+    // header over a card of rows over a footer, in one readable column centered in
+    // the room it has.
 
-// The card: its continuous corner, a row's least height, how far a row's
-// content and its separator sit from the card's edges, the separator's
-// thickness, and the gap between a row's trailing accessories.
-public function metricListCornerRadius() -> String { return "listCornerRadius" }
-public function metricListRowHeight() -> String { return "listRowHeight" }
-public function metricListRowInset() -> String { return "listRowInset" }
-public function metricListSeparatorThickness() -> String { return "listSeparatorThickness" }
-public function metricListAccessorySpacing() -> String { return "listAccessorySpacing" }
+    // The widest the column grows; the gap between two sections' cards, and
+    // between two sections when a header or a footer stands between them; and
+    // the room above the first section and below the last.
+    let listReadableWidth: String = "listReadableWidth"
+    let listSectionSpacing: String = "listSectionSpacing"
+    let listLabeledSectionSpacing: String = "listLabeledSectionSpacing"
+    let listTopInset: String = "listTopInset"
 
-// What a header holds above and below its title, and what a footer holds
-// above and below its text. Both start at the row inset.
-public function metricListHeaderPadding() -> String { return "listHeaderPadding" }
-public function metricListFooterTopInset() -> String { return "listFooterTopInset" }
-public function metricListFooterBottomInset() -> String { return "listFooterBottomInset" }
+    // The card: its continuous corner, a row's least height, how far a row's
+    // content and its separator sit from the card's edges and from the row's
+    // top and bottom, the separator's thickness, and the gap between a row's
+    // trailing accessories.
+    let listCornerRadius: String = "listCornerRadius"
+    let listRowHeight: String = "listRowHeight"
+    let listRowInset: String = "listRowInset"
+    let listRowVerticalInset: String = "listRowVerticalInset"
+    let listSeparatorThickness: String = "listSeparatorThickness"
+    let listAccessorySpacing: String = "listAccessorySpacing"
 
-// --- The large title ---------------------------------------------------------
-//
-// A column's title set large under the bar: how far below the bar its line
-// starts, and the room under it before the content.
-public function metricLargeTitleTopInset() -> String { return "largeTitleTopInset" }
-public function metricLargeTitleBottomInset() -> String { return "largeTitleBottomInset" }
-public function metricLargeTitleFadeDuration() -> String { return "largeTitleFadeDuration" }
-public function metricLargeTitleInlineTravel() -> String { return "largeTitleInlineTravel" }
-public function metricLargeTitleInlineBlur() -> String { return "largeTitleInlineBlur" }
-public function metricScrollEdgeBlurRadius() -> String { return "scrollEdgeBlurRadius" }
-public function metricScrollEdgeBorderWidth() -> String { return "scrollEdgeBorderWidth" }
+    // The share of a labeled row a desktop's grouped form gives the value, the
+    // rest going to the label.
+    let listValueColumnShare: String = "listValueColumnShare"
 
-// --- The navigation transition -----------------------------------------------
-//
-// A pushed view slides in over the one it covers and slides back off it, by a
-// swipe or the back button. While it moves its corners are rounded, and the
-// view under it sits a little smaller and dimmed, coming up to full size and
-// light as it is uncovered. A swipe that lifts past the commit fraction, or
-// throws faster than the commit velocity (points a second), goes back; one
-// that does neither settles where it started. A swipe is only a swipe once it
-// has moved the slop, and moved it more across than down.
-public function metricNavigationPageCornerRadius() -> String { return "navigationPageCornerRadius" }
-public function metricNavigationCoveredDim() -> String { return "navigationCoveredDim" }
-public function metricNavigationCoveredParallax() -> String { return "navigationCoveredParallax" }
-public function metricNavigationPushResponse() -> String { return "navigationPushResponse" }
-public function metricNavigationPushDamping() -> String { return "navigationPushDamping" }
-public function metricNavigationSwipeCommitFraction() -> String { return "navigationSwipeCommitFraction" }
-public function metricNavigationSwipeCommitVelocity() -> String { return "navigationSwipeCommitVelocity" }
-public function metricNavigationSwipeSlop() -> String { return "navigationSwipeSlop" }
+    // What a header holds above its title and between its title and the card,
+    // and what a footer holds above and below its text. Both start at the row
+    // inset.
+    let listHeaderTopInset: String = "listHeaderTopInset"
+    let listHeaderBottomInset: String = "listHeaderBottomInset"
+    let listFooterTopInset: String = "listFooterTopInset"
+    let listFooterBottomInset: String = "listFooterBottomInset"
 
-// --- The scroll indicator ----------------------------------------------------
-//
-// The bar along a scroll view's trailing edge while it scrolls: its thickness,
-// and its thickness while the pointer holds it to scrub; the shortest it gets
-// over long content, and the shortest it squeezes to pulled past an end; how
-// far beyond it a pointer still takes it, across and along; and how long it
-// stays after scrolling stops, how long it takes to fade, and how long it
-// takes to swell and to thin back.
-public function metricScrollIndicatorThickness() -> String { return "scrollIndicatorThickness" }
-public function metricScrollIndicatorExpandedThickness() -> String { return "scrollIndicatorExpandedThickness" }
-public function metricScrollIndicatorMinimumLength() -> String { return "scrollIndicatorMinimumLength" }
-public function metricScrollIndicatorOverscrolledLength() -> String { return "scrollIndicatorOverscrolledLength" }
-public function metricScrollIndicatorHitOutsetAcross() -> String { return "scrollIndicatorHitOutsetAcross" }
-public function metricScrollIndicatorHitOutsetAlong() -> String { return "scrollIndicatorHitOutsetAlong" }
-public function metricScrollIndicatorHideDelay() -> String { return "scrollIndicatorHideDelay" }
-public function metricScrollIndicatorFadeDuration() -> String { return "scrollIndicatorFadeDuration" }
-public function metricScrollIndicatorExpandDuration() -> String { return "scrollIndicatorExpandDuration" }
-public function metricScrollIndicatorCollapseDuration() -> String { return "scrollIndicatorCollapseDuration" }
-public function metricMenuMorphGrowthResponse() -> String { return "menuMorphGrowthResponse" }
-public function metricMenuMorphGrowthDamping() -> String { return "menuMorphGrowthDamping" }
-public function metricMenuMorphHeightResponse() -> String { return "menuMorphHeightResponse" }
-public function metricMenuMorphHeightDamping() -> String { return "menuMorphHeightDamping" }
-public function metricMenuMorphDropResponse() -> String { return "menuMorphDropResponse" }
-public function metricMenuMorphDropDamping() -> String { return "menuMorphDropDamping" }
-public function metricMenuMorphDropLaunch() -> String { return "menuMorphDropLaunch" }
-public function metricMenuMorphCloseResponse() -> String { return "menuMorphCloseResponse" }
-public function metricMenuMorphCloseDamping() -> String { return "menuMorphCloseDamping" }
-public function metricMenuMorphFlightResponse() -> String { return "menuMorphFlightResponse" }
-public function metricMenuMorphFlightDamping() -> String { return "menuMorphFlightDamping" }
-public function metricMenuMorphCornerResponse() -> String { return "menuMorphCornerResponse" }
-public function metricMenuMorphCloseCornerResponse() -> String { return "menuMorphCloseCornerResponse" }
-public function metricMenuMorphCloseDuration() -> String { return "menuMorphCloseDuration" }
-public function metricMenuMorphRoundness() -> String { return "menuMorphRoundness" }
-public function metricMenuMorphContentOpen() -> String { return "menuMorphContentOpen" }
-public function metricMenuMorphContentClose() -> String { return "menuMorphContentClose" }
-public function metricMenuMorphContentZoom() -> String { return "menuMorphContentZoom" }
-public function metricMenuMorphContentBlur() -> String { return "menuMorphContentBlur" }
-public function metricMenuMorphGlyphGone() -> String { return "menuMorphGlyphGone" }
-public function metricMenuMorphGlyphReturn() -> String { return "menuMorphGlyphReturn" }
-public function metricMenuMorphGlyphBack() -> String { return "menuMorphGlyphBack" }
-public function metricMenuMorphGlyphBlur() -> String { return "menuMorphGlyphBlur" }
-public function metricMenuMorphHomeReach() -> String { return "menuMorphHomeReach" }
-public function metricMenuMorphHomeDepth() -> String { return "menuMorphHomeDepth" }
-public function metricMenuMorphHomeSurface() -> String { return "menuMorphHomeSurface" }
-public function metricMenuMorphHomeLead() -> String { return "menuMorphHomeLead" }
-public function metricMenuMorphHomeBlend() -> String { return "menuMorphHomeBlend" }
-public function metricMenuSubmenuOpenResponse() -> String { return "menuSubmenuOpenResponse" }
-public function metricMenuSubmenuOpenDamping() -> String { return "menuSubmenuOpenDamping" }
-public function metricMenuSubmenuCloseResponse() -> String { return "menuSubmenuCloseResponse" }
-public function metricMenuSubmenuCloseDamping() -> String { return "menuSubmenuCloseDamping" }
-public function metricMenuSubmenuRecededOpacity() -> String { return "menuSubmenuRecededOpacity" }
-public function metricMenuSubmenuRecedeScale() -> String { return "menuSubmenuRecedeScale" }
-public function metricMenuSubmenuRecedeHold() -> String { return "menuSubmenuRecedeHold" }
-public function metricMenuSubmenuDwell() -> String { return "menuSubmenuDwell" }
-public function metricMenuSubmenuWiden() -> String { return "menuSubmenuWiden" }
-public function metricMenuSubmenuRecedeInResponse() -> String { return "menuSubmenuRecedeInResponse" }
-public function metricMenuSubmenuRecedeInDamping() -> String { return "menuSubmenuRecedeInDamping" }
-public function metricMenuSubmenuRecedeOutResponse() -> String { return "menuSubmenuRecedeOutResponse" }
-public function metricMenuSubmenuRecedeOutDamping() -> String { return "menuSubmenuRecedeOutDamping" }
-public function metricMenuSubmenuShrinkResponse() -> String { return "menuSubmenuShrinkResponse" }
-public function metricMenuSubmenuShrinkDamping() -> String { return "menuSubmenuShrinkDamping" }
-public function metricMenuSubmenuRise() -> String { return "menuSubmenuRise" }
-public function metricMenuSubmenuRiseLaunch() -> String { return "menuSubmenuRiseLaunch" }
-public function metricMenuSubmenuHeaderCenter() -> String { return "menuSubmenuHeaderCenter" }
-public function metricMenuSubmenuChevronTurn() -> String { return "menuSubmenuChevronTurn" }
-public function metricMenuSubmenuCardAppear() -> String { return "menuSubmenuCardAppear" }
-public function metricMenuSubmenuCardAppearSpan() -> String { return "menuSubmenuCardAppearSpan" }
-public function metricMenuSubmenuCardVanish() -> String { return "menuSubmenuCardVanish" }
-public function metricMenuSubmenuItemsAppear() -> String { return "menuSubmenuItemsAppear" }
-public function metricMenuSubmenuItemsAppearSpan() -> String { return "menuSubmenuItemsAppearSpan" }
-public function metricMenuSubmenuItemsVanish() -> String { return "menuSubmenuItemsVanish" }
-public function metricMenuSubmenuItemsVanishSpan() -> String { return "menuSubmenuItemsVanishSpan" }
+    // How far a row's content steps in for each level of an outline.
+    let listIndentation: String = "listIndentation"
 
-// --- Menus -------------------------------------------------------------------
-//
-// How far under the control that opened it a menu's card hangs.
-public function metricMenuAnchorSpacing() -> String { return "menuAnchorSpacing" }
+    // --- The large title ---------------------------------------------------------
+    //
+    // A column's title set large under the bar: how far below the bar its line
+    // starts, and the room under it before the content.
+    let largeTitleTopInset: String = "largeTitleTopInset"
+    let largeTitleBottomInset: String = "largeTitleBottomInset"
+    let largeTitleFadeDuration: String = "largeTitleFadeDuration"
+    let largeTitleInlineTravel: String = "largeTitleInlineTravel"
+    let largeTitleInlineBlur: String = "largeTitleInlineBlur"
+    let scrollEdgeBlurRadius: String = "scrollEdgeBlurRadius"
+    let scrollEdgeBorderWidth: String = "scrollEdgeBorderWidth"
 
-// --- The tab bar -------------------------------------------------------------
-//
-// The bar a `TabView` floats in the toolbar's row: its height and what it
-// holds its tabs off its glass by, then a tab's height and what a tab holds its
-// title, or a symbol tab its symbol, off its own ends.
-public function metricTabBarHeight() -> String { return "tabBarHeight" }
-public function metricTabBarInset() -> String { return "tabBarInset" }
-public function metricTabHeight() -> String { return "tabHeight" }
-public function metricTabLabelInset() -> String { return "tabLabelInset" }
-public function metricTabSymbolInset() -> String { return "tabSymbolInset" }
+    // --- The navigation transition -----------------------------------------------
+    //
+    // A pushed view slides in over the one it covers and slides back off it, by a
+    // swipe or the back button. While it moves its corners are rounded, and the
+    // view under it sits a little smaller and dimmed, coming up to full size and
+    // light as it is uncovered. A swipe that lifts past the commit fraction, or
+    // throws faster than the commit velocity (points a second), goes back; one
+    // that does neither settles where it started. A swipe is only a swipe once it
+    // has moved the slop, and moved it more across than down.
+    let navigationPageCornerRadius: String = "navigationPageCornerRadius"
+    let navigationCoveredDim: String = "navigationCoveredDim"
+    let navigationCoveredParallax: String = "navigationCoveredParallax"
+    let navigationPushResponse: String = "navigationPushResponse"
+    let navigationPushDamping: String = "navigationPushDamping"
+    let navigationSwipeCommitFraction: String = "navigationSwipeCommitFraction"
+    let navigationSwipeCommitVelocity: String = "navigationSwipeCommitVelocity"
+    let navigationSwipeSlop: String = "navigationSwipeSlop"
 
-// --- Switches, sliders and progress bars ---------------------------------------
-//
-// A switch's track and the knob held inside it; a slider's height, the track
-// running through its middle and the knob riding it; a progress bar's track.
-public function metricSwitchWidth() -> String { return "switchWidth" }
-public function metricSwitchHeight() -> String { return "switchHeight" }
-public function metricSwitchKnobWidth() -> String { return "switchKnobWidth" }
-public function metricSwitchKnobInset() -> String { return "switchKnobInset" }
-public function metricSliderHeight() -> String { return "sliderHeight" }
-public function metricSliderTrackHeight() -> String { return "sliderTrackHeight" }
-public function metricSliderKnobWidth() -> String { return "sliderKnobWidth" }
-public function metricSliderKnobHeight() -> String { return "sliderKnobHeight" }
-public function metricSliderKnobInset() -> String { return "sliderKnobInset" }
-public function metricSliderHeldKnobWidth() -> String { return "sliderHeldKnobWidth" }
-public function metricSliderHeldKnobHeight() -> String { return "sliderHeldKnobHeight" }
-public function metricProgressTrackHeight() -> String { return "progressTrackHeight" }
-// The two shadows under a slider's knob: a soft one that falls away from it,
-// and a tight one where it meets the track.
-// The insertion point in a focused field.
-public function metricCaretWidth() -> String { return "caretWidth" }
-public function metricCaretHeight() -> String { return "caretHeight" }
-// How opaque a switch or slider stands while it is disabled.
-public function metricDisabledControlOpacity() -> String { return "disabledControlOpacity" }
-public function metricKnobShadowRadius() -> String { return "knobShadowRadius" }
-public function metricKnobShadowOffset() -> String { return "knobShadowOffset" }
-public function metricKnobContactShadowRadius() -> String { return "knobContactShadowRadius" }
-public function metricKnobContactShadowOffset() -> String { return "knobContactShadowOffset" }
-// The shadow a menu's card casts: how far it blurs, and how far below the card it falls.
-public function metricMenuShadowRadius() -> String { return "menuShadowRadius" }
-public function metricMenuShadowOffset() -> String { return "menuShadowOffset" }
+    // --- The scroll indicator ----------------------------------------------------
+    //
+    // The bar along a scroll view's trailing edge while it scrolls: its thickness,
+    // and its thickness while the pointer holds it to scrub; the shortest it gets
+    // over long content, and the shortest it squeezes to pulled past an end; how
+    // far beyond it a pointer still takes it, across and along; and how long it
+    // stays after scrolling stops, how long it takes to fade, and how long it
+    // takes to swell and to thin back.
+    let scrollIndicatorThickness: String = "scrollIndicatorThickness"
+    let scrollIndicatorExpandedThickness: String = "scrollIndicatorExpandedThickness"
+    let scrollIndicatorMinimumLength: String = "scrollIndicatorMinimumLength"
+    let scrollIndicatorOverscrolledLength: String = "scrollIndicatorOverscrolledLength"
+    let scrollIndicatorHitOutsetAcross: String = "scrollIndicatorHitOutsetAcross"
+    let scrollIndicatorHitOutsetAlong: String = "scrollIndicatorHitOutsetAlong"
+    let scrollIndicatorHideDelay: String = "scrollIndicatorHideDelay"
+    let scrollIndicatorFadeDuration: String = "scrollIndicatorFadeDuration"
+    let scrollIndicatorExpandDuration: String = "scrollIndicatorExpandDuration"
+    let scrollIndicatorCollapseDuration: String = "scrollIndicatorCollapseDuration"
+    let menuMorphGrowthResponse: String = "menuMorphGrowthResponse"
+    let menuMorphGrowthDamping: String = "menuMorphGrowthDamping"
+    let menuMorphHeightResponse: String = "menuMorphHeightResponse"
+    let menuMorphHeightDamping: String = "menuMorphHeightDamping"
+    let menuMorphDropResponse: String = "menuMorphDropResponse"
+    let menuMorphDropDamping: String = "menuMorphDropDamping"
+    let menuMorphDropLaunch: String = "menuMorphDropLaunch"
+    let menuMorphCloseResponse: String = "menuMorphCloseResponse"
+    let menuMorphCloseDamping: String = "menuMorphCloseDamping"
+    let menuMorphFlightResponse: String = "menuMorphFlightResponse"
+    let menuMorphFlightDamping: String = "menuMorphFlightDamping"
+    let menuMorphCornerResponse: String = "menuMorphCornerResponse"
+    let menuMorphCloseCornerResponse: String = "menuMorphCloseCornerResponse"
+    let menuMorphCloseDuration: String = "menuMorphCloseDuration"
+    let menuMorphRoundness: String = "menuMorphRoundness"
+    let menuMorphContentOpen: String = "menuMorphContentOpen"
+    let menuMorphContentClose: String = "menuMorphContentClose"
+    let menuMorphContentZoom: String = "menuMorphContentZoom"
+    let menuMorphContentBlur: String = "menuMorphContentBlur"
+    let menuMorphGlyphGone: String = "menuMorphGlyphGone"
+    let menuMorphGlyphReturn: String = "menuMorphGlyphReturn"
+    let menuMorphGlyphBack: String = "menuMorphGlyphBack"
+    let menuMorphGlyphBlur: String = "menuMorphGlyphBlur"
+    let menuMorphHomeReach: String = "menuMorphHomeReach"
+    let menuMorphHomeDepth: String = "menuMorphHomeDepth"
+    let menuMorphHomeSurface: String = "menuMorphHomeSurface"
+    let menuMorphHomeLead: String = "menuMorphHomeLead"
+    let menuMorphHomeBlend: String = "menuMorphHomeBlend"
+    let menuSubmenuOpenResponse: String = "menuSubmenuOpenResponse"
+    let menuSubmenuOpenDamping: String = "menuSubmenuOpenDamping"
+    let menuSubmenuCloseResponse: String = "menuSubmenuCloseResponse"
+    let menuSubmenuCloseDamping: String = "menuSubmenuCloseDamping"
+    let menuSubmenuRecededOpacity: String = "menuSubmenuRecededOpacity"
+    let menuSubmenuRecedeScale: String = "menuSubmenuRecedeScale"
+    let menuSubmenuRecedeHold: String = "menuSubmenuRecedeHold"
+    let menuSubmenuDwell: String = "menuSubmenuDwell"
+    let menuSubmenuWiden: String = "menuSubmenuWiden"
+    let menuSubmenuRecedeInResponse: String = "menuSubmenuRecedeInResponse"
+    let menuSubmenuRecedeInDamping: String = "menuSubmenuRecedeInDamping"
+    let menuSubmenuRecedeOutResponse: String = "menuSubmenuRecedeOutResponse"
+    let menuSubmenuRecedeOutDamping: String = "menuSubmenuRecedeOutDamping"
+    let menuSubmenuShrinkResponse: String = "menuSubmenuShrinkResponse"
+    let menuSubmenuShrinkDamping: String = "menuSubmenuShrinkDamping"
+    let menuSubmenuRise: String = "menuSubmenuRise"
+    let menuSubmenuRiseLaunch: String = "menuSubmenuRiseLaunch"
+    let menuSubmenuHeaderCenter: String = "menuSubmenuHeaderCenter"
+    let menuSubmenuChevronTurn: String = "menuSubmenuChevronTurn"
+    let menuSubmenuCardAppear: String = "menuSubmenuCardAppear"
+    let menuSubmenuCardAppearSpan: String = "menuSubmenuCardAppearSpan"
+    let menuSubmenuCardVanish: String = "menuSubmenuCardVanish"
+    let menuSubmenuItemsAppear: String = "menuSubmenuItemsAppear"
+    let menuSubmenuItemsAppearSpan: String = "menuSubmenuItemsAppearSpan"
+    let menuSubmenuItemsVanish: String = "menuSubmenuItemsVanish"
+    let menuSubmenuItemsVanishSpan: String = "menuSubmenuItemsVanishSpan"
 
-public function allMetricNames() -> [String] {
-    var names: [String] = []
-    names.append(metricToolbarHeight())
-    names.append(metricToolbarCompactHeight())
-    names.append(metricToolbarCompactBandHeight())
-    names.append(metricToolbarItemHeight())
-    names.append(metricToolbarItemWidth())
-    names.append(metricToolbarGroupSpacing())
-    names.append(metricToolbarGroupInset())
-    names.append(metricToolbarItemSpacing())
-    names.append(metricToolbarSpacerWidth())
-    names.append(metricToolbarEdgeInset())
-    names.append(metricToolbarCompactEdgeInset())
-    names.append(metricToolbarBackRemovalScale())
-    names.append(metricToolbarBackRemovalDuration())
-    names.append(metricToolbarSearchWidth())
-    names.append(metricToolbarSearchLeading())
-    names.append(metricToolbarSearchTrailing())
-    names.append(metricToolbarSearchSpacing())
-    names.append(metricToolbarItemLabelInset())
-    names.append(metricToolbarSymbolSize())
-    names.append(metricToolbarSymbolWeight())
-    names.append(metricWindowCornerRadius())
-    names.append(metricWindowControlsLeading())
-    names.append(metricWindowControlDiameter())
-    names.append(metricWindowControlSpacing())
-    names.append(metricWindowControlsTrailing())
-    names.append(metricSidebarHeaderHeight())
-    names.append(metricSidebarHeaderInset())
-    names.append(metricSidebarHeaderTopInset())
-    names.append(metricSidebarRowHeight())
-    names.append(metricSidebarRowInset())
-    names.append(metricSidebarSelectionInset())
-    names.append(metricSidebarSelectionRadius())
-    names.append(metricSidebarIconColumn())
-    names.append(metricSidebarTitleSpacing())
-    names.append(metricSidebarSymbolSize())
-    names.append(metricSidebarToggleResponse())
-    names.append(metricSidebarToggleDamping())
-    names.append(metricSidebarGlassBleed())
-    names.append(metricSidebarShadowRadius())
-    names.append(metricListReadableWidth())
-    names.append(metricListSectionSpacing())
-    names.append(metricListTopInset())
-    names.append(metricListCornerRadius())
-    names.append(metricListRowHeight())
-    names.append(metricListRowInset())
-    names.append(metricListSeparatorThickness())
-    names.append(metricListAccessorySpacing())
-    names.append(metricListHeaderPadding())
-    names.append(metricListFooterTopInset())
-    names.append(metricListFooterBottomInset())
-    names.append(metricLargeTitleTopInset())
-    names.append(metricLargeTitleBottomInset())
-    names.append(metricLargeTitleFadeDuration())
-    names.append(metricLargeTitleInlineTravel())
-    names.append(metricLargeTitleInlineBlur())
-    names.append(metricScrollEdgeBlurRadius())
-    names.append(metricScrollEdgeBorderWidth())
-    names.append(metricNavigationPageCornerRadius())
-    names.append(metricNavigationCoveredDim())
-    names.append(metricNavigationCoveredParallax())
-    names.append(metricNavigationPushResponse())
-    names.append(metricNavigationPushDamping())
-    names.append(metricNavigationSwipeCommitFraction())
-    names.append(metricNavigationSwipeCommitVelocity())
-    names.append(metricNavigationSwipeSlop())
-    names.append(metricScrollIndicatorThickness())
-    names.append(metricScrollIndicatorExpandedThickness())
-    names.append(metricScrollIndicatorMinimumLength())
-    names.append(metricScrollIndicatorOverscrolledLength())
-    names.append(metricScrollIndicatorHitOutsetAcross())
-    names.append(metricScrollIndicatorHitOutsetAlong())
-    names.append(metricScrollIndicatorHideDelay())
-    names.append(metricScrollIndicatorFadeDuration())
-    names.append(metricScrollIndicatorExpandDuration())
-    names.append(metricScrollIndicatorCollapseDuration())
-    names.append(metricMenuMorphGrowthResponse())
-    names.append(metricMenuMorphGrowthDamping())
-    names.append(metricMenuMorphHeightResponse())
-    names.append(metricMenuMorphHeightDamping())
-    names.append(metricMenuMorphDropResponse())
-    names.append(metricMenuMorphDropDamping())
-    names.append(metricMenuMorphDropLaunch())
-    names.append(metricMenuMorphCloseResponse())
-    names.append(metricMenuMorphCloseDamping())
-    names.append(metricMenuMorphFlightResponse())
-    names.append(metricMenuMorphFlightDamping())
-    names.append(metricMenuMorphCornerResponse())
-    names.append(metricMenuMorphCloseCornerResponse())
-    names.append(metricMenuMorphCloseDuration())
-    names.append(metricMenuMorphRoundness())
-    names.append(metricMenuMorphContentOpen())
-    names.append(metricMenuMorphContentClose())
-    names.append(metricMenuMorphContentZoom())
-    names.append(metricMenuMorphContentBlur())
-    names.append(metricMenuMorphGlyphGone())
-    names.append(metricMenuMorphGlyphReturn())
-    names.append(metricMenuMorphGlyphBack())
-    names.append(metricMenuMorphGlyphBlur())
-    names.append(metricMenuMorphHomeReach())
-    names.append(metricMenuMorphHomeDepth())
-    names.append(metricMenuMorphHomeSurface())
-    names.append(metricMenuMorphHomeLead())
-    names.append(metricMenuMorphHomeBlend())
-    names.append(metricMenuSubmenuOpenResponse())
-    names.append(metricMenuSubmenuOpenDamping())
-    names.append(metricMenuSubmenuCloseResponse())
-    names.append(metricMenuSubmenuCloseDamping())
-    names.append(metricMenuSubmenuRecededOpacity())
-    names.append(metricMenuSubmenuRecedeScale())
-    names.append(metricMenuSubmenuRecedeHold())
-    names.append(metricMenuSubmenuDwell())
-    names.append(metricMenuSubmenuWiden())
-    names.append(metricMenuSubmenuRecedeInResponse())
-    names.append(metricMenuSubmenuRecedeInDamping())
-    names.append(metricMenuSubmenuRecedeOutResponse())
-    names.append(metricMenuSubmenuRecedeOutDamping())
-    names.append(metricMenuSubmenuShrinkResponse())
-    names.append(metricMenuSubmenuShrinkDamping())
-    names.append(metricMenuSubmenuRise())
-    names.append(metricMenuSubmenuRiseLaunch())
-    names.append(metricMenuSubmenuHeaderCenter())
-    names.append(metricMenuSubmenuChevronTurn())
-    names.append(metricMenuSubmenuCardAppear())
-    names.append(metricMenuSubmenuCardAppearSpan())
-    names.append(metricMenuSubmenuCardVanish())
-    names.append(metricMenuSubmenuItemsAppear())
-    names.append(metricMenuSubmenuItemsAppearSpan())
-    names.append(metricMenuSubmenuItemsVanish())
-    names.append(metricMenuSubmenuItemsVanishSpan())
-    names.append(metricMenuAnchorSpacing())
-    names.append(metricTabBarHeight())
-    names.append(metricTabBarInset())
-    names.append(metricTabHeight())
-    names.append(metricTabLabelInset())
-    names.append(metricTabSymbolInset())
-    names.append(metricSwitchWidth())
-    names.append(metricSwitchHeight())
-    names.append(metricSwitchKnobWidth())
-    names.append(metricSwitchKnobInset())
-    names.append(metricSliderHeight())
-    names.append(metricSliderTrackHeight())
-    names.append(metricSliderKnobWidth())
-    names.append(metricSliderKnobHeight())
-    names.append(metricSliderKnobInset())
-    names.append(metricSliderHeldKnobWidth())
-    names.append(metricSliderHeldKnobHeight())
-    names.append(metricProgressTrackHeight())
-    names.append(metricCaretWidth())
-    names.append(metricCaretHeight())
-    names.append(metricDisabledControlOpacity())
-    names.append(metricKnobShadowRadius())
-    names.append(metricKnobShadowOffset())
-    names.append(metricKnobContactShadowRadius())
-    names.append(metricKnobContactShadowOffset())
-    names.append(metricMenuShadowRadius())
-    names.append(metricMenuShadowOffset())
-    return names
+    // --- Menus -------------------------------------------------------------------
+    //
+    // How far under the control that opened it a menu's card hangs.
+    let menuAnchorSpacing: String = "menuAnchorSpacing"
+
+    // --- The tab bar -------------------------------------------------------------
+    //
+    // The bar a `TabView` floats in the toolbar's row: its height and what it
+    // holds its tabs off its glass by, then a tab's height and what a tab holds its
+    // title, or a symbol tab its symbol, off its own ends.
+    let tabBarHeight: String = "tabBarHeight"
+    let tabBarInset: String = "tabBarInset"
+    let tabHeight: String = "tabHeight"
+    let tabLabelInset: String = "tabLabelInset"
+    let tabSymbolInset: String = "tabSymbolInset"
+
+    // --- The phone's tab bar -------------------------------------------------------
+    //
+    // The bar a `TabView` floats at the foot of a phone's screen: how far its
+    // tabs keep off the screen's sides at most and off its bottom, and how far
+    // its glass reaches past them. Then a tab: its width with the selection
+    // capsule that reaches past its ends, its height, and how far each tab
+    // overlaps the next; how far its symbol stands off its top and its label off
+    // its ends; its symbol's size and line, its title's size and line, and the
+    // gap between the two.
+    let phoneTabBarEdgeInset: String = "phoneTabBarEdgeInset"
+    let phoneTabBarBottomInset: String = "phoneTabBarBottomInset"
+    let phoneTabBarGlassOutset: String = "phoneTabBarGlassOutset"
+    let phoneTabWidth: String = "phoneTabWidth"
+    let phoneTabHeight: String = "phoneTabHeight"
+    let phoneTabOverlap: String = "phoneTabOverlap"
+    let phoneTabTopInset: String = "phoneTabTopInset"
+    let phoneTabSideInset: String = "phoneTabSideInset"
+    let phoneTabSymbolSize: String = "phoneTabSymbolSize"
+    let phoneTabSymbolLine: String = "phoneTabSymbolLine"
+    let phoneTabTitleSize: String = "phoneTabTitleSize"
+    let phoneTabTitleLine: String = "phoneTabTitleLine"
+    let phoneTabTitleSpacing: String = "phoneTabTitleSpacing"
+
+    // --- Control sizes -------------------------------------------------------------
+    //
+    // An inline control at each size: how tall it stands, how far its label is
+    // held off its ends, the size its label is set at, and how tall a text
+    // field of that size stands. A field's text is held off its ends by one
+    // inset at every size.
+    let controlMiniHeight: String = "controlMiniHeight"
+    let controlMiniLabelInset: String = "controlMiniLabelInset"
+    let controlMiniFontSize: String = "controlMiniFontSize"
+    let controlMiniFieldHeight: String = "controlMiniFieldHeight"
+    let controlSmallHeight: String = "controlSmallHeight"
+    let controlSmallLabelInset: String = "controlSmallLabelInset"
+    let controlSmallFontSize: String = "controlSmallFontSize"
+    let controlSmallFieldHeight: String = "controlSmallFieldHeight"
+    let controlRegularHeight: String = "controlRegularHeight"
+    let controlRegularLabelInset: String = "controlRegularLabelInset"
+    let controlRegularFontSize: String = "controlRegularFontSize"
+    let controlRegularFieldHeight: String = "controlRegularFieldHeight"
+    let controlLargeHeight: String = "controlLargeHeight"
+    let controlLargeLabelInset: String = "controlLargeLabelInset"
+    let controlLargeFontSize: String = "controlLargeFontSize"
+    let controlLargeFieldHeight: String = "controlLargeFieldHeight"
+    let fieldLabelInset: String = "fieldLabelInset"
+
+
+    // How round a control's bezel is at each control size: a button's or a
+    // pop-up's, and a text field's.
+    let controlMiniCornerRadius: String = "controlMiniCornerRadius"
+    let controlSmallCornerRadius: String = "controlSmallCornerRadius"
+    let controlRegularCornerRadius: String = "controlRegularCornerRadius"
+    let controlLargeCornerRadius: String = "controlLargeCornerRadius"
+    let controlMiniFieldCornerRadius: String = "controlMiniFieldCornerRadius"
+    let controlSmallFieldCornerRadius: String = "controlSmallFieldCornerRadius"
+    let controlRegularFieldCornerRadius: String = "controlRegularFieldCornerRadius"
+    let controlLargeFieldCornerRadius: String = "controlLargeFieldCornerRadius"
+
+    // A pop-up button at each control size: how tall it stands, how far its
+    // title is held off its leading end, the gap between the title and its
+    // chevron, the size the chevron is drawn at, and how far the chevron is
+    // held off the trailing end.
+    let popUpMiniHeight: String = "popUpMiniHeight"
+    let popUpMiniLeadingInset: String = "popUpMiniLeadingInset"
+    let popUpMiniChevronSpacing: String = "popUpMiniChevronSpacing"
+    let popUpMiniChevronSize: String = "popUpMiniChevronSize"
+    let popUpMiniTrailingInset: String = "popUpMiniTrailingInset"
+    let popUpSmallHeight: String = "popUpSmallHeight"
+    let popUpSmallLeadingInset: String = "popUpSmallLeadingInset"
+    let popUpSmallChevronSpacing: String = "popUpSmallChevronSpacing"
+    let popUpSmallChevronSize: String = "popUpSmallChevronSize"
+    let popUpSmallTrailingInset: String = "popUpSmallTrailingInset"
+    let popUpRegularHeight: String = "popUpRegularHeight"
+    let popUpRegularLeadingInset: String = "popUpRegularLeadingInset"
+    let popUpRegularChevronSpacing: String = "popUpRegularChevronSpacing"
+    let popUpRegularChevronSize: String = "popUpRegularChevronSize"
+    let popUpRegularTrailingInset: String = "popUpRegularTrailingInset"
+    let popUpLargeHeight: String = "popUpLargeHeight"
+    let popUpLargeLeadingInset: String = "popUpLargeLeadingInset"
+    let popUpLargeChevronSpacing: String = "popUpLargeChevronSpacing"
+    let popUpLargeChevronSize: String = "popUpLargeChevronSize"
+    let popUpLargeTrailingInset: String = "popUpLargeTrailingInset"
+
+    // A checkbox at each control size: the side of its box, how round the box
+    // is, the size its checkmark is drawn at, and the gap before its title.
+    let checkboxMiniSize: String = "checkboxMiniSize"
+    let checkboxMiniCornerRadius: String = "checkboxMiniCornerRadius"
+    let checkboxMiniCheckmarkSize: String = "checkboxMiniCheckmarkSize"
+    let checkboxMiniSpacing: String = "checkboxMiniSpacing"
+    let checkboxSmallSize: String = "checkboxSmallSize"
+    let checkboxSmallCornerRadius: String = "checkboxSmallCornerRadius"
+    let checkboxSmallCheckmarkSize: String = "checkboxSmallCheckmarkSize"
+    let checkboxSmallSpacing: String = "checkboxSmallSpacing"
+    let checkboxRegularSize: String = "checkboxRegularSize"
+    let checkboxRegularCornerRadius: String = "checkboxRegularCornerRadius"
+    let checkboxRegularCheckmarkSize: String = "checkboxRegularCheckmarkSize"
+    let checkboxRegularSpacing: String = "checkboxRegularSpacing"
+    let checkboxLargeSize: String = "checkboxLargeSize"
+    let checkboxLargeCornerRadius: String = "checkboxLargeCornerRadius"
+    let checkboxLargeCheckmarkSize: String = "checkboxLargeCheckmarkSize"
+    let checkboxLargeSpacing: String = "checkboxLargeSpacing"
+
+    // --- Switches, sliders and progress bars ---------------------------------------
+    //
+    // A switch at each control size: its capsule track and the knob held inside
+    // it, off its ends. A slider at each control size: its height, the track
+    // running through its middle, the knob riding it, and how far in from
+    // either end of the track the knob's center stops. A progress bar's track.
+    let switchMiniWidth: String = "switchMiniWidth"
+    let switchMiniHeight: String = "switchMiniHeight"
+    let switchMiniKnobWidth: String = "switchMiniKnobWidth"
+    let switchMiniKnobInset: String = "switchMiniKnobInset"
+    let switchSmallWidth: String = "switchSmallWidth"
+    let switchSmallHeight: String = "switchSmallHeight"
+    let switchSmallKnobWidth: String = "switchSmallKnobWidth"
+    let switchSmallKnobInset: String = "switchSmallKnobInset"
+    let switchRegularWidth: String = "switchRegularWidth"
+    let switchRegularHeight: String = "switchRegularHeight"
+    let switchRegularKnobWidth: String = "switchRegularKnobWidth"
+    let switchRegularKnobInset: String = "switchRegularKnobInset"
+    let switchLargeWidth: String = "switchLargeWidth"
+    let switchLargeHeight: String = "switchLargeHeight"
+    let switchLargeKnobWidth: String = "switchLargeKnobWidth"
+    let switchLargeKnobInset: String = "switchLargeKnobInset"
+    let sliderMiniHeight: String = "sliderMiniHeight"
+    let sliderMiniTrackHeight: String = "sliderMiniTrackHeight"
+    let sliderMiniKnobWidth: String = "sliderMiniKnobWidth"
+    let sliderMiniKnobHeight: String = "sliderMiniKnobHeight"
+    let sliderMiniKnobInset: String = "sliderMiniKnobInset"
+    let sliderSmallHeight: String = "sliderSmallHeight"
+    let sliderSmallTrackHeight: String = "sliderSmallTrackHeight"
+    let sliderSmallKnobWidth: String = "sliderSmallKnobWidth"
+    let sliderSmallKnobHeight: String = "sliderSmallKnobHeight"
+    let sliderSmallKnobInset: String = "sliderSmallKnobInset"
+    let sliderRegularHeight: String = "sliderRegularHeight"
+    let sliderRegularTrackHeight: String = "sliderRegularTrackHeight"
+    let sliderRegularKnobWidth: String = "sliderRegularKnobWidth"
+    let sliderRegularKnobHeight: String = "sliderRegularKnobHeight"
+    let sliderRegularKnobInset: String = "sliderRegularKnobInset"
+    let sliderLargeHeight: String = "sliderLargeHeight"
+    let sliderLargeTrackHeight: String = "sliderLargeTrackHeight"
+    let sliderLargeKnobWidth: String = "sliderLargeKnobWidth"
+    let sliderLargeKnobHeight: String = "sliderLargeKnobHeight"
+    let sliderLargeKnobInset: String = "sliderLargeKnobInset"
+    let sliderHeldKnobWidth: String = "sliderHeldKnobWidth"
+    let sliderHeldKnobHeight: String = "sliderHeldKnobHeight"
+    let progressTrackHeight: String = "progressTrackHeight"
+    // The height a progress bar stands, its track centered in it, and the
+    // width of the edge drawn around that track.
+    let progressHeight: String = "progressHeight"
+    let progressTrackBorderWidth: String = "progressTrackBorderWidth"
+    // The two shadows under a slider's knob: a soft one that falls away from it,
+    // and a tight one where it meets the track.
+    // The insertion point in a focused field.
+    let caretWidth: String = "caretWidth"
+    let caretHeight: String = "caretHeight"
+    // How opaque a switch or slider stands while it is disabled.
+    let disabledControlOpacity: String = "disabledControlOpacity"
+    let knobShadowRadius: String = "knobShadowRadius"
+    let knobShadowOffset: String = "knobShadowOffset"
+    let knobContactShadowRadius: String = "knobContactShadowRadius"
+    let knobContactShadowOffset: String = "knobContactShadowOffset"
+    // --- Menu geometry ------------------------------------------------------------
+    //
+    // A menu's card and what is in it, at the regular control size: its rows and
+    // the type in them, the card's width, air and corner, the rule between two
+    // groups, the glyph column and the chevron, and the actions across its top. A
+    // computer's menu is the platform's dense one; a touch screen's has rows a
+    // finger can land on.
+    let menuRowHeight: String = "menuRowHeight"
+    let menuLeadingInset: String = "menuLeadingInset"
+    let menuTrailingInset: String = "menuTrailingInset"
+    let menuLabelSize: String = "menuLabelSize"
+    let menuCardWidth: String = "menuCardWidth"
+    let menuCardPadding: String = "menuCardPadding"
+    let menuCardRadius: String = "menuCardRadius"
+    let menuDividerInset: String = "menuDividerInset"
+    let menuDividerVerticalInset: String = "menuDividerVerticalInset"
+    let menuActionPadding: String = "menuActionPadding"
+    let menuPillInset: String = "menuPillInset"
+    let menuChevronBox: String = "menuChevronBox"
+    let menuChevronSize: String = "menuChevronSize"
+    let menuIconColumn: String = "menuIconColumn"
+    let menuIconGap: String = "menuIconGap"
+    let menuActionIconSize: String = "menuActionIconSize"
+    let menuActionLabelSize: String = "menuActionLabelSize"
+    let menuActionSpacing: String = "menuActionSpacing"
+    let menuActionsTopInset: String = "menuActionsTopInset"
+    let menuActionsBottomInset: String = "menuActionsBottomInset"
+    let menuActionsInset: String = "menuActionsInset"
+    let menuActionsGap: String = "menuActionsGap"
+
+    // The shadow a menu's card casts: how far it blurs, and how far below the card it falls.
+    let menuShadowRadius: String = "menuShadowRadius"
+    let menuShadowOffset: String = "menuShadowOffset"
+
+    // --- Menu bar -----------------------------------------------------------------
+    //
+    // The row of menus across the top of a window: its height, the pill a title
+    // lights in when its menu is out and the room the title holds in it, the gap
+    // between two titles, and how far under its title a menu's card hangs.
+    let menuBarHeight: String = "menuBarHeight"
+    let menuBarTitleHeight: String = "menuBarTitleHeight"
+    let menuBarTitlePadding: String = "menuBarTitlePadding"
+    let menuBarTitleSpacing: String = "menuBarTitleSpacing"
+    let menuBarCardGap: String = "menuBarCardGap"
+
+    // --- Workspaces ---------------------------------------------------------------
+    //
+    // A workspace's panels: the gap between them; the room a tab holds its cross
+    // in by; how far a panel holds its strip off its edges; the band a divider is
+    // grabbed by; how wide each edge opens and how small it may be dragged before
+    // it folds away.
+    let workspaceGap: String = "workspaceGap"
+    let workspaceTabSpacing: String = "workspaceTabSpacing"
+    let workspaceStripInset: String = "workspaceStripInset"
+    let workspaceDividerThickness: String = "workspaceDividerThickness"
+    let workspaceLeadingWidth: String = "workspaceLeadingWidth"
+    let workspaceTrailingWidth: String = "workspaceTrailingWidth"
+    let workspaceBottomHeight: String = "workspaceBottomHeight"
+    let workspaceMinimumWidth: String = "workspaceMinimumWidth"
+    let workspaceMinimumHeight: String = "workspaceMinimumHeight"
+
+    let all: [String] = [MetricName.toolbarHeight, MetricName.toolbarCompactHeight, MetricName.toolbarCompactBandHeight, MetricName.toolbarItemHeight, MetricName.toolbarItemWidth, MetricName.toolbarGroupSpacing, MetricName.toolbarGroupInset, MetricName.toolbarItemSpacing, MetricName.toolbarSpacerWidth, MetricName.toolbarEdgeInset, MetricName.toolbarCompactEdgeInset, MetricName.toolbarBackRemovalScale, MetricName.toolbarBackRemovalDuration, MetricName.toolbarSearchWidth, MetricName.toolbarSearchLeading, MetricName.toolbarSearchTrailing, MetricName.toolbarSearchSpacing, MetricName.toolbarItemLabelInset, MetricName.toolbarSymbolSize, MetricName.toolbarSymbolWeight, MetricName.windowCornerRadius, MetricName.windowControlsLeading, MetricName.windowControlDiameter, MetricName.windowControlSpacing, MetricName.windowControlsTrailing, MetricName.sidebarHeaderHeight, MetricName.sidebarHeaderInset, MetricName.sidebarHeaderTopInset, MetricName.sidebarWidth, MetricName.sidebarExpandedWidth, MetricName.sidebarRowHeight, MetricName.sidebarRowInset, MetricName.sidebarSelectionInset, MetricName.sidebarSelectionRadius, MetricName.sidebarIconColumn, MetricName.sidebarTitleSpacing, MetricName.sidebarSymbolSize, MetricName.sidebarToggleResponse, MetricName.sidebarToggleDamping, MetricName.sidebarGlassBleed, MetricName.sidebarShadowRadius, MetricName.listReadableWidth, MetricName.listSectionSpacing, MetricName.listLabeledSectionSpacing, MetricName.listTopInset, MetricName.listCornerRadius, MetricName.listRowHeight, MetricName.listRowInset, MetricName.listRowVerticalInset, MetricName.listSeparatorThickness, MetricName.listAccessorySpacing, MetricName.listValueColumnShare, MetricName.listHeaderTopInset, MetricName.listHeaderBottomInset, MetricName.listFooterTopInset, MetricName.listFooterBottomInset, MetricName.listIndentation, MetricName.largeTitleTopInset, MetricName.largeTitleBottomInset, MetricName.largeTitleFadeDuration, MetricName.largeTitleInlineTravel, MetricName.largeTitleInlineBlur, MetricName.scrollEdgeBlurRadius, MetricName.scrollEdgeBorderWidth, MetricName.navigationPageCornerRadius, MetricName.navigationCoveredDim, MetricName.navigationCoveredParallax, MetricName.navigationPushResponse, MetricName.navigationPushDamping, MetricName.navigationSwipeCommitFraction, MetricName.navigationSwipeCommitVelocity, MetricName.navigationSwipeSlop, MetricName.scrollIndicatorThickness, MetricName.scrollIndicatorExpandedThickness, MetricName.scrollIndicatorMinimumLength, MetricName.scrollIndicatorOverscrolledLength, MetricName.scrollIndicatorHitOutsetAcross, MetricName.scrollIndicatorHitOutsetAlong, MetricName.scrollIndicatorHideDelay, MetricName.scrollIndicatorFadeDuration, MetricName.scrollIndicatorExpandDuration, MetricName.scrollIndicatorCollapseDuration, MetricName.menuMorphGrowthResponse, MetricName.menuMorphGrowthDamping, MetricName.menuMorphHeightResponse, MetricName.menuMorphHeightDamping, MetricName.menuMorphDropResponse, MetricName.menuMorphDropDamping, MetricName.menuMorphDropLaunch, MetricName.menuMorphCloseResponse, MetricName.menuMorphCloseDamping, MetricName.menuMorphFlightResponse, MetricName.menuMorphFlightDamping, MetricName.menuMorphCornerResponse, MetricName.menuMorphCloseCornerResponse, MetricName.menuMorphCloseDuration, MetricName.menuMorphRoundness, MetricName.menuMorphContentOpen, MetricName.menuMorphContentClose, MetricName.menuMorphContentZoom, MetricName.menuMorphContentBlur, MetricName.menuMorphGlyphGone, MetricName.menuMorphGlyphReturn, MetricName.menuMorphGlyphBack, MetricName.menuMorphGlyphBlur, MetricName.menuMorphHomeReach, MetricName.menuMorphHomeDepth, MetricName.menuMorphHomeSurface, MetricName.menuMorphHomeLead, MetricName.menuMorphHomeBlend, MetricName.menuSubmenuOpenResponse, MetricName.menuSubmenuOpenDamping, MetricName.menuSubmenuCloseResponse, MetricName.menuSubmenuCloseDamping, MetricName.menuSubmenuRecededOpacity, MetricName.menuSubmenuRecedeScale, MetricName.menuSubmenuRecedeHold, MetricName.menuSubmenuDwell, MetricName.menuSubmenuWiden, MetricName.menuSubmenuRecedeInResponse, MetricName.menuSubmenuRecedeInDamping, MetricName.menuSubmenuRecedeOutResponse, MetricName.menuSubmenuRecedeOutDamping, MetricName.menuSubmenuShrinkResponse, MetricName.menuSubmenuShrinkDamping, MetricName.menuSubmenuRise, MetricName.menuSubmenuRiseLaunch, MetricName.menuSubmenuHeaderCenter, MetricName.menuSubmenuChevronTurn, MetricName.menuSubmenuCardAppear, MetricName.menuSubmenuCardAppearSpan, MetricName.menuSubmenuCardVanish, MetricName.menuSubmenuItemsAppear, MetricName.menuSubmenuItemsAppearSpan, MetricName.menuSubmenuItemsVanish, MetricName.menuSubmenuItemsVanishSpan, MetricName.menuAnchorSpacing, MetricName.tabBarHeight, MetricName.tabBarInset, MetricName.tabHeight, MetricName.tabLabelInset, MetricName.tabSymbolInset, MetricName.phoneTabBarEdgeInset, MetricName.phoneTabBarBottomInset, MetricName.phoneTabBarGlassOutset, MetricName.phoneTabWidth, MetricName.phoneTabHeight, MetricName.phoneTabOverlap, MetricName.phoneTabTopInset, MetricName.phoneTabSideInset, MetricName.phoneTabSymbolSize, MetricName.phoneTabSymbolLine, MetricName.phoneTabTitleSize, MetricName.phoneTabTitleLine, MetricName.phoneTabTitleSpacing, MetricName.controlMiniHeight, MetricName.controlMiniLabelInset, MetricName.controlMiniFontSize, MetricName.controlMiniFieldHeight, MetricName.controlSmallHeight, MetricName.controlSmallLabelInset, MetricName.controlSmallFontSize, MetricName.controlSmallFieldHeight, MetricName.controlRegularHeight, MetricName.controlRegularLabelInset, MetricName.controlRegularFontSize, MetricName.controlRegularFieldHeight, MetricName.controlLargeHeight, MetricName.controlLargeLabelInset, MetricName.controlLargeFontSize, MetricName.controlLargeFieldHeight, MetricName.fieldLabelInset, MetricName.controlMiniCornerRadius, MetricName.controlSmallCornerRadius, MetricName.controlRegularCornerRadius, MetricName.controlLargeCornerRadius, MetricName.controlMiniFieldCornerRadius, MetricName.controlSmallFieldCornerRadius, MetricName.controlRegularFieldCornerRadius, MetricName.controlLargeFieldCornerRadius, MetricName.popUpMiniHeight, MetricName.popUpMiniLeadingInset, MetricName.popUpMiniChevronSpacing, MetricName.popUpMiniChevronSize, MetricName.popUpMiniTrailingInset, MetricName.popUpSmallHeight, MetricName.popUpSmallLeadingInset, MetricName.popUpSmallChevronSpacing, MetricName.popUpSmallChevronSize, MetricName.popUpSmallTrailingInset, MetricName.popUpRegularHeight, MetricName.popUpRegularLeadingInset, MetricName.popUpRegularChevronSpacing, MetricName.popUpRegularChevronSize, MetricName.popUpRegularTrailingInset, MetricName.popUpLargeHeight, MetricName.popUpLargeLeadingInset, MetricName.popUpLargeChevronSpacing, MetricName.popUpLargeChevronSize, MetricName.popUpLargeTrailingInset, MetricName.checkboxMiniSize, MetricName.checkboxMiniCornerRadius, MetricName.checkboxMiniCheckmarkSize, MetricName.checkboxMiniSpacing, MetricName.checkboxSmallSize, MetricName.checkboxSmallCornerRadius, MetricName.checkboxSmallCheckmarkSize, MetricName.checkboxSmallSpacing, MetricName.checkboxRegularSize, MetricName.checkboxRegularCornerRadius, MetricName.checkboxRegularCheckmarkSize, MetricName.checkboxRegularSpacing, MetricName.checkboxLargeSize, MetricName.checkboxLargeCornerRadius, MetricName.checkboxLargeCheckmarkSize, MetricName.checkboxLargeSpacing, MetricName.switchMiniWidth, MetricName.switchMiniHeight, MetricName.switchMiniKnobWidth, MetricName.switchMiniKnobInset, MetricName.switchSmallWidth, MetricName.switchSmallHeight, MetricName.switchSmallKnobWidth, MetricName.switchSmallKnobInset, MetricName.switchRegularWidth, MetricName.switchRegularHeight, MetricName.switchRegularKnobWidth, MetricName.switchRegularKnobInset, MetricName.switchLargeWidth, MetricName.switchLargeHeight, MetricName.switchLargeKnobWidth, MetricName.switchLargeKnobInset, MetricName.sliderMiniHeight, MetricName.sliderMiniTrackHeight, MetricName.sliderMiniKnobWidth, MetricName.sliderMiniKnobHeight, MetricName.sliderMiniKnobInset, MetricName.sliderSmallHeight, MetricName.sliderSmallTrackHeight, MetricName.sliderSmallKnobWidth, MetricName.sliderSmallKnobHeight, MetricName.sliderSmallKnobInset, MetricName.sliderRegularHeight, MetricName.sliderRegularTrackHeight, MetricName.sliderRegularKnobWidth, MetricName.sliderRegularKnobHeight, MetricName.sliderRegularKnobInset, MetricName.sliderLargeHeight, MetricName.sliderLargeTrackHeight, MetricName.sliderLargeKnobWidth, MetricName.sliderLargeKnobHeight, MetricName.sliderLargeKnobInset, MetricName.sliderHeldKnobWidth, MetricName.sliderHeldKnobHeight, MetricName.progressTrackHeight, MetricName.progressHeight, MetricName.progressTrackBorderWidth, MetricName.caretWidth, MetricName.caretHeight, MetricName.disabledControlOpacity, MetricName.knobShadowRadius, MetricName.knobShadowOffset, MetricName.knobContactShadowRadius, MetricName.knobContactShadowOffset, MetricName.menuRowHeight, MetricName.menuLeadingInset, MetricName.menuTrailingInset, MetricName.menuLabelSize, MetricName.menuCardWidth, MetricName.menuCardPadding, MetricName.menuCardRadius, MetricName.menuDividerInset, MetricName.menuDividerVerticalInset, MetricName.menuActionPadding, MetricName.menuPillInset, MetricName.menuChevronBox, MetricName.menuChevronSize, MetricName.menuIconColumn, MetricName.menuIconGap, MetricName.menuActionIconSize, MetricName.menuActionLabelSize, MetricName.menuActionSpacing, MetricName.menuActionsTopInset, MetricName.menuActionsBottomInset, MetricName.menuActionsInset, MetricName.menuActionsGap, MetricName.menuShadowRadius, MetricName.menuShadowOffset, MetricName.menuBarHeight, MetricName.menuBarTitleHeight, MetricName.menuBarTitlePadding, MetricName.menuBarTitleSpacing, MetricName.menuBarCardGap, MetricName.workspaceGap, MetricName.workspaceTabSpacing, MetricName.workspaceDividerThickness, MetricName.workspaceLeadingWidth, MetricName.workspaceTrailingWidth, MetricName.workspaceBottomHeight, MetricName.workspaceMinimumWidth, MetricName.workspaceMinimumHeight, MetricName.workspaceStripInset]
 }

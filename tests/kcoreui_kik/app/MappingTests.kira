@@ -12,13 +12,15 @@ import KCoreUI
 // The named resource kinds sit on their assigned wire values.
 construct KcuResourceKindWireValuesAreFixed() extends Test {
     test {
-        return resourceKindValue(.Color) == 1
-            && resourceKindValue(.Gradient) == 2
-            && resourceKindValue(.Material) == 3
-            && resourceKindValue(.Effect) == 4
-            && resourceKindValue(.Typography) == 5
-            && resourceKindValue(.Custom(resourceKindCustomBase())) == resourceKindCustomBase()
-            && resourceKindValue(.Unknown(9)) == 9
+        return ResourceKind.Color.value() == 1
+            && ResourceKind.Gradient.value() == 2
+            && ResourceKind.Material.value() == 3
+            && ResourceKind.Effect.value() == 4
+            && ResourceKind.Typography.value() == 5
+            && (
+                ResourceKind.Custom(ResourceKindRange.customBase)
+            ).value() == ResourceKindRange.customBase
+            && (ResourceKind.Unknown(9)).value() == 9
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok(true)
@@ -30,17 +32,19 @@ construct KcuResourceKindWireValuesAreFixed() extends Test {
 // and the custom range starts exactly at the base the format reserves.
 construct KcuResourceKindMappingIsTotal() extends Test {
     test {
-        var value = 0
-        while value < 1100 {
-            if resourceKindValue(resourceKindFromValue(value)) != value { return false }
-            value = value + 1
+        for value in 0..1100 {
+            if (resourceKindFromValue(value)).value() != value { return false }
         }
-        return resourceKindsEqual(resourceKindFromValue(3), .Material)
-            && resourceKindsEqual(resourceKindFromValue(resourceKindCustomBase()), .Custom(resourceKindCustomBase()))
-            && resourceKindsEqual(resourceKindFromValue(resourceKindCustomBase() - 1), .Unknown(resourceKindCustomBase() - 1))
-            && resourceKindsEqual(resourceKindFromValue(0), .Unknown(0))
-            && !resourceKindIsKnown(resourceKindFromValue(0))
-            && resourceKindIsKnown(.Typography)
+        return (resourceKindFromValue(3)).equals(.Material)
+            && (resourceKindFromValue(ResourceKindRange.customBase)).equals(
+                .Custom(ResourceKindRange.customBase)
+            )
+            && (resourceKindFromValue(ResourceKindRange.customBase - 1)).equals(
+                .Unknown(ResourceKindRange.customBase - 1)
+            )
+            && (resourceKindFromValue(0)).equals(.Unknown(0))
+            && !(resourceKindFromValue(0)).isKnown()
+            && ResourceKind.Typography.isKnown()
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok(true)
@@ -52,20 +56,20 @@ construct KcuResourceKindMappingIsTotal() extends Test {
 // priority order, and the custom range starts at the reserved base.
 construct KcuTraitIdentifierWireValuesAreFixed() extends Test {
     test {
-        return traitIdentifierValue(.Appearance) == 0
-            && traitIdentifierValue(.Contrast) == 1
-            && traitIdentifierValue(.Gamut) == 2
-            && traitIdentifierValue(.Scale) == 3
-            && traitIdentifierValue(.Idiom) == 4
-            && traitIdentifierValue(.Platform) == 5
-            && traitIdentifierValue(.LayoutDirection) == 6
-            && traitIdentifierValue(.HorizontalSizeClass) == 7
-            && traitIdentifierValue(.VerticalSizeClass) == 8
-            && traitIdentifierValue(.ReduceTransparency) == 9
-            && traitIdentifierValue(.ReduceMotion) == 10
-            && traitIdentifierValue(.InvertColors) == 11
-            && traitIdentifierValue(.DifferentiateWithoutColor) == 12
-            && traitIdentifierCustomBase() == 64
+        return TraitIdentifier.Appearance.value() == 0
+            && TraitIdentifier.Contrast.value() == 1
+            && TraitIdentifier.Gamut.value() == 2
+            && TraitIdentifier.Scale.value() == 3
+            && TraitIdentifier.Idiom.value() == 4
+            && TraitIdentifier.Platform.value() == 5
+            && TraitIdentifier.LayoutDirection.value() == 6
+            && TraitIdentifier.HorizontalSizeClass.value() == 7
+            && TraitIdentifier.VerticalSizeClass.value() == 8
+            && TraitIdentifier.ReduceTransparency.value() == 9
+            && TraitIdentifier.ReduceMotion.value() == 10
+            && TraitIdentifier.InvertColors.value() == 11
+            && TraitIdentifier.DifferentiateWithoutColor.value() == 12
+            && TraitIdentifierRange.customBase == 64
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok(true)
@@ -77,15 +81,13 @@ construct KcuTraitIdentifierWireValuesAreFixed() extends Test {
 // range, the reserved gap and the custom range.
 construct KcuTraitIdentifierMappingIsTotal() extends Test {
     test {
-        var value = 0
-        while value < 200 {
-            if traitIdentifierValue(traitIdentifierFromValue(value)) != value { return false }
-            value = value + 1
+        for value in 0..200 {
+            if (traitIdentifierFromValue(value)).value() != value { return false }
         }
-        return traitIdentifiersEqual(traitIdentifierFromValue(12), .DifferentiateWithoutColor)
-            && traitIdentifiersEqual(traitIdentifierFromValue(13), .Unknown(13))
-            && traitIdentifiersEqual(traitIdentifierFromValue(63), .Unknown(63))
-            && traitIdentifiersEqual(traitIdentifierFromValue(64), .Custom(64))
+        return (traitIdentifierFromValue(12)).equals(.DifferentiateWithoutColor)
+            && (traitIdentifierFromValue(13)).equals(.Unknown(13))
+            && (traitIdentifierFromValue(63)).equals(.Unknown(63))
+            && (traitIdentifierFromValue(64)).equals(.Custom(64))
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok(true)
@@ -97,20 +99,18 @@ construct KcuTraitIdentifierMappingIsTotal() extends Test {
 // value survives the round trip as itself.
 construct KcuBlendModeMappingIsTotal() extends Test {
     test {
-        var value = 0
-        while value < 256 {
-            if blendModeValue(blendModeFromValue(value)) != value { return false }
-            value = value + 1
+        for value in 0..256 {
+            if (blendModeFromValue(value)).value() != value { return false }
         }
-        return blendModeValue(.Normal) == 0
-            && blendModeValue(.LinearDodge) == 1
-            && blendModeValue(.ColorDodge) == 2
-            && blendModeValue(.HardLight) == 3
-            && blendModeValue(.Overlay) == 4
-            && blendModeValue(.Lighten) == 5
-            && blendModeValue(.Darken) == 6
-            && blendModeValue(.Multiply) == 7
-            && blendModeValue(.Luminosity) == 8
+        return BlendMode.Normal.value() == 0
+            && BlendMode.LinearDodge.value() == 1
+            && BlendMode.ColorDodge.value() == 2
+            && BlendMode.HardLight.value() == 3
+            && BlendMode.Overlay.value() == 4
+            && BlendMode.Lighten.value() == 5
+            && BlendMode.Darken.value() == 6
+            && BlendMode.Multiply.value() == 7
+            && BlendMode.Luminosity.value() == 8
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok(true)

@@ -7,12 +7,9 @@ import Foundation
 // which only refracts. Each is one recipe across every size, so the name says
 // which glass and the surface's size says how it looks.
 
-public function glassRegular() -> String { return "glassRegular" }
-public function glassClear() -> String { return "glassClear" }
+public namespace GlassName {
+    let regular: String = "glassRegular"
+    let clear: String = "glassClear"
 
-public function allGlassNames() -> [String] {
-    var names: [String] = []
-    names.append(glassRegular())
-    names.append(glassClear())
-    return names
+    let all: [String] = [GlassName.regular, GlassName.clear]
 }

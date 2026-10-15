@@ -5,7 +5,7 @@ import KCoreUI
 
 // Parsing answers a `Result`, and a case that wants the catalog rather than the
 // failure unwraps it here so the nine-armed handler is written once.
-function kcuParseOrEmpty(bytes: borrow [U8]) -> Catalog {
+function parseOrEmpty(bytes: borrow [U8]) -> Catalog {
     attempt {
         let catalog = try parseCatalog(bytes)
         return catalog
@@ -23,7 +23,7 @@ function kcuParseOrEmpty(bytes: borrow [U8]) -> Catalog {
 }
 
 // Whether a blob parses at all. The rejection cases ask only this.
-function kcuParses(bytes: borrow [U8]) -> Bool {
+function parses(bytes: borrow [U8]) -> Bool {
     attempt {
         let catalog = try parseCatalog(bytes)
         return catalog.majorVersion > 0
@@ -42,54 +42,52 @@ function kcuParses(bytes: borrow [U8]) -> Bool {
 
 // The failure a blob is refused with, as its text. A case that cares *why* a
 // blob was refused compares this.
-function kcuParseFailure(bytes: borrow [U8]) -> String {
+function parseFailure(bytes: borrow [U8]) -> String {
     attempt {
         let catalog = try parseCatalog(bytes)
         return "accepted " + String(catalog.resources.count)
     } handle {
-        NotKira { return catalogErrorText(CatalogError.NotKira) }
-        UnsupportedVersion { return catalogErrorText(CatalogError.UnsupportedVersion) }
-        TruncatedHeader { return catalogErrorText(CatalogError.TruncatedHeader) }
-        TruncatedTable { return catalogErrorText(CatalogError.TruncatedTable) }
-        OffsetOutOfRange { return catalogErrorText(CatalogError.OffsetOutOfRange) }
-        NamesUnsorted { return catalogErrorText(CatalogError.NamesUnsorted) }
-        ConstraintsUnsorted { return catalogErrorText(CatalogError.ConstraintsUnsorted) }
-        DuplicateRendition { return catalogErrorText(CatalogError.DuplicateRendition) }
-        ReservedTraitValue { return catalogErrorText(CatalogError.ReservedTraitValue) }
+        NotKira { return CatalogError.NotKira.text() }
+        UnsupportedVersion { return CatalogError.UnsupportedVersion.text() }
+        TruncatedHeader { return CatalogError.TruncatedHeader.text() }
+        TruncatedTable { return CatalogError.TruncatedTable.text() }
+        OffsetOutOfRange { return CatalogError.OffsetOutOfRange.text() }
+        NamesUnsorted { return CatalogError.NamesUnsorted.text() }
+        ConstraintsUnsorted { return CatalogError.ConstraintsUnsorted.text() }
+        DuplicateRendition { return CatalogError.DuplicateRendition.text() }
+        ReservedTraitValue { return CatalogError.ReservedTraitValue.text() }
     }
 }
 
-function kcuBytesEqual(left: borrow [U8], right: borrow [U8]) -> Bool {
+function bytesEqual(left: borrow [U8], right: borrow [U8]) -> Bool {
     if left.count != right.count {
         return false
     }
-    var index = 0
-    while index < left.count {
-        let a: Int = left[index]
-        let b: Int = right[index]
+    for index in 0..left.count {
+        let a: Number = left[index]
+        let b: Number = right[index]
         if a != b {
             return false
         }
-        index = index + 1
     }
     return true
 }
 
 // Writing a record, parsing it back and writing it again must reproduce the
 // first bytes exactly. Every format case ends up asking this.
-function kcuRoundTrips(record: borrow CatalogRecord) -> Bool {
-    let bytes = writeCatalogRecord(record)
-    let catalog = kcuParseOrEmpty(bytes)
+function roundTrips(record: borrow CatalogRecord) -> Bool {
+    let bytes = record.encoded()
+    let catalog = parseOrEmpty(bytes)
     if catalog.resources.count == 0 && record.resources.count > 0 {
         return false
     }
-    return kcuBytesEqual(bytes, writeCatalog(catalog))
+    return bytesEqual(bytes, catalog.encoded())
 }
 
 // A color written the way a case reads it: sRGB, which is what a design tool
 // quotes and what an environment reporting the sRGB gamut resolves back to.
-function kcuColor(r: Float, g: Float, b: Float, a: Float) -> Color {
-    return Color(r: r, g: g, b: b, a: a)
+function color(r: Number, g: Number, b: Number, a: Number) -> RGBAColor {
+    return RGBAColor(r: r, g: g, b: b, a: a)
 }
 
 // The same color as a catalog stores one.
@@ -98,8 +96,8 @@ function kcuColor(r: Float, g: Float, b: Float, a: Float) -> Color {
 // color and then expects it back goes through this, which is what makes
 // "author this, resolve this" true rather than accidentally true for the
 // primaries and false for everything between them.
-function kcuAuthored(color: borrow Color) -> [U8] {
-    return encodeColor(srgbToP3(color))
+function authored(color: borrow RGBAColor) -> [U8] {
+    return encodeColor(color.srgbToP3())
 }
 
 // How close two channels have to be to count as the same color.
@@ -113,46 +111,46 @@ function kcuAuthored(color: borrow Color) -> [U8] {
 // An eighth of an 8-bit step is the bar. That is 4.9e-4, seven times the worst
 // observed error and far below anything a display can show, so it catches a
 // wrong color without asserting that a gamut conversion is lossless.
-function kcuNear(left: Float, right: Float) -> Bool {
+function near(left: Number, right: Number) -> Bool {
     return abs(left - right) < 1.0 / 2048.0
 }
 
-function kcuColorsEqual(left: borrow Color, right: borrow Color) -> Bool {
-    return kcuNear(left.r, right.r) && kcuNear(left.g, right.g)
-        && kcuNear(left.b, right.b) && kcuNear(left.a, right.a)
+function colorsEqual(left: borrow RGBAColor, right: borrow RGBAColor) -> Bool {
+    return near(left.r, right.r) && near(left.g, right.g)
+        && near(left.b, right.b) && near(left.a, right.a)
 }
 
 // A color resource with one rendition per appearance.
-function kcuAdaptive(name: borrow String, light: borrow Color, dark: borrow Color) -> ResourceRecord {
+function adaptive(name: borrow String, light: borrow RGBAColor, dark: borrow RGBAColor) -> ResourceRecord {
     var resource = ResourceRecord()
     resource.name = name
     resource.kind = .Color
 
     var lightRendition = RenditionRecord()
-    lightRendition.constraints.append(whenAppearance(.Light))
-    lightRendition.payload = kcuAuthored(light)
+    lightRendition.constraints.append(Appearance.Light.constraint())
+    lightRendition.payload = authored(light)
     resource.renditions.append(lightRendition)
 
     var darkRendition = RenditionRecord()
-    darkRendition.constraints.append(whenAppearance(.Dark))
-    darkRendition.payload = kcuAuthored(dark)
+    darkRendition.constraints.append(Appearance.Dark.constraint())
+    darkRendition.payload = authored(dark)
     resource.renditions.append(darkRendition)
     return resource
 }
 
 // A color resource with a single unconstrained rendition.
-function kcuFlat(name: borrow String, value: borrow Color) -> ResourceRecord {
+function flat(name: borrow String, value: borrow RGBAColor) -> ResourceRecord {
     var resource = ResourceRecord()
     resource.name = name
     resource.kind = .Color
     var rendition = RenditionRecord()
-    rendition.payload = kcuAuthored(value)
+    rendition.payload = authored(value)
     resource.renditions.append(rendition)
     return resource
 }
 
 // A color resource that is a reference to another name.
-function kcuAlias(name: borrow String, target: borrow String) -> ResourceRecord {
+function alias(name: borrow String, target: borrow String) -> ResourceRecord {
     var resource = ResourceRecord()
     resource.name = name
     resource.kind = .Color
@@ -164,20 +162,18 @@ function kcuAlias(name: borrow String, target: borrow String) -> ResourceRecord 
 
 // A resource of a kind this build has no decoder for, carrying arbitrary bytes.
 // The round-trip cases use it to prove the container is agnostic about payload.
-function kcuUnknownKind() -> ResourceKind {
-    return .Custom(resourceKindCustomBase() + 7)
+function unknownKind() -> ResourceKind {
+    return .Custom(ResourceKindRange.customBase + 7)
 }
 
-function kcuOpaqueResource(name: borrow String) -> ResourceRecord {
+function opaqueResource(name: borrow String) -> ResourceRecord {
     var resource = ResourceRecord()
     resource.name = name
-    resource.kind = kcuUnknownKind()
+    resource.kind = unknownKind()
     var rendition = RenditionRecord()
     var payload: [U8] = []
-    var index = 0
-    while index < 32 {
+    for index in 0..32 {
         payload.append((index * 7 + 3) & 255)
-        index = index + 1
     }
     rendition.payload = payload
     resource.renditions.append(rendition)
@@ -186,38 +182,52 @@ function kcuOpaqueResource(name: borrow String) -> ResourceRecord {
 
 // --- Environments ----------------------------------------------------------
 
-function kcuLight() -> UIEnvironment {
+function light() -> UIEnvironment {
     var environment = UIEnvironment()
     environment.appearance = .Light
     return environment
 }
 
-function kcuDark() -> UIEnvironment {
+function dark() -> UIEnvironment {
     var environment = UIEnvironment()
     environment.appearance = .Dark
     return environment
 }
 
-function kcuLightHighContrast() -> UIEnvironment {
-    var environment = kcuLight()
+// The two interfaces the default catalog sizes: a tablet's, which is its
+// floor, and a desktop's, pinned over it.
+function tablet() -> UIEnvironment {
+    var environment = light()
+    environment.idiom = .Pad
+    return environment
+}
+
+function desktop() -> UIEnvironment {
+    var environment = light()
+    environment.idiom = .Desktop
+    return environment
+}
+
+function lightHighContrast() -> UIEnvironment {
+    var environment = light()
     environment.contrast = .High
     return environment
 }
 
-function kcuReducedTransparency() -> UIEnvironment {
-    var environment = kcuDark()
+function reducedTransparency() -> UIEnvironment {
+    var environment = dark()
     environment.reduceTransparency = true
     return environment
 }
 
 // --- Stacks ----------------------------------------------------------------
 
-function kcuCatalogOf(record: borrow CatalogRecord) -> Catalog {
-    return kcuParseOrEmpty(writeCatalogRecord(record))
+function catalogOf(record: borrow CatalogRecord) -> Catalog {
+    return parseOrEmpty(record.encoded())
 }
 
-function kcuStackOf(record: borrow CatalogRecord) -> CatalogStack {
-    return catalogStackOf(kcuCatalogOf(record))
+function stackOf(record: borrow CatalogRecord) -> CatalogStack {
+    return (catalogOf(record)).asStack()
 }
 
 // The catalog this repository ships, read from disk. The cases that assert what
@@ -228,14 +238,28 @@ function kcuStackOf(record: borrow CatalogRecord) -> CatalogStack {
 // is the repository root for `kira test tests/kcoreui_kik` and the package
 // directory for a run started inside it. Both are tried so a case reports what
 // is wrong with the catalog rather than that it could not find one.
-function kcuDefaultCatalogPath() -> String {
+function defaultCatalogPath() -> String {
     if fileExists("Resources/Default.kcui") {
         return "Resources/Default.kcui"
     }
     return "../../Resources/Default.kcui"
 }
 
-function kcuDefaultCatalog() -> Catalog {
-    let size: Int = fileSize(kcuDefaultCatalogPath())
-    return kcuParseOrEmpty(readFileRange(kcuDefaultCatalogPath(), 0, size))
+// The default catalog's bytes, or why they could not be read.
+function defaultCatalogBytes() -> Result< [U8], FileFailure> {
+    let path = defaultCatalogPath()
+    let size = try fileSize(path)
+    return readFileRange(path, 0, size)
+}
+
+// An unreadable catalog is logged and read as empty, so the case using it
+// fails on its first expectation.
+function defaultCatalog() -> Catalog {
+    match defaultCatalogBytes() {
+        Ok(bytes) -> return parseOrEmpty(bytes)
+        Error(failure) -> {
+            log fault("could not read the default catalog", failure)
+            return Catalog()
+        }
+    }
 }

@@ -9,38 +9,38 @@ import Foundation
 // resource database that resolves differently on the VM and on LLVM is not a
 // resource database.
 
-// The scale of a 16.16 fixed-point value. One unit is 1/65536.
-public function fixedScale() -> Int {
-    return 65536
+public namespace FixedPoint {
+    // The scale of a 16.16 fixed-point value. One unit is 1/65536.
+    let scale: Number = 65536
 }
 
 // A fractional value as it is written to the wire. Rounds half away from zero
 // so the sign of a value never decides which way it rounds.
-public function fixedFromFloat(value: Float) -> Int {
-    let scaled = value * Float(fixedScale())
+public function fixedFromNumber(value: Number) -> Number {
+    let scaled = value * Number(FixedPoint.scale)
     if scaled < 0.0 {
-        return Int(scaled - 0.5)
+        return trunc(scaled - 0.5)
     }
-    return Int(scaled + 0.5)
+    return trunc(scaled + 0.5)
 }
 
 // The inverse, exact for every value `fixedFromFloat` can produce.
-public function floatFromFixed(value: Int) -> Float {
-    return Float(value) / Float(fixedScale())
+public function floatFromFixed(value: Number) -> Number {
+    return Number(value) / Number(FixedPoint.scale)
 }
 
 // --- Writing ---------------------------------------------------------------
 
-public function appendU8(bytes: borrow mut [U8], value: Int) {
+function appendU8(bytes: borrow mut [U8], value: Number) {
     bytes.append(value & 255)
 }
 
-public function appendU16(bytes: borrow mut [U8], value: Int) {
+function appendU16(bytes: borrow mut [U8], value: Number) {
     bytes.append(value & 255)
     bytes.append((value >> 8) & 255)
 }
 
-public function appendU32(bytes: borrow mut [U8], value: Int) {
+function appendU32(bytes: borrow mut [U8], value: Number) {
     bytes.append(value & 255)
     bytes.append((value >> 8) & 255)
     bytes.append((value >> 16) & 255)
@@ -49,11 +49,11 @@ public function appendU32(bytes: borrow mut [U8], value: Int) {
 
 // A signed 32-bit value, two's complement. Sign-extension on the way back out
 // is what `readI32` undoes.
-public function appendI32(bytes: borrow mut [U8], value: Int) {
+function appendI32(bytes: borrow mut [U8], value: Number) {
     appendU32(bytes, value)
 }
 
-public function appendBytes(bytes: borrow mut [U8], extra: borrow [U8]) {
+function appendBytes(bytes: borrow mut [U8], extra: borrow [U8]) {
     for byte in extra {
         bytes.append(byte)
     }
@@ -62,11 +62,9 @@ public function appendBytes(bytes: borrow mut [U8], extra: borrow [U8]) {
 // A string as its own bytes, with no length and no terminator. Length is the
 // caller's to record, because every string in the format sits in a table whose
 // entries already carry offsets.
-public function appendStringBytes(bytes: borrow mut [U8], text: borrow String) {
-    var index = 0
-    while index < text.count {
+function appendStringBytes(bytes: borrow mut [U8], text: borrow String) {
+    for index in 0..text.count {
         bytes.append(text.charAt(index) & 255)
-        index = index + 1
     }
 }
 
@@ -77,19 +75,19 @@ public function appendStringBytes(bytes: borrow mut [U8], text: borrow String) {
 // into a stopped program; the parser above these validates offsets and reports
 // a typed failure instead.
 
-public function readU8(bytes: borrow [U8], offset: Int) -> Int {
+public function readU8(bytes: borrow [U8], offset: Number) -> Number {
     if offset < 0 || offset >= bytes.count {
         return 0
     }
-    let value: Int = bytes[offset]
+    let value: Number = bytes[offset]
     return value & 255
 }
 
-public function readU16(bytes: borrow [U8], offset: Int) -> Int {
+public function readU16(bytes: borrow [U8], offset: Number) -> Number {
     return readU8(bytes, offset) | (readU8(bytes, offset + 1) << 8)
 }
 
-public function readU32(bytes: borrow [U8], offset: Int) -> Int {
+public function readU32(bytes: borrow [U8], offset: Number) -> Number {
     var value = readU8(bytes, offset)
     value = value | (readU8(bytes, offset + 1) << 8)
     value = value | (readU8(bytes, offset + 2) << 16)
@@ -98,7 +96,7 @@ public function readU32(bytes: borrow [U8], offset: Int) -> Int {
 }
 
 // The signed reading of the same four bytes.
-public function readI32(bytes: borrow [U8], offset: Int) -> Int {
+public function readI32(bytes: borrow [U8], offset: Number) -> Number {
     let raw = readU32(bytes, offset)
     if raw >= 2147483648 {
         return raw - 4294967296
@@ -107,18 +105,16 @@ public function readI32(bytes: borrow [U8], offset: Int) -> Int {
 }
 
 // A slice, clamped to what is there.
-public function sliceBytes(bytes: borrow [U8], offset: Int, count: Int) -> [U8] {
+public function sliceBytes(bytes: borrow [U8], offset: Number, count: Number) -> [U8] {
     var slice: [U8] = []
     if count <= 0 {
         return slice
     }
-    var index = offset
     let end = offset + count
-    while index < end {
+    for index in offset..end {
         if index >= 0 && index < bytes.count {
             slice.append(bytes[index])
         }
-        index = index + 1
     }
     return slice
 }
@@ -136,7 +132,7 @@ public function stringBytes(text: borrow String) -> [U8] {
 // How many bytes the scalar starting at `offset` occupies, by its lead byte.
 // A continuation byte or an invalid lead answers one, so a malformed sequence
 // advances rather than looping.
-public function utf8SequenceLength(lead: Int) -> Int {
+public function utf8SequenceLength(lead: Number) -> Number {
     if lead < 128 { return 1 }
     if lead >= 240 { return 4 }
     if lead >= 224 { return 3 }
@@ -150,6 +146,15 @@ public function utf8SequenceLength(lead: Int) -> Int {
 // only where a payload hands text back to a caller — a typeface family name.
 // A byte that begins no valid sequence is replaced rather than dropped, so the
 // result's length still tracks the input's shape.
+// The text of one scalar, or the replacement character for a number that names
+// none. `scalarText` answers nothing for a number that is not a scalar; the
+// decoder below never asks for one — a malformed run is replaced with U+FFFD
+// before it gets here — so the absent case falls back to the same character
+// rather than dropping a byte from a result whose length tracks its input.
+function scalarTextOrReplacement(codepoint: Number) -> String {
+    return scalarText(codepoint).or(scalarText(65533).or(""))
+}
+
 public function stringFromBytes(bytes: borrow [U8]) -> String {
     var text = ""
     var cursor = 0
@@ -160,9 +165,9 @@ public function stringFromBytes(bytes: borrow [U8]) -> String {
         // sequence advances one, so a malformed run cannot stall the walk.
         var stride = 1
         if lead < 128 {
-            text = text + scalarText(lead)
+            text = text + scalarTextOrReplacement(lead)
         } else if length == 1 || cursor + length > bytes.count {
-            text = text + scalarText(65533)
+            text = text + scalarTextOrReplacement(65533)
         } else {
             var code = 0
             if length == 2 { code = lead & 31 }
@@ -176,7 +181,9 @@ public function stringFromBytes(bytes: borrow [U8]) -> String {
                 }
                 code = (code << 6) | (continuation & 63)
             }
-            text = valid ? text + scalarText(code) : text + scalarText(65533)
+            text = valid ? text + scalarTextOrReplacement(code) : text + scalarTextOrReplacement(
+                65533
+            )
             stride = length
         }
         cursor = cursor + stride
@@ -192,49 +199,54 @@ public function stringFromBytes(bytes: borrow [U8]) -> String {
 //
 // Answers a negative number when the slice sorts first, zero when they are
 // equal, and a positive number otherwise.
-public function compareSliceToString(bytes: borrow [U8], offset: Int, count: Int, text: borrow String) -> Int {
-    var index = 0
+public function compareSliceToString(
+    bytes: borrow [U8],
+    offset: Number,
+    count: Number,
+    text: borrow String
+) -> Number {
     let shorter = count < text.count ? count : text.count
-    while index < shorter {
+    for index in 0..shorter {
         let left = readU8(bytes, offset + index)
         // `charAt` answers the byte itself, and this compares it as a number.
-        let right = Int(text.charAt(index))
+        let right = Number(text.charAt(index))
         if left != right {
             return left - right
         }
-        index = index + 1
     }
     return count - text.count
 }
 
 // The same order over two slices of the same buffer, which is what the writer
 // sorts the name table with.
-public function compareSlices(bytes: borrow [U8], leftOffset: Int, leftCount: Int, rightOffset: Int, rightCount: Int) -> Int {
-    var index = 0
+public function compareSlices(
+    bytes: borrow [U8],
+    leftOffset: Number,
+    leftCount: Number,
+    rightOffset: Number,
+    rightCount: Number
+) -> Number {
     let shorter = leftCount < rightCount ? leftCount : rightCount
-    while index < shorter {
+    for index in 0..shorter {
         let left = readU8(bytes, leftOffset + index)
         let right = readU8(bytes, rightOffset + index)
         if left != right {
             return left - right
         }
-        index = index + 1
     }
     return leftCount - rightCount
 }
 
 // Byte order over two strings, for the writer's own sort.
-public function compareStrings(left: borrow String, right: borrow String) -> Int {
-    var index = 0
+public function compareStrings(left: borrow String, right: borrow String) -> Number {
     let shorter = left.count < right.count ? left.count : right.count
-    while index < shorter {
+    for index in 0..shorter {
         // `charAt` answers a `U8`, and a difference of two bytes is signed.
-        let a = Int(left.charAt(index))
-        let b = Int(right.charAt(index))
+        let a = Number(left.charAt(index))
+        let b = Number(right.charAt(index))
         if a != b {
             return a - b
         }
-        index = index + 1
     }
     return left.count - right.count
 }

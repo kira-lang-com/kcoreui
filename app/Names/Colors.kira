@@ -21,151 +21,95 @@ import Foundation
 
 // --- Hierarchical styles ---------------------------------------------------
 
-public function colorPrimary() -> String { return "primary" }
-public function colorSecondary() -> String { return "secondary" }
-public function colorTertiary() -> String { return "tertiary" }
-public function colorQuaternary() -> String { return "quaternary" }
-public function colorQuinary() -> String { return "quinary" }
+public namespace ColorName {
+    let primary: String = "primary"
+    let secondary: String = "secondary"
+    let tertiary: String = "tertiary"
+    let quaternary: String = "quaternary"
+    let quinary: String = "quinary"
 
-// --- Labels ----------------------------------------------------------------
+    // --- Labels ----------------------------------------------------------------
 
-public function colorLabel() -> String { return "label" }
-public function colorSecondaryLabel() -> String { return "secondaryLabel" }
-public function colorTertiaryLabel() -> String { return "tertiaryLabel" }
-public function colorQuaternaryLabel() -> String { return "quaternaryLabel" }
-public function colorPlaceholderText() -> String { return "placeholderText" }
-public function colorPlaceholder() -> String { return "placeholder" }
+    let label: String = "label"
+    let secondaryLabel: String = "secondaryLabel"
+    let tertiaryLabel: String = "tertiaryLabel"
+    let quaternaryLabel: String = "quaternaryLabel"
+    let placeholderText: String = "placeholderText"
+    let placeholder: String = "placeholder"
 
-// --- Fills -----------------------------------------------------------------
+    // --- Fills -----------------------------------------------------------------
 
-public function colorSystemFill() -> String { return "systemFill" }
-public function colorSecondarySystemFill() -> String { return "secondarySystemFill" }
-public function colorTertiarySystemFill() -> String { return "tertiarySystemFill" }
-public function colorQuaternarySystemFill() -> String { return "quaternarySystemFill" }
-public function colorFill() -> String { return "fill" }
+    let systemFill: String = "systemFill"
+    let secondarySystemFill: String = "secondarySystemFill"
+    let tertiarySystemFill: String = "tertiarySystemFill"
+    let quaternarySystemFill: String = "quaternarySystemFill"
+    let fill: String = "fill"
 
-// --- Backgrounds -----------------------------------------------------------
+    // --- Backgrounds -----------------------------------------------------------
 
-public function colorSystemBackground() -> String { return "systemBackground" }
-public function colorSecondarySystemBackground() -> String { return "secondarySystemBackground" }
-public function colorTertiarySystemBackground() -> String { return "tertiarySystemBackground" }
-public function colorSystemGroupedBackground() -> String { return "systemGroupedBackground" }
-public function colorSecondarySystemGroupedBackground() -> String { return "secondarySystemGroupedBackground" }
-public function colorTertiarySystemGroupedBackground() -> String { return "tertiarySystemGroupedBackground" }
-public function colorBackground() -> String { return "background" }
-public function colorWindowBackground() -> String { return "windowBackground" }
+    let systemBackground: String = "systemBackground"
+    let secondarySystemBackground: String = "secondarySystemBackground"
+    let tertiarySystemBackground: String = "tertiarySystemBackground"
+    let systemGroupedBackground: String = "systemGroupedBackground"
+    let secondarySystemGroupedBackground: String = "secondarySystemGroupedBackground"
+    let tertiarySystemGroupedBackground: String = "tertiarySystemGroupedBackground"
+    let background: String = "background"
+    let windowBackground: String = "windowBackground"
 
-// --- Separators and links --------------------------------------------------
+    // --- Separators and links --------------------------------------------------
 
-public function colorSeparator() -> String { return "separator" }
-public function colorOpaqueSeparator() -> String { return "opaqueSeparator" }
-public function colorLink() -> String { return "link" }
+    let separator: String = "separator"
+    let opaqueSeparator: String = "opaqueSeparator"
+    let link: String = "link"
 
-// --- Scroll indicators -------------------------------------------------------
+    // --- Scroll indicators -------------------------------------------------------
 
-public function colorScrollIndicator() -> String { return "scrollIndicator" }
-public function colorScrollEdgeFill() -> String { return "scrollEdgeFill" }
-public function colorScrollEdgeBorder() -> String { return "scrollEdgeBorder" }
-public function colorSidebarShadow() -> String { return "sidebarShadow" }
+    let scrollIndicator: String = "scrollIndicator"
+    let scrollEdgeFill: String = "scrollEdgeFill"
+    let scrollEdgeBorder: String = "scrollEdgeBorder"
+    let sidebarShadow: String = "sidebarShadow"
 
-// --- Shape styles ----------------------------------------------------------
+    // --- Workspaces ----------------------------------------------------------------
 
-public function colorForeground() -> String { return "foreground" }
-public function colorSelection() -> String { return "selection" }
-public function colorTint() -> String { return "tint" }
-public function colorAccentColor() -> String { return "accentColor" }
+    // The card a workspace's panels sit on.
+    let workspacePanel: String = "workspacePanel"
 
-// --- The system palette ----------------------------------------------------
+    // --- Shape styles ----------------------------------------------------------
 
-public function colorSystemRed() -> String { return "systemRed" }
-public function colorSystemOrange() -> String { return "systemOrange" }
-public function colorSystemYellow() -> String { return "systemYellow" }
-public function colorSystemGreen() -> String { return "systemGreen" }
-public function colorSystemMint() -> String { return "systemMint" }
-public function colorSystemTeal() -> String { return "systemTeal" }
-public function colorSystemCyan() -> String { return "systemCyan" }
-public function colorSystemBlue() -> String { return "systemBlue" }
-public function colorSystemIndigo() -> String { return "systemIndigo" }
-public function colorSystemPurple() -> String { return "systemPurple" }
-public function colorSystemPink() -> String { return "systemPink" }
-public function colorSystemBrown() -> String { return "systemBrown" }
+    let foreground: String = "foreground"
+    let selection: String = "selection"
+    let tint: String = "tint"
+    let accentColor: String = "accentColor"
 
-public function colorSystemGray() -> String { return "systemGray" }
-public function colorSystemGray2() -> String { return "systemGray2" }
-public function colorSystemGray3() -> String { return "systemGray3" }
-public function colorSystemGray4() -> String { return "systemGray4" }
-public function colorSystemGray5() -> String { return "systemGray5" }
-public function colorSystemGray6() -> String { return "systemGray6" }
+    // --- The system palette ----------------------------------------------------
 
-// --- The whole surface -----------------------------------------------------
+    let systemRed: String = "systemRed"
+    let systemOrange: String = "systemOrange"
+    let systemYellow: String = "systemYellow"
+    let systemGreen: String = "systemGreen"
+    let systemMint: String = "systemMint"
+    let systemTeal: String = "systemTeal"
+    let systemCyan: String = "systemCyan"
+    let systemBlue: String = "systemBlue"
+    let systemIndigo: String = "systemIndigo"
+    let systemPurple: String = "systemPurple"
+    let systemPink: String = "systemPink"
+    let systemBrown: String = "systemBrown"
 
-// Every color name this build declares.
-//
-// The integrity check walks this list against the default catalog, which is
-// what stops the hardcoded surface and the shipped blob from drifting: a name
-// here with no resource behind it is a lookup that would fall through the floor,
-// and the floor is what makes resolution total.
-public function allColorNames() -> [String] {
-    var names: [String] = []
-    names.append(colorPrimary())
-    names.append(colorSecondary())
-    names.append(colorTertiary())
-    names.append(colorQuaternary())
-    names.append(colorQuinary())
+    let systemGray: String = "systemGray"
+    let systemGray2: String = "systemGray2"
+    let systemGray3: String = "systemGray3"
+    let systemGray4: String = "systemGray4"
+    let systemGray5: String = "systemGray5"
+    let systemGray6: String = "systemGray6"
 
-    names.append(colorLabel())
-    names.append(colorSecondaryLabel())
-    names.append(colorTertiaryLabel())
-    names.append(colorQuaternaryLabel())
-    names.append(colorPlaceholderText())
-    names.append(colorPlaceholder())
+    // --- The whole surface -----------------------------------------------------
 
-    names.append(colorSystemFill())
-    names.append(colorSecondarySystemFill())
-    names.append(colorTertiarySystemFill())
-    names.append(colorQuaternarySystemFill())
-    names.append(colorFill())
-
-    names.append(colorSystemBackground())
-    names.append(colorSecondarySystemBackground())
-    names.append(colorTertiarySystemBackground())
-    names.append(colorSystemGroupedBackground())
-    names.append(colorSecondarySystemGroupedBackground())
-    names.append(colorTertiarySystemGroupedBackground())
-    names.append(colorBackground())
-    names.append(colorWindowBackground())
-
-    names.append(colorSeparator())
-    names.append(colorOpaqueSeparator())
-    names.append(colorLink())
-    names.append(colorScrollIndicator())
-    names.append(colorScrollEdgeFill())
-    names.append(colorScrollEdgeBorder())
-    names.append(colorSidebarShadow())
-
-    names.append(colorForeground())
-    names.append(colorSelection())
-    names.append(colorTint())
-    names.append(colorAccentColor())
-
-    names.append(colorSystemRed())
-    names.append(colorSystemOrange())
-    names.append(colorSystemYellow())
-    names.append(colorSystemGreen())
-    names.append(colorSystemMint())
-    names.append(colorSystemTeal())
-    names.append(colorSystemCyan())
-    names.append(colorSystemBlue())
-    names.append(colorSystemIndigo())
-    names.append(colorSystemPurple())
-    names.append(colorSystemPink())
-    names.append(colorSystemBrown())
-
-    names.append(colorSystemGray())
-    names.append(colorSystemGray2())
-    names.append(colorSystemGray3())
-    names.append(colorSystemGray4())
-    names.append(colorSystemGray5())
-    names.append(colorSystemGray6())
-    return names
+    // Every color name this build declares.
+    //
+    // The integrity check walks this list against the default catalog, which is
+    // what stops the hardcoded surface and the shipped blob from drifting: a name
+    // here with no resource behind it is a lookup that would fall through the floor,
+    // and the floor is what makes resolution total.
+    let all: [String] = [ColorName.primary, ColorName.secondary, ColorName.tertiary, ColorName.quaternary, ColorName.quinary, ColorName.label, ColorName.secondaryLabel, ColorName.tertiaryLabel, ColorName.quaternaryLabel, ColorName.placeholderText, ColorName.placeholder, ColorName.systemFill, ColorName.secondarySystemFill, ColorName.tertiarySystemFill, ColorName.quaternarySystemFill, ColorName.fill, ColorName.systemBackground, ColorName.secondarySystemBackground, ColorName.tertiarySystemBackground, ColorName.systemGroupedBackground, ColorName.secondarySystemGroupedBackground, ColorName.tertiarySystemGroupedBackground, ColorName.background, ColorName.windowBackground, ColorName.separator, ColorName.opaqueSeparator, ColorName.link, ColorName.scrollIndicator, ColorName.scrollEdgeFill, ColorName.scrollEdgeBorder, ColorName.sidebarShadow, ColorName.workspacePanel, ColorName.foreground, ColorName.selection, ColorName.tint, ColorName.accentColor, ColorName.systemRed, ColorName.systemOrange, ColorName.systemYellow, ColorName.systemGreen, ColorName.systemMint, ColorName.systemTeal, ColorName.systemCyan, ColorName.systemBlue, ColorName.systemIndigo, ColorName.systemPurple, ColorName.systemPink, ColorName.systemBrown, ColorName.systemGray, ColorName.systemGray2, ColorName.systemGray3, ColorName.systemGray4, ColorName.systemGray5, ColorName.systemGray6]
 }

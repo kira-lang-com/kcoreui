@@ -8,12 +8,19 @@ import KCoreUI
 // minimize and zoom buttons, the split divider -- were measured on a running
 // macOS 27 window, since the window is the Mac's.
 //
-// They are authored without a platform constraint because the floor has to
-// answer in every environment, and the Mac's are the only measurements this
-// catalog holds yet. A platform with different chrome adds renditions pinned
-// to itself; the Mac's numbers stay where they are.
+// They are authored without a constraint because the floor has to answer in
+// every environment, and they are the mobile interface: a phone or a tablet,
+// which is what that kit draws.
+//
+// A desktop -- macOS, Windows, Linux -- draws the same interface at the Mac's
+// size, so a length that differs there carries a second rendition pinned to
+// the desktop idiom. Where AppKit states the number, it is AppKit's: a 52-point
+// toolbar, 32-point sidebar rows, a 13-point symbol beside 13-point text. Where
+// it does not, the desktop takes the tablet's length at 77 percent, the ratio
+// Mac Catalyst scales an iPad interface by: 17-point body text to 13. Motion is
+// not a size, and every timing and spring is shared.
 
-function metricResource(name: borrow String, points: Float) -> ResourceRecord {
+function metricResource(name: borrow String, points: Number) -> ResourceRecord {
     var resource = ResourceRecord()
     resource.name = name
     resource.kind = .Metric
@@ -22,38 +29,63 @@ function metricResource(name: borrow String, points: Float) -> ResourceRecord {
     value.points = points
 
     var rendition = RenditionRecord()
-    rendition.payload = encodeMetric(value)
+    rendition.payload = value.encoded()
+    resource.renditions.append(rendition)
+    return resource
+}
+
+// A length that is the tablet's on a phone or a tablet and the Mac's on a
+// desktop: the floor, and a rendition pinned to the desktop idiom over it.
+function sizedMetricResource(
+    name: borrow String,
+    mobile: Number,
+    desktop: Number
+) -> ResourceRecord {
+    var resource = metricResource(name, mobile)
+
+    var value = MetricValue()
+    value.points = desktop
+
+    var rendition = RenditionRecord()
+    rendition.constraints.append(Idiom.Desktop.constraint())
+    rendition.payload = value.encoded()
     resource.renditions.append(rendition)
     return resource
 }
 
 function defaultMetricResources() -> [ResourceRecord] {
     var records: [ResourceRecord] = []
+    let desktopWorkspaceGap = 6.0
+    let mobileWorkspaceGap = 8.0
+    let windowControlDiameter = 14.0
 
-    // The bar is the iPadOS 27 kit's top toolbar. Its controls row is 44 tall,
-    // held 10 under the window's top edge (the kit's window content holds 10)
-    // and 10 over what follows: a 64-point band with the row centered in it.
+    // The bar is the iPadOS 27 kit's top toolbar. Its controls row is 44 tall.
     // A symbol button is a 44-point square of glass around a 36-point symbol
     // box. A button group holds its symbols 20 apart and 6 off its ends, which
     // is 44-point items 12 apart, 2 off the ends: two buttons come to 104.
-    records.append(metricResource(metricToolbarHeight(), 64.0))
+    // The menu row above it provides the top clearance, so in both sizings
+    // the band is its items and one workspace gap below them: the panels hang
+    // the same gap under the bar as they stand apart from each other.
+    records.append(
+        sizedMetricResource(MetricName.toolbarHeight, 44.0 + mobileWorkspaceGap, 28.0 + desktopWorkspaceGap)
+    )
     // An iPhone has no window around the bar: UIKit's navigation bar is its
     // 44-point row, flush under the status bar, and the band content is held
     // under -- the scroll edge effect's depth -- runs 10 past it.
-    records.append(metricResource(metricToolbarCompactHeight(), 44.0))
-    records.append(metricResource(metricToolbarCompactBandHeight(), 54.0))
-    records.append(metricResource(metricToolbarItemHeight(), 44.0))
-    records.append(metricResource(metricToolbarItemWidth(), 44.0))
-    records.append(metricResource(metricToolbarGroupSpacing(), 12.0))
-    records.append(metricResource(metricToolbarGroupInset(), 2.0))
+    records.append(metricResource(MetricName.toolbarCompactHeight, 44.0))
+    records.append(metricResource(MetricName.toolbarCompactBandHeight, 54.0))
+    records.append(sizedMetricResource(MetricName.toolbarItemHeight, 44.0, 28.0))
+    records.append(sizedMetricResource(MetricName.toolbarItemWidth, 44.0, 28.0))
+    records.append(sizedMetricResource(MetricName.toolbarGroupSpacing, 12.0, 9.0))
+    records.append(metricResource(MetricName.toolbarGroupInset, 2.0))
 
     // Twelve points between pieces of glass, which is all a fixed spacer
     // holds, and ten from the outermost piece to the edge of the bar.
-    records.append(metricResource(metricToolbarItemSpacing(), 12.0))
-    records.append(metricResource(metricToolbarSpacerWidth(), 12.0))
-    records.append(metricResource(metricToolbarEdgeInset(), 10.0))
+    records.append(sizedMetricResource(MetricName.toolbarItemSpacing, 12.0, 9.0))
+    records.append(sizedMetricResource(MetricName.toolbarSpacerWidth, 12.0, 9.0))
+    records.append(sizedMetricResource(MetricName.toolbarEdgeInset, 10.0, 8.0))
     // The iPhone kit's top toolbar holds its controls 16 off either side.
-    records.append(metricResource(metricToolbarCompactEdgeInset(), 16.0))
+    records.append(metricResource(MetricName.toolbarCompactEdgeInset, 16.0))
 
     // An inline title starts at the column's 20-point margin, or 12 past a
     // back button's glass.
@@ -61,34 +93,33 @@ function defaultMetricResources() -> [ResourceRecord] {
     // A back button stays through the pop and leaves after it, swelling a
     // tenth as it fades in under a fifth of a second. Set by eye against the
     // platform, not measured.
-    records.append(metricResource(metricToolbarBackRemovalScale(), 1.1))
-    records.append(metricResource(metricToolbarBackRemovalDuration(), 0.18))
+    records.append(metricResource(MetricName.toolbarBackRemovalScale, 1.1))
+    records.append(metricResource(MetricName.toolbarBackRemovalDuration, 0.18))
 
     // The iPadOS kit's toolbar search field: 180 points of glass, the
     // magnifier 11 in from its leading end, its trailing end 10 in, and 4
     // between the magnifier and the text.
-    records.append(metricResource(metricToolbarSearchWidth(), 180.0))
-    records.append(metricResource(metricToolbarSearchLeading(), 11.0))
-    records.append(metricResource(metricToolbarSearchTrailing(), 10.0))
-    records.append(metricResource(metricToolbarSearchSpacing(), 4.0))
+    records.append(sizedMetricResource(MetricName.toolbarSearchWidth, 180.0, 140.0))
+    records.append(sizedMetricResource(MetricName.toolbarSearchLeading, 11.0, 8.0))
+    records.append(sizedMetricResource(MetricName.toolbarSearchTrailing, 10.0, 8.0))
+    records.append(sizedMetricResource(MetricName.toolbarSearchSpacing, 4.0, 3.0))
 
     // A text button holds its label 14 off its glass's ends: 8 to the label's
     // own capsule and 6 inside it. Symbols are SF Pro Medium at 17 points:
     // weight 510.
-    records.append(metricResource(metricToolbarItemLabelInset(), 14.0))
-    records.append(metricResource(metricToolbarSymbolSize(), 17.0))
-    records.append(metricResource(metricToolbarSymbolWeight(), 510.0))
+    records.append(sizedMetricResource(MetricName.toolbarItemLabelInset, 14.0, 11.0))
+    records.append(sizedMetricResource(MetricName.toolbarSymbolSize, 17.0, 13.0))
+    records.append(metricResource(MetricName.toolbarSymbolWeight, 510.0))
 
     // The iPad kit's window: a continuous corner of 34.
-    records.append(metricResource(metricWindowCornerRadius(), 34.0))
+    records.append(sizedMetricResource(MetricName.windowCornerRadius, 34.0, 26.0))
 
     // Three 14-point buttons at x = 19, 42 and 65; the bar's own items start at
     // 92, 13 points after the last.
-    records.append(metricResource(metricWindowControlsLeading(), 19.0))
-    records.append(metricResource(metricWindowControlDiameter(), 14.0))
-    records.append(metricResource(metricWindowControlSpacing(), 9.0))
-    records.append(metricResource(metricWindowControlsTrailing(), 13.0))
-
+    records.append(metricResource(MetricName.windowControlsLeading, 19.0))
+    records.append(metricResource(MetricName.windowControlDiameter, windowControlDiameter))
+    records.append(metricResource(MetricName.windowControlSpacing, 9.0))
+    records.append(metricResource(MetricName.windowControlsTrailing, 13.0))
 
     // A `List` in the sidebar column, from the iPadOS 27 kit's split view: the
     // column holds its rows 10 off each edge. A section's header row is 54
@@ -96,48 +127,77 @@ function defaultMetricResources() -> [ResourceRecord] {
     // are 44 and touch, their content 10 further in than the column's. The
     // selected row's band is the row itself, a capsule. The symbol sits in a
     // 34-point box at 17 points, the title 4 after it.
-    records.append(metricResource(metricSidebarHeaderHeight(), 54.0))
-    records.append(metricResource(metricSidebarHeaderInset(), 22.0))
-    records.append(metricResource(metricSidebarHeaderTopInset(), 21.0))
-    records.append(metricResource(metricSidebarRowHeight(), 44.0))
-    records.append(metricResource(metricSidebarRowInset(), 20.0))
-    records.append(metricResource(metricSidebarSelectionInset(), 10.0))
-    records.append(metricResource(metricSidebarSelectionRadius(), 22.0))
-    records.append(metricResource(metricSidebarIconColumn(), 34.0))
-    records.append(metricResource(metricSidebarTitleSpacing(), 4.0))
-    records.append(metricResource(metricSidebarSymbolSize(), 17.0))
-    records.append(metricResource(metricSidebarToggleResponse(), 0.42))
-    records.append(metricResource(metricSidebarToggleDamping(), 1.0))
-    records.append(metricResource(metricSidebarGlassBleed(), 6.0))
-    records.append(metricResource(metricSidebarShadowRadius(), 24.0))
+    // The kit's column is 280 wide, 320 in a window wide enough to give it
+    // more; a Mac's opens at 220 however wide the window is, as a source
+    // list in Finder or Mail does.
+    records.append(sizedMetricResource(MetricName.sidebarWidth, 280.0, 220.0))
+    records.append(sizedMetricResource(MetricName.sidebarExpandedWidth, 320.0, 220.0))
+    records.append(sizedMetricResource(MetricName.sidebarHeaderHeight, 54.0, 34.0))
+    records.append(sizedMetricResource(MetricName.sidebarHeaderInset, 22.0, 18.0))
+    records.append(sizedMetricResource(MetricName.sidebarHeaderTopInset, 21.0, 13.0))
+    // A Mac's row is AppKit's medium sidebar row, the size a sidebar takes
+    // unless the person asks for another: 32 since macOS 26, 28 before it
+    // (`_NSSidebarMetricsForRowSize_isSolariumEnabled`).
+    records.append(sizedMetricResource(MetricName.sidebarRowHeight, 44.0, 32.0))
+    records.append(sizedMetricResource(MetricName.sidebarRowInset, 20.0, 18.0))
+    records.append(metricResource(MetricName.sidebarSelectionInset, 10.0))
+    records.append(sizedMetricResource(MetricName.sidebarSelectionRadius, 22.0, 10.0))
+    records.append(sizedMetricResource(MetricName.sidebarIconColumn, 34.0, 22.0))
+    records.append(sizedMetricResource(MetricName.sidebarTitleSpacing, 4.0, 6.0))
+    records.append(sizedMetricResource(MetricName.sidebarSymbolSize, 17.0, 13.0))
+    records.append(metricResource(MetricName.sidebarToggleResponse, 0.42))
+    records.append(metricResource(MetricName.sidebarToggleDamping, 1.0))
+    records.append(metricResource(MetricName.sidebarGlassBleed, 6.0))
+    records.append(sizedMetricResource(MetricName.sidebarShadowRadius, 24.0, 18.0))
 
     // The kit's list screen: a 648-point column, 10 between a header, its
     // card and the next section, 10 above the first. The card's corner is 26;
-    // a row is 52 at least, its content and separator 16 in, the separator a
-    // hairline, accessories 16 apart. A header holds 10 above and below its
-    // title; a footer 8 above and 6 below.
-    records.append(metricResource(metricListReadableWidth(), 648.0))
-    records.append(metricResource(metricListSectionSpacing(), 10.0))
-    records.append(metricResource(metricListTopInset(), 10.0))
-    records.append(metricResource(metricListCornerRadius(), 26.0))
-    records.append(metricResource(metricListRowHeight(), 52.0))
-    records.append(metricResource(metricListRowInset(), 16.0))
-    records.append(metricResource(metricListSeparatorThickness(), 0.5))
-    records.append(metricResource(metricListAccessorySpacing(), 16.0))
-    records.append(metricResource(metricListHeaderPadding(), 10.0))
-    records.append(metricResource(metricListFooterTopInset(), 8.0))
-    records.append(metricResource(metricListFooterBottomInset(), 6.0))
+    // a row is 52 at least, its content and separator 16 in and 15 off its
+    // top and bottom (`defaultCellLayoutMarginsForTableStyle:`), the separator
+    // a hairline, accessories 16 apart. A header holds 10 above its title and
+    // 20 down to its card; a footer 8 above and 6 below.
+    //
+    // A grouped `Form` on macOS 27, measured 400 to 1600 wide: a column 704
+    // wide at most, 20 around it, 10 between two cards, 30 when a header or
+    // footer stands between them; a header 10 above its card, a footer 10
+    // below its card. Its card's corner is 12, a row 36 at least with its
+    // content 10 in and 10 off its top and bottom, however tall the control it
+    // holds.
+    records.append(sizedMetricResource(MetricName.listReadableWidth, 648.0, 704.0))
+    records.append(metricResource(MetricName.listSectionSpacing, 10.0))
+    records.append(sizedMetricResource(MetricName.listLabeledSectionSpacing, 10.0, 30.0))
+    records.append(sizedMetricResource(MetricName.listTopInset, 10.0, 20.0))
+    records.append(sizedMetricResource(MetricName.listCornerRadius, 26.0, 12.0))
+    records.append(sizedMetricResource(MetricName.listRowHeight, 52.0, 36.0))
+    records.append(sizedMetricResource(MetricName.listRowInset, 16.0, 10.0))
+    records.append(sizedMetricResource(MetricName.listRowVerticalInset, 15.0, 10.0))
+    records.append(metricResource(MetricName.listSeparatorThickness, 0.5))
+    records.append(sizedMetricResource(MetricName.listAccessorySpacing, 16.0, 10.0))
+    // A grouped `Form` on macOS 27 splits a labeled row 45 to 55 between the
+    // label and the value, measured 500 and 800 wide, whatever the label
+    // reads. An iPad's row has no columns: its value trails the label, so only
+    // a desktop list reads this.
+    records.append(metricResource(MetricName.listValueColumnShare, 0.55))
+    records.append(sizedMetricResource(MetricName.listHeaderTopInset, 10.0, 0.0))
+    records.append(sizedMetricResource(MetricName.listHeaderBottomInset, 20.0, 10.0))
+    records.append(sizedMetricResource(MetricName.listFooterTopInset, 8.0, 10.0))
+    records.append(sizedMetricResource(MetricName.listFooterBottomInset, 6.0, 0.0))
+
+    // One level of an outline: UIKit's list cell steps in 10
+    // (`UITableConstants_IOS defaultIndentationWidthForSidebarStyle:`), an
+    // `NSOutlineView` on macOS 27 13 per level.
+    records.append(sizedMetricResource(MetricName.listIndentation, 10.0, 13.0))
 
     // The kit's top toolbar sets its large title in a row that holds 4 above
     // it, under the 10 the band already leaves below the controls, and leaves
     // 10 under it before the content.
-    records.append(metricResource(metricLargeTitleTopInset(), 4.0))
-    records.append(metricResource(metricLargeTitleBottomInset(), 10.0))
-    records.append(metricResource(metricLargeTitleFadeDuration(), 0.25))
-    records.append(metricResource(metricLargeTitleInlineTravel(), 8.0))
-    records.append(metricResource(metricLargeTitleInlineBlur(), 5.0))
-    records.append(metricResource(metricScrollEdgeBlurRadius(), 6.0))
-    records.append(metricResource(metricScrollEdgeBorderWidth(), 0.67))
+    records.append(metricResource(MetricName.largeTitleTopInset, 4.0))
+    records.append(sizedMetricResource(MetricName.largeTitleBottomInset, 10.0, 8.0))
+    records.append(metricResource(MetricName.largeTitleFadeDuration, 0.25))
+    records.append(metricResource(MetricName.largeTitleInlineTravel, 8.0))
+    records.append(metricResource(MetricName.largeTitleInlineBlur, 5.0))
+    records.append(metricResource(MetricName.scrollEdgeBlurRadius, 6.0))
+    records.append(metricResource(MetricName.scrollEdgeBorderWidth, 0.67))
 
     // The platform's push, measured off Apple Music mid-swipe: the moving view
     // takes the display's corner, the covered one sits under an 11% black
@@ -145,19 +205,19 @@ function defaultMetricResources() -> [ResourceRecord] {
     // from 30% of the width toward the leading edge. UIKit's interactive pop
     // commits past half the width or on a throw faster than 300 points a
     // second, and the swipe starts once it has moved 10 points.
-    records.append(metricResource(metricNavigationPageCornerRadius(), 18.0))
-    records.append(metricResource(metricNavigationCoveredDim(), 0.11))
-    records.append(metricResource(metricNavigationCoveredParallax(), 0.3))
+    records.append(metricResource(MetricName.navigationPageCornerRadius, 18.0))
+    records.append(metricResource(MetricName.navigationCoveredDim, 0.11))
+    records.append(metricResource(MetricName.navigationCoveredParallax, 0.3))
     // A push and a pop land on UIKit's spring, fitted to a
     // UINavigationController sampled frame by frame on an iPhone (iOS 27):
     // a little past critical damping on a 0.25 s response, so the view is
     // within a point of home in 0.4 s. A swipe let go hands the spring the
     // speed it was thrown at.
-    records.append(metricResource(metricNavigationPushResponse(), 0.25))
-    records.append(metricResource(metricNavigationPushDamping(), 1.1))
-    records.append(metricResource(metricNavigationSwipeCommitFraction(), 0.5))
-    records.append(metricResource(metricNavigationSwipeCommitVelocity(), 300.0))
-    records.append(metricResource(metricNavigationSwipeSlop(), 10.0))
+    records.append(metricResource(MetricName.navigationPushResponse, 0.25))
+    records.append(metricResource(MetricName.navigationPushDamping, 1.1))
+    records.append(metricResource(MetricName.navigationSwipeCommitFraction, 0.5))
+    records.append(metricResource(MetricName.navigationSwipeCommitVelocity, 300.0))
+    records.append(metricResource(MetricName.navigationSwipeSlop, 10.0))
 
     // UIKit's iOS scroll indicator, read out of iPadOS 26's UIKitCore: 3
     // thick, 8 while scrubbed, never shorter than 36 over long content, and
@@ -165,16 +225,16 @@ function defaultMetricResources() -> [ResourceRecord] {
     // 10 to either side and 5 beyond either end. It stays a second after
     // scrolling stops and fades over a quarter of one, and swells in 0.2
     // seconds and thins back in 0.3, both critically damped.
-    records.append(metricResource(metricScrollIndicatorThickness(), 3.0))
-    records.append(metricResource(metricScrollIndicatorExpandedThickness(), 8.0))
-    records.append(metricResource(metricScrollIndicatorMinimumLength(), 36.0))
-    records.append(metricResource(metricScrollIndicatorOverscrolledLength(), 7.0))
-    records.append(metricResource(metricScrollIndicatorHitOutsetAcross(), 10.0))
-    records.append(metricResource(metricScrollIndicatorHitOutsetAlong(), 5.0))
-    records.append(metricResource(metricScrollIndicatorHideDelay(), 1.0))
-    records.append(metricResource(metricScrollIndicatorFadeDuration(), 0.25))
-    records.append(metricResource(metricScrollIndicatorExpandDuration(), 0.2))
-    records.append(metricResource(metricScrollIndicatorCollapseDuration(), 0.3))
+    records.append(sizedMetricResource(MetricName.scrollIndicatorThickness, 3.0, 6.0))
+    records.append(sizedMetricResource(MetricName.scrollIndicatorExpandedThickness, 8.0, 10.0))
+    records.append(sizedMetricResource(MetricName.scrollIndicatorMinimumLength, 36.0, 20.0))
+    records.append(metricResource(MetricName.scrollIndicatorOverscrolledLength, 7.0))
+    records.append(metricResource(MetricName.scrollIndicatorHitOutsetAcross, 10.0))
+    records.append(metricResource(MetricName.scrollIndicatorHitOutsetAlong, 5.0))
+    records.append(metricResource(MetricName.scrollIndicatorHideDelay, 1.0))
+    records.append(metricResource(MetricName.scrollIndicatorFadeDuration, 0.25))
+    records.append(metricResource(MetricName.scrollIndicatorExpandDuration, 0.2))
+    records.append(metricResource(MetricName.scrollIndicatorCollapseDuration, 0.3))
 
     // A bar's menu growing out of its button, fit frame by frame to the
     // iOS 26 Photos menu slowed tenfold: the glass's box, center and fill
@@ -206,34 +266,34 @@ function defaultMetricResources() -> [ResourceRecord] {
     // glyph comes back on the button's glass over its first 60%, out of a
     // 4-point blur. The rows' size is measured off the recording, the blur
     // read by eye.
-    records.append(metricResource(metricMenuMorphGrowthResponse(), 0.27))
-    records.append(metricResource(metricMenuMorphGrowthDamping(), 0.95))
-    records.append(metricResource(metricMenuMorphHeightResponse(), 0.17))
-    records.append(metricResource(metricMenuMorphHeightDamping(), 1.0))
-    records.append(metricResource(metricMenuMorphDropResponse(), 0.34))
-    records.append(metricResource(metricMenuMorphDropDamping(), 0.72))
-    records.append(metricResource(metricMenuMorphDropLaunch(), 4.0))
-    records.append(metricResource(metricMenuMorphCloseResponse(), 0.18))
-    records.append(metricResource(metricMenuMorphCloseDamping(), 1.0))
-    records.append(metricResource(metricMenuMorphFlightResponse(), 0.27))
-    records.append(metricResource(metricMenuMorphFlightDamping(), 0.88))
-    records.append(metricResource(metricMenuMorphCornerResponse(), 0.34))
-    records.append(metricResource(metricMenuMorphCloseCornerResponse(), 0.22))
-    records.append(metricResource(metricMenuMorphCloseDuration(), 0.4))
-    records.append(metricResource(metricMenuMorphRoundness(), 0.3))
-    records.append(metricResource(metricMenuMorphContentOpen(), 0.4))
-    records.append(metricResource(metricMenuMorphContentClose(), 0.3))
-    records.append(metricResource(metricMenuMorphContentZoom(), 0.14))
-    records.append(metricResource(metricMenuMorphContentBlur(), 12.0))
-    records.append(metricResource(metricMenuMorphGlyphGone(), 0.35))
-    records.append(metricResource(metricMenuMorphGlyphReturn(), 0.6))
-    records.append(metricResource(metricMenuMorphGlyphBack(), 0.6))
-    records.append(metricResource(metricMenuMorphGlyphBlur(), 4.0))
-    records.append(metricResource(metricMenuMorphHomeReach(), 20.0))
-    records.append(metricResource(metricMenuMorphHomeDepth(), 8.0))
-    records.append(metricResource(metricMenuMorphHomeSurface(), 0.35))
-    records.append(metricResource(metricMenuMorphHomeLead(), 0.1))
-    records.append(metricResource(metricMenuMorphHomeBlend(), 14.0))
+    records.append(metricResource(MetricName.menuMorphGrowthResponse, 0.27))
+    records.append(metricResource(MetricName.menuMorphGrowthDamping, 0.95))
+    records.append(metricResource(MetricName.menuMorphHeightResponse, 0.17))
+    records.append(metricResource(MetricName.menuMorphHeightDamping, 1.0))
+    records.append(metricResource(MetricName.menuMorphDropResponse, 0.34))
+    records.append(metricResource(MetricName.menuMorphDropDamping, 0.72))
+    records.append(metricResource(MetricName.menuMorphDropLaunch, 4.0))
+    records.append(metricResource(MetricName.menuMorphCloseResponse, 0.18))
+    records.append(metricResource(MetricName.menuMorphCloseDamping, 1.0))
+    records.append(metricResource(MetricName.menuMorphFlightResponse, 0.27))
+    records.append(metricResource(MetricName.menuMorphFlightDamping, 0.88))
+    records.append(metricResource(MetricName.menuMorphCornerResponse, 0.34))
+    records.append(metricResource(MetricName.menuMorphCloseCornerResponse, 0.22))
+    records.append(metricResource(MetricName.menuMorphCloseDuration, 0.4))
+    records.append(metricResource(MetricName.menuMorphRoundness, 0.3))
+    records.append(metricResource(MetricName.menuMorphContentOpen, 0.4))
+    records.append(metricResource(MetricName.menuMorphContentClose, 0.3))
+    records.append(metricResource(MetricName.menuMorphContentZoom, 0.14))
+    records.append(metricResource(MetricName.menuMorphContentBlur, 12.0))
+    records.append(metricResource(MetricName.menuMorphGlyphGone, 0.35))
+    records.append(metricResource(MetricName.menuMorphGlyphReturn, 0.6))
+    records.append(metricResource(MetricName.menuMorphGlyphBack, 0.6))
+    records.append(metricResource(MetricName.menuMorphGlyphBlur, 4.0))
+    records.append(metricResource(MetricName.menuMorphHomeReach, 20.0))
+    records.append(metricResource(MetricName.menuMorphHomeDepth, 8.0))
+    records.append(metricResource(MetricName.menuMorphHomeSurface, 0.35))
+    records.append(metricResource(MetricName.menuMorphHomeLead, 0.1))
+    records.append(metricResource(MetricName.menuMorphHomeBlend, 14.0))
 
     // A submenu, measured frame by frame off the iOS 26 Music playlist menu at
     // 60 fps. Its card is the menu's full width, its header 30 points under its
@@ -246,86 +306,294 @@ function defaultMetricResources() -> [ResourceRecord] {
     // edges coming in by 1.7% of its size -- the 98% Music's menu narrows to
     // with its trailing edge held -- and after 70 ms dims to 64% ink on a
     // 0.3 s spring; it comes back on 0.12 s with no hold.
-    records.append(metricResource(metricMenuSubmenuOpenResponse(), 0.35))
-    records.append(metricResource(metricMenuSubmenuOpenDamping(), 0.65))
-    records.append(metricResource(metricMenuSubmenuCloseResponse(), 0.18))
-    records.append(metricResource(metricMenuSubmenuCloseDamping(), 1.0))
-    records.append(metricResource(metricMenuSubmenuRecededOpacity(), 0.64))
-    records.append(metricResource(metricMenuSubmenuRecedeScale(), 0.972))
-    records.append(metricResource(metricMenuSubmenuRecedeHold(), 0.07))
+    records.append(metricResource(MetricName.menuSubmenuOpenResponse, 0.35))
+    records.append(metricResource(MetricName.menuSubmenuOpenDamping, 0.65))
+    records.append(metricResource(MetricName.menuSubmenuCloseResponse, 0.18))
+    records.append(metricResource(MetricName.menuSubmenuCloseDamping, 1.0))
+    records.append(metricResource(MetricName.menuSubmenuRecededOpacity, 0.64))
+    records.append(metricResource(MetricName.menuSubmenuRecedeScale, 0.972))
+    records.append(metricResource(MetricName.menuSubmenuRecedeHold, 0.07))
     // How long a held press rests on a submenu's header before it opens or
     // closes, or on the menu behind an open one before it closes.
-    records.append(metricResource(metricMenuSubmenuDwell(), 0.45))
+    records.append(metricResource(MetricName.menuSubmenuDwell, 0.45))
     // How much wider than its menu a submenu's card opens, all of it on the
     // leading side.
-    records.append(metricResource(metricMenuSubmenuWiden(), 9.0))
-    records.append(metricResource(metricMenuSubmenuRecedeInResponse(), 0.3))
-    records.append(metricResource(metricMenuSubmenuRecedeInDamping(), 1.0))
-    records.append(metricResource(metricMenuSubmenuRecedeOutResponse(), 0.12))
-    records.append(metricResource(metricMenuSubmenuRecedeOutDamping(), 1.0))
-    records.append(metricResource(metricMenuSubmenuShrinkResponse(), 0.35))
-    records.append(metricResource(metricMenuSubmenuShrinkDamping(), 0.65))
-    records.append(metricResource(metricMenuSubmenuRise(), 2.0))
-    records.append(metricResource(metricMenuSubmenuRiseLaunch(), 80.0))
-    records.append(metricResource(metricMenuSubmenuHeaderCenter(), 30.0))
-    records.append(metricResource(metricMenuSubmenuChevronTurn(), 0.7))
-    records.append(metricResource(metricMenuSubmenuCardAppear(), 0.3))
-    records.append(metricResource(metricMenuSubmenuCardAppearSpan(), 0.6))
-    records.append(metricResource(metricMenuSubmenuCardVanish(), 0.12))
-    records.append(metricResource(metricMenuSubmenuItemsAppear(), 0.05))
-    records.append(metricResource(metricMenuSubmenuItemsAppearSpan(), 0.35))
-    records.append(metricResource(metricMenuSubmenuItemsVanish(), 0.2))
-    records.append(metricResource(metricMenuSubmenuItemsVanishSpan(), 0.5))
+    records.append(sizedMetricResource(MetricName.menuSubmenuWiden, 9.0, 7.0))
+    records.append(metricResource(MetricName.menuSubmenuRecedeInResponse, 0.3))
+    records.append(metricResource(MetricName.menuSubmenuRecedeInDamping, 1.0))
+    records.append(metricResource(MetricName.menuSubmenuRecedeOutResponse, 0.12))
+    records.append(metricResource(MetricName.menuSubmenuRecedeOutDamping, 1.0))
+    records.append(metricResource(MetricName.menuSubmenuShrinkResponse, 0.35))
+    records.append(metricResource(MetricName.menuSubmenuShrinkDamping, 0.65))
+    records.append(metricResource(MetricName.menuSubmenuRise, 2.0))
+    records.append(metricResource(MetricName.menuSubmenuRiseLaunch, 80.0))
+    records.append(sizedMetricResource(MetricName.menuSubmenuHeaderCenter, 30.0, 23.0))
+    records.append(metricResource(MetricName.menuSubmenuChevronTurn, 0.7))
+    records.append(metricResource(MetricName.menuSubmenuCardAppear, 0.3))
+    records.append(metricResource(MetricName.menuSubmenuCardAppearSpan, 0.6))
+    records.append(metricResource(MetricName.menuSubmenuCardVanish, 0.12))
+    records.append(metricResource(MetricName.menuSubmenuItemsAppear, 0.05))
+    records.append(metricResource(MetricName.menuSubmenuItemsAppearSpan, 0.35))
+    records.append(metricResource(MetricName.menuSubmenuItemsVanish, 0.2))
+    records.append(metricResource(MetricName.menuSubmenuItemsVanishSpan, 0.5))
 
     // The kit's context menu hangs 16 under what opened it, its trailing edge
     // on that control's.
-    records.append(metricResource(metricMenuAnchorSpacing(), 16.0))
+    records.append(sizedMetricResource(MetricName.menuAnchorSpacing, 16.0, 6.0))
 
     // The kit's iPad tab bar: a 44-point capsule of glass holding its tabs 4
     // off every side. A tab is a 36-point capsule with its title 18 off its
-    // ends; a symbol tab holds its symbol 16 off them.
-    records.append(metricResource(metricTabBarHeight(), 44.0))
-    records.append(metricResource(metricTabBarInset(), 4.0))
-    records.append(metricResource(metricTabHeight(), 36.0))
-    records.append(metricResource(metricTabLabelInset(), 18.0))
-    records.append(metricResource(metricTabSymbolInset(), 16.0))
+    // ends; a symbol tab holds its symbol 16 off them. The desktop draws the
+    // same component at its 28-point control height: every measure scaled by
+    // 28/44, on the half point a 2x display draws.
+    records.append(sizedMetricResource(MetricName.tabBarHeight, 44.0, 28.0))
+    records.append(sizedMetricResource(MetricName.tabBarInset, 4.0, 2.5))
+    records.append(sizedMetricResource(MetricName.tabHeight, 36.0, 23.0))
+    records.append(sizedMetricResource(MetricName.tabLabelInset, 18.0, 11.5))
+    records.append(sizedMetricResource(MetricName.tabSymbolInset, 16.0, 10.0))
 
-    // The kit's switch: a 64 by 28 capsule holding a 38 by 24 knob 2 off its
-    // ends. Its slider stands 28 tall, a 6-point track through the middle under
-    // the same 38 by 24 knob, whose center travels from 16 in from one end of
-    // the track to 16 in from the other. Held, the knob swells into a 60 by 40
-    // piece of clear glass. Its progress bar is a 4-point track.
-    records.append(metricResource(metricSwitchWidth(), 64.0))
-    records.append(metricResource(metricSwitchHeight(), 28.0))
-    records.append(metricResource(metricSwitchKnobWidth(), 38.0))
-    records.append(metricResource(metricSwitchKnobInset(), 2.0))
-    records.append(metricResource(metricSliderHeight(), 28.0))
-    records.append(metricResource(metricSliderTrackHeight(), 6.0))
-    records.append(metricResource(metricSliderKnobWidth(), 38.0))
-    records.append(metricResource(metricSliderKnobHeight(), 24.0))
-    records.append(metricResource(metricSliderKnobInset(), 16.0))
-    records.append(metricResource(metricSliderHeldKnobWidth(), 60.0))
-    records.append(metricResource(metricSliderHeldKnobHeight(), 40.0))
-    records.append(metricResource(metricProgressTrackHeight(), 4.0))
+    // The kit's iPhone tab bar, which floats at the foot of the screen: its
+    // row of tabs keeps 25 off the screen's sides at most and 25 off its
+    // bottom, under glass reaching 4 past it. A tab is 102 wide, 2 in from the
+    // row's ends, its 54-point selection capsule 2 past either end of it, and
+    // overlaps the next by 8: so 106 wide with the capsule, overlapping by 12,
+    // from end to end of the row.
+    // Its 18-point semibold symbol is set on a 28-point line 6 under its top,
+    // over a 10-point semibold title on a 12-point line 1 under it, both 8 in
+    // from the tab's ends. Four tabs or more shrink to fit the row.
+    records.append(metricResource(MetricName.phoneTabBarEdgeInset, 25.0))
+    records.append(metricResource(MetricName.phoneTabBarBottomInset, 25.0))
+    records.append(metricResource(MetricName.phoneTabBarGlassOutset, 4.0))
+    records.append(metricResource(MetricName.phoneTabWidth, 106.0))
+    records.append(metricResource(MetricName.phoneTabHeight, 54.0))
+    records.append(metricResource(MetricName.phoneTabOverlap, 12.0))
+    records.append(metricResource(MetricName.phoneTabTopInset, 6.0))
+    records.append(metricResource(MetricName.phoneTabSideInset, 10.0))
+    records.append(metricResource(MetricName.phoneTabSymbolSize, 18.0))
+    records.append(metricResource(MetricName.phoneTabSymbolLine, 28.0))
+    records.append(metricResource(MetricName.phoneTabTitleSize, 10.0))
+    records.append(metricResource(MetricName.phoneTabTitleLine, 12.0))
+    records.append(metricResource(MetricName.phoneTabTitleSpacing, 1.0))
+
+    // A button's own geometry at each control size. The mobile side is UIKit's
+    // `UIButtonConfiguration`: its default content insets, 10 by 5 at mini and
+    // small, 12 by 7 at medium and 20 by 15 at large, around a title set in the
+    // short subheadline at mini and small and the short body above. So its
+    // height is that face's line, 18 or 20, and the two insets. The desktop side
+    // is SwiftUI's bordered button on macOS 27, measured: 13, 20, 24 and 28
+    // tall, its title 8, 10, 12 and 11 off its ends, set at 9, 11, 13 and 13.
+    // Its bezel is rounded 4, 5 and 6, and at large it is a capsule.
+    records.append(sizedMetricResource(MetricName.controlMiniHeight, 28.0, 13.0))
+    records.append(sizedMetricResource(MetricName.controlMiniLabelInset, 10.0, 8.0))
+    records.append(sizedMetricResource(MetricName.controlMiniFontSize, 15.0, 9.0))
+    records.append(sizedMetricResource(MetricName.controlMiniCornerRadius, 8.0, 4.0))
+    records.append(sizedMetricResource(MetricName.controlSmallHeight, 28.0, 20.0))
+    records.append(sizedMetricResource(MetricName.controlSmallLabelInset, 10.0, 10.0))
+    records.append(sizedMetricResource(MetricName.controlSmallFontSize, 15.0, 11.0))
+    records.append(sizedMetricResource(MetricName.controlSmallCornerRadius, 8.0, 5.0))
+    records.append(sizedMetricResource(MetricName.controlRegularHeight, 34.0, 24.0))
+    records.append(sizedMetricResource(MetricName.controlRegularLabelInset, 12.0, 12.0))
+    records.append(sizedMetricResource(MetricName.controlRegularFontSize, 17.0, 13.0))
+    records.append(sizedMetricResource(MetricName.controlRegularCornerRadius, 8.0, 6.0))
+    records.append(sizedMetricResource(MetricName.controlLargeHeight, 50.0, 28.0))
+    records.append(sizedMetricResource(MetricName.controlLargeLabelInset, 20.0, 11.0))
+    records.append(sizedMetricResource(MetricName.controlLargeFontSize, 17.0, 13.0))
+    records.append(sizedMetricResource(MetricName.controlLargeCornerRadius, 8.0, 14.0))
+
+    // A text field at each control size. The mobile side is UIKit's rounded
+    // field, which has no size of its own: `_UITextFieldSystemBackgroundProvider`
+    // holds its text 7 off its ends and 2 off its top and bottom, and stands at
+    // least 30 tall. The desktop side is SwiftUI's on macOS 27, measured: 19,
+    // 21, 24 and 24 tall, its text 6 off its ends at every size, its bezel
+    // rounded 4, 5, 6 and 7.
+    records.append(sizedMetricResource(MetricName.controlMiniFieldHeight, 30.0, 19.0))
+    records.append(sizedMetricResource(MetricName.controlSmallFieldHeight, 30.0, 21.0))
+    records.append(sizedMetricResource(MetricName.controlRegularFieldHeight, 30.0, 24.0))
+    records.append(sizedMetricResource(MetricName.controlLargeFieldHeight, 30.0, 24.0))
+    records.append(sizedMetricResource(MetricName.controlMiniFieldCornerRadius, 8.0, 4.0))
+    records.append(sizedMetricResource(MetricName.controlSmallFieldCornerRadius, 8.0, 5.0))
+    records.append(sizedMetricResource(MetricName.controlRegularFieldCornerRadius, 8.0, 6.0))
+    records.append(sizedMetricResource(MetricName.controlLargeFieldCornerRadius, 8.0, 7.0))
+    records.append(sizedMetricResource(MetricName.fieldLabelInset, 7.0, 6.0))
+
+    // A pop-up button at each control size, which only a Mac draws: SwiftUI's
+    // `Picker` on macOS 27, measured. It is 16, 20, 24 and 28 tall, on the
+    // bezel a button of the size has, its title 8, 10, 12 and 14 off its
+    // leading end. Its chevron, 9, 9, 10.5 and 13.5 tall, stands 11, 14.5, 18
+    // and 21.5 past the title and 6, 8.5, 10 and 10.5 off the trailing end,
+    // whatever the title's length.
+    records.append(metricResource(MetricName.popUpMiniHeight, 16.0))
+    records.append(metricResource(MetricName.popUpMiniLeadingInset, 8.0))
+    records.append(metricResource(MetricName.popUpMiniChevronSpacing, 11.0))
+    records.append(metricResource(MetricName.popUpMiniChevronSize, 9.0))
+    records.append(metricResource(MetricName.popUpMiniTrailingInset, 6.0))
+    records.append(metricResource(MetricName.popUpSmallHeight, 20.0))
+    records.append(metricResource(MetricName.popUpSmallLeadingInset, 10.0))
+    records.append(metricResource(MetricName.popUpSmallChevronSpacing, 14.5))
+    records.append(metricResource(MetricName.popUpSmallChevronSize, 9.0))
+    records.append(metricResource(MetricName.popUpSmallTrailingInset, 8.5))
+    records.append(metricResource(MetricName.popUpRegularHeight, 24.0))
+    records.append(metricResource(MetricName.popUpRegularLeadingInset, 12.0))
+    records.append(metricResource(MetricName.popUpRegularChevronSpacing, 18.0))
+    records.append(metricResource(MetricName.popUpRegularChevronSize, 10.5))
+    records.append(metricResource(MetricName.popUpRegularTrailingInset, 10.0))
+    records.append(metricResource(MetricName.popUpLargeHeight, 28.0))
+    records.append(metricResource(MetricName.popUpLargeLeadingInset, 14.0))
+    records.append(metricResource(MetricName.popUpLargeChevronSpacing, 21.5))
+    records.append(metricResource(MetricName.popUpLargeChevronSize, 13.5))
+    records.append(metricResource(MetricName.popUpLargeTrailingInset, 10.5))
+
+    // A checkbox at each control size, which only a Mac draws: SwiftUI's
+    // automatic `Toggle` on macOS 27, measured. Its box is 12, 14, 16 and 18
+    // square, rounded 3.5, 4.5, 5.5 and 6.5, its checkmark 7.5, 9, 10 and 12
+    // across, and its title stands 1, 4, 5 and 5 past it.
+    records.append(metricResource(MetricName.checkboxMiniSize, 12.0))
+    records.append(metricResource(MetricName.checkboxMiniCornerRadius, 3.5))
+    records.append(metricResource(MetricName.checkboxMiniCheckmarkSize, 7.5))
+    records.append(metricResource(MetricName.checkboxMiniSpacing, 1.0))
+    records.append(metricResource(MetricName.checkboxSmallSize, 14.0))
+    records.append(metricResource(MetricName.checkboxSmallCornerRadius, 4.5))
+    records.append(metricResource(MetricName.checkboxSmallCheckmarkSize, 9.0))
+    records.append(metricResource(MetricName.checkboxSmallSpacing, 4.0))
+    records.append(metricResource(MetricName.checkboxRegularSize, 16.0))
+    records.append(metricResource(MetricName.checkboxRegularCornerRadius, 5.5))
+    records.append(metricResource(MetricName.checkboxRegularCheckmarkSize, 10.0))
+    records.append(metricResource(MetricName.checkboxRegularSpacing, 5.0))
+    records.append(metricResource(MetricName.checkboxLargeSize, 18.0))
+    records.append(metricResource(MetricName.checkboxLargeCornerRadius, 6.5))
+    records.append(metricResource(MetricName.checkboxLargeCheckmarkSize, 12.0))
+    records.append(metricResource(MetricName.checkboxLargeSpacing, 5.0))
+
+    // A switch and a slider at each control size. UIKit's have no sizes of
+    // their own, so the mobile side is the kit's at every size: a 64 by 28
+    // capsule holding a 38 by 24 knob 2 off its ends, and a slider 28 tall, a
+    // 6-point track through the middle under the same 38 by 24 knob, whose
+    // center travels from 16 in from one end of the track to 16 in from the
+    // other. Held, the knob swells into a 60 by 40 piece of clear glass. Its
+    // progress bar is a 4-point track.
+    //
+    // The desktop's are SwiftUI's on macOS 27, measured. Its switch is 36 by
+    // 16, 44 by 20, 54 by 24 and 64 by 28, holding a knob 21 by 13 1.5 off its
+    // ends at the mini size and 26, 32 and 38 wide 2 off them above it. Its
+    // slider stands 12, 14, 16 and 20 tall, a 4-point bar under the two
+    // smaller sizes and a 6-point one under the others, under a knob 16 by 12,
+    // 18 by 14, 20 by 16 and 24 by 20 whose center stops half its width in
+    // from either end, as the regular one's does at 10. Its
+    // `NSProgressIndicator` stands 20 tall, an 8-point track through the
+    // middle edged in half a point.
+    records.append(sizedMetricResource(MetricName.switchMiniWidth, 64.0, 36.0))
+    records.append(sizedMetricResource(MetricName.switchMiniHeight, 28.0, 16.0))
+    records.append(sizedMetricResource(MetricName.switchMiniKnobWidth, 38.0, 21.0))
+    records.append(sizedMetricResource(MetricName.switchMiniKnobInset, 2.0, 1.5))
+    records.append(sizedMetricResource(MetricName.switchSmallWidth, 64.0, 44.0))
+    records.append(sizedMetricResource(MetricName.switchSmallHeight, 28.0, 20.0))
+    records.append(sizedMetricResource(MetricName.switchSmallKnobWidth, 38.0, 26.0))
+    records.append(sizedMetricResource(MetricName.switchSmallKnobInset, 2.0, 2.0))
+    records.append(sizedMetricResource(MetricName.switchRegularWidth, 64.0, 54.0))
+    records.append(sizedMetricResource(MetricName.switchRegularHeight, 28.0, 24.0))
+    records.append(sizedMetricResource(MetricName.switchRegularKnobWidth, 38.0, 32.0))
+    records.append(sizedMetricResource(MetricName.switchRegularKnobInset, 2.0, 2.0))
+    records.append(sizedMetricResource(MetricName.switchLargeWidth, 64.0, 64.0))
+    records.append(sizedMetricResource(MetricName.switchLargeHeight, 28.0, 28.0))
+    records.append(sizedMetricResource(MetricName.switchLargeKnobWidth, 38.0, 38.0))
+    records.append(sizedMetricResource(MetricName.switchLargeKnobInset, 2.0, 2.0))
+    records.append(sizedMetricResource(MetricName.sliderMiniHeight, 28.0, 12.0))
+    records.append(sizedMetricResource(MetricName.sliderMiniTrackHeight, 6.0, 4.0))
+    records.append(sizedMetricResource(MetricName.sliderMiniKnobWidth, 38.0, 16.0))
+    records.append(sizedMetricResource(MetricName.sliderMiniKnobHeight, 24.0, 12.0))
+    records.append(sizedMetricResource(MetricName.sliderMiniKnobInset, 16.0, 8.0))
+    records.append(sizedMetricResource(MetricName.sliderSmallHeight, 28.0, 14.0))
+    records.append(sizedMetricResource(MetricName.sliderSmallTrackHeight, 6.0, 4.0))
+    records.append(sizedMetricResource(MetricName.sliderSmallKnobWidth, 38.0, 18.0))
+    records.append(sizedMetricResource(MetricName.sliderSmallKnobHeight, 24.0, 14.0))
+    records.append(sizedMetricResource(MetricName.sliderSmallKnobInset, 16.0, 9.0))
+    records.append(sizedMetricResource(MetricName.sliderRegularHeight, 28.0, 16.0))
+    records.append(sizedMetricResource(MetricName.sliderRegularTrackHeight, 6.0, 6.0))
+    records.append(sizedMetricResource(MetricName.sliderRegularKnobWidth, 38.0, 20.0))
+    records.append(sizedMetricResource(MetricName.sliderRegularKnobHeight, 24.0, 16.0))
+    records.append(sizedMetricResource(MetricName.sliderRegularKnobInset, 16.0, 10.0))
+    records.append(sizedMetricResource(MetricName.sliderLargeHeight, 28.0, 20.0))
+    records.append(sizedMetricResource(MetricName.sliderLargeTrackHeight, 6.0, 6.0))
+    records.append(sizedMetricResource(MetricName.sliderLargeKnobWidth, 38.0, 24.0))
+    records.append(sizedMetricResource(MetricName.sliderLargeKnobHeight, 24.0, 20.0))
+    records.append(sizedMetricResource(MetricName.sliderLargeKnobInset, 16.0, 12.0))
+    records.append(sizedMetricResource(MetricName.sliderHeldKnobWidth, 60.0, 46.0))
+    records.append(sizedMetricResource(MetricName.sliderHeldKnobHeight, 40.0, 31.0))
+    records.append(sizedMetricResource(MetricName.progressTrackHeight, 4.0, 8.0))
+    records.append(sizedMetricResource(MetricName.progressHeight, 4.0, 20.0))
+    records.append(sizedMetricResource(MetricName.progressTrackBorderWidth, 0.0, 0.5))
 
     // The kit's insertion point: a 2 by 23 bar in the accent beside 17-point
     // text.
-    records.append(metricResource(metricCaretWidth(), 2.0))
-    records.append(metricResource(metricCaretHeight(), 23.0))
+    records.append(metricResource(MetricName.caretWidth, 2.0))
+    records.append(sizedMetricResource(MetricName.caretHeight, 23.0, 17.0))
 
     // The kit draws a disabled switch at half opacity, knob and all.
-    records.append(metricResource(metricDisabledControlOpacity(), 0.5))
+    records.append(metricResource(MetricName.disabledControlOpacity, 0.5))
 
     // The kit's slider knob casts two shadows: 13 of blur falling 6 below it,
     // and 4 of blur half a point below it.
-    records.append(metricResource(metricKnobShadowRadius(), 13.0))
-    records.append(metricResource(metricKnobShadowOffset(), 6.0))
-    records.append(metricResource(metricKnobContactShadowRadius(), 4.0))
-    records.append(metricResource(metricKnobContactShadowOffset(), 0.5))
+    records.append(sizedMetricResource(MetricName.knobShadowRadius, 13.0, 10.0))
+    records.append(sizedMetricResource(MetricName.knobShadowOffset, 6.0, 4.0))
+    records.append(sizedMetricResource(MetricName.knobContactShadowRadius, 4.0, 3.0))
+    records.append(metricResource(MetricName.knobContactShadowOffset, 0.5))
+
+    // The kit's iPad menu: a 238 card with 10 of air top and bottom, 36 rows
+    // held 16 off its edges, a 28 glyph column 8 before 15-point titles. A
+    // computer's menu is the platform's: 24 rows of 13-point titles in a
+    // tighter card with a smaller corner.
+    records.append(sizedMetricResource(MetricName.menuRowHeight, 36.0, 24.0))
+    records.append(sizedMetricResource(MetricName.menuLeadingInset, 16.0, 12.0))
+    records.append(sizedMetricResource(MetricName.menuTrailingInset, 16.0, 12.0))
+    records.append(sizedMetricResource(MetricName.menuLabelSize, 15.0, 13.0))
+    records.append(sizedMetricResource(MetricName.menuCardWidth, 238.0, 220.0))
+    records.append(sizedMetricResource(MetricName.menuCardPadding, 10.0, 5.0))
+    records.append(sizedMetricResource(MetricName.menuCardRadius, 34.0, 13.0))
+    records.append(sizedMetricResource(MetricName.menuDividerInset, 16.0, 12.0))
+    records.append(sizedMetricResource(MetricName.menuDividerVerticalInset, 7.5, 5.0))
+    records.append(sizedMetricResource(MetricName.menuActionPadding, 4.0, 3.0))
+    records.append(sizedMetricResource(MetricName.menuPillInset, 8.0, 6.0))
+    records.append(sizedMetricResource(MetricName.menuChevronBox, 14.0, 10.0))
+    records.append(sizedMetricResource(MetricName.menuChevronSize, 11.0, 9.0))
+    records.append(sizedMetricResource(MetricName.menuIconColumn, 28.0, 18.0))
+    records.append(sizedMetricResource(MetricName.menuIconGap, 8.0, 6.0))
+    records.append(sizedMetricResource(MetricName.menuActionIconSize, 21.0, 16.0))
+    records.append(sizedMetricResource(MetricName.menuActionLabelSize, 12.0, 10.0))
+    records.append(sizedMetricResource(MetricName.menuActionSpacing, 5.0, 4.0))
+    records.append(sizedMetricResource(MetricName.menuActionsTopInset, 6.0, 4.0))
+    records.append(sizedMetricResource(MetricName.menuActionsBottomInset, 6.0, 4.0))
+    records.append(sizedMetricResource(MetricName.menuActionsInset, 10.0, 6.0))
+    records.append(sizedMetricResource(MetricName.menuActionsGap, 6.0, 4.0))
 
     // The kit's menu lifts off what it is over by a wide, soft shadow: 48 of
     // blur falling 8 below the card.
-    records.append(metricResource(metricMenuShadowRadius(), 48.0))
-    records.append(metricResource(metricMenuShadowOffset(), 8.0))
+    records.append(sizedMetricResource(MetricName.menuShadowRadius, 48.0, 37.0))
+    records.append(sizedMetricResource(MetricName.menuShadowOffset, 8.0, 6.0))
+
+    // The menu bar, off the iPadOS 27 kit's: a 44-point row of titles, each
+    // lit in a 32-point pill 12 wide of its text, the pills 4 apart, a menu's
+    // card hung 8 under its title. The desktop menu bar keeps its native
+    // 40-point height, centering the 14-point traffic lights 13 points from
+    // either edge; workspace panel gaps do not resize window chrome.
+    records.append(sizedMetricResource(MetricName.menuBarHeight, 44.0, 40.0))
+    records.append(sizedMetricResource(MetricName.menuBarTitleHeight, 32.0, 24.0))
+    records.append(sizedMetricResource(MetricName.menuBarTitlePadding, 12.0, 8.0))
+    records.append(sizedMetricResource(MetricName.menuBarTitleSpacing, 4.0, 2.0))
+    records.append(sizedMetricResource(MetricName.menuBarCardGap, 8.0, 6.0))
+
+    // A workspace, set by eye against Xcode's and Fleet's editors: panels a
+    // hairline gap apart on the window's canvas, each a card with a tab strip
+    // the height of a compact control. The navigator side opens narrower than
+    // the inspector side, as Xcode's do, and a divider dragged under the
+    // minimum folds its edge away.
+    records.append(sizedMetricResource(MetricName.workspaceGap, mobileWorkspaceGap, desktopWorkspaceGap))
+    records.append(sizedMetricResource(MetricName.workspaceTabSpacing, 4.0, 2.0))
+    records.append(sizedMetricResource(MetricName.workspaceStripInset, 8.0, 6.0))
+    records.append(sizedMetricResource(MetricName.workspaceDividerThickness, 16.0, 8.0))
+    records.append(sizedMetricResource(MetricName.workspaceLeadingWidth, 300.0, 240.0))
+    records.append(sizedMetricResource(MetricName.workspaceTrailingWidth, 340.0, 280.0))
+    records.append(sizedMetricResource(MetricName.workspaceBottomHeight, 260.0, 200.0))
+    records.append(sizedMetricResource(MetricName.workspaceMinimumWidth, 220.0, 160.0))
+    records.append(sizedMetricResource(MetricName.workspaceMinimumHeight, 140.0, 100.0))
     return records
 }

@@ -9,7 +9,25 @@ import KCoreUI
 // proves the floor answers for every name the hardcoded surface declares.
 
 construct KcuTheDefaultCatalogLoads() extends Test {
-    test { return kcuDefaultCatalog().resources.count > 0 }
+    test { return defaultCatalog().resources.count > 0 }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
+}
+
+// Fractional Number midpoints must not cause the lookup to skip a resource.
+construct KcuEveryDefaultCatalogResourceCanBeFound() extends Test {
+    test {
+        let catalog = defaultCatalog()
+        for index in 0..catalog.resources.count {
+            let name = catalog.resourceName(index)
+            if catalog.findResource(name, catalog.resources[index].kind) != index {
+                return false
+            }
+        }
+        return true
+    }
     expect {
         let e: Result<Any, TestFailure> = .Ok(true)
         return e
@@ -20,9 +38,10 @@ construct KcuTheDefaultCatalogLoads() extends Test {
 // changing anything writes the same file back.
 construct KcuTheDefaultCatalogWritesBackByteForByte() extends Test {
     test {
-        let size: Int = fileSize(kcuDefaultCatalogPath())
-        let bytes = readFileRange(kcuDefaultCatalogPath(), 0, size)
-        return kcuBytesEqual(bytes, writeCatalog(kcuDefaultCatalog()))
+        match defaultCatalogBytes() {
+            Ok(bytes) -> return bytesEqual(bytes, (defaultCatalog()).encoded())
+            Error(failure) -> return "unreadable: \(failure)"
+        }
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok(true)
@@ -34,7 +53,7 @@ construct KcuTheDefaultCatalogWritesBackByteForByte() extends Test {
 // name declared with nothing behind it would resolve through the floor and
 // paint the debug color.
 construct KcuTheDefaultCatalogCoversEveryDeclaredName() extends Test {
-    test { return integrityHolds(checkIntegrity(kcuDefaultCatalog())) }
+    test { return ((defaultCatalog()).checkIntegrity()).holds() }
     expect {
         let e: Result<Any, TestFailure> = .Ok(true)
         return e
@@ -43,7 +62,7 @@ construct KcuTheDefaultCatalogCoversEveryDeclaredName() extends Test {
 
 construct KcuTheDefaultCatalogDeclaresNothingItDoesNotCarry() extends Test {
     test {
-        let report = checkIntegrity(kcuDefaultCatalog())
+        let report = (defaultCatalog()).checkIntegrity()
         return report.missingColors.count + report.missingMaterials.count + report.missingTextStyles.count
     }
     expect {
@@ -57,12 +76,12 @@ construct KcuTheDefaultCatalogDeclaresNothingItDoesNotCarry() extends Test {
 // dark.
 construct KcuEveryDeclaredColorResolvesInEveryAppearance() extends Test {
     test {
-        let stack = catalogStackOf(kcuDefaultCatalog())
+        let stack = (defaultCatalog()).asStack()
         var complete = true
-        for name in allColorNames() {
-            if !resolveColorChecked(stack, name, kcuLight()).found { complete = false }
-            if !resolveColorChecked(stack, name, kcuDark()).found { complete = false }
-            if !resolveColorChecked(stack, name, kcuLightHighContrast()).found { complete = false }
+        for name in ColorName.all {
+            if !stack.resolveColorChecked(name, light()).found { complete = false }
+            if !stack.resolveColorChecked(name, dark()).found { complete = false }
+            if !stack.resolveColorChecked(name, lightHighContrast()).found { complete = false }
         }
         return complete
     }
@@ -74,12 +93,12 @@ construct KcuEveryDeclaredColorResolvesInEveryAppearance() extends Test {
 
 construct KcuEveryDeclaredMaterialResolvesInEveryAppearance() extends Test {
     test {
-        let stack = catalogStackOf(kcuDefaultCatalog())
+        let stack = (defaultCatalog()).asStack()
         var complete = true
-        for name in allMaterialNames() {
-            if !resolveMaterial(stack, name, kcuLight()).found { complete = false }
-            if !resolveMaterial(stack, name, kcuDark()).found { complete = false }
-            if !resolveMaterial(stack, name, kcuReducedTransparency()).found { complete = false }
+        for name in MaterialName.all {
+            if !stack.resolveMaterial(name, light()).found { complete = false }
+            if !stack.resolveMaterial(name, dark()).found { complete = false }
+            if !stack.resolveMaterial(name, reducedTransparency()).found { complete = false }
         }
         return complete
     }
@@ -91,10 +110,10 @@ construct KcuEveryDeclaredMaterialResolvesInEveryAppearance() extends Test {
 
 construct KcuEveryDeclaredTextStyleResolves() extends Test {
     test {
-        let stack = catalogStackOf(kcuDefaultCatalog())
+        let stack = (defaultCatalog()).asStack()
         var complete = true
-        for name in allTextStyleNames() {
-            let resolved = resolveTypography(stack, name, kcuLight())
+        for name in TextStyleName.all {
+            let resolved = stack.resolveTypography(name, light())
             if !resolved.found || resolved.value.size <= 0.0 || resolved.value.lineHeight <= 0.0 {
                 complete = false
             }
@@ -111,10 +130,10 @@ construct KcuEveryDeclaredTextStyleResolves() extends Test {
 // carrying one value under two renditions.
 construct KcuTheLabelColorDiffersBetweenAppearances() extends Test {
     test {
-        let stack = catalogStackOf(kcuDefaultCatalog())
-        let light = resolveColor(stack, colorLabel(), kcuLight())
-        let dark = resolveColor(stack, colorLabel(), kcuDark())
-        return !kcuColorsEqual(light, dark) && light.r < dark.r
+        let stack = (defaultCatalog()).asStack()
+        let light = stack.resolveColor(ColorName.label, light())
+        let dark = stack.resolveColor(ColorName.label, dark())
+        return !colorsEqual(light, dark) && light.r < dark.r
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok(true)
@@ -126,15 +145,24 @@ construct KcuTheLabelColorDiffersBetweenAppearances() extends Test {
 // the labels they name in every appearance without a second set of numbers.
 construct KcuTheHierarchicalStylesAliasTheLabels() extends Test {
     test {
-        let stack = catalogStackOf(kcuDefaultCatalog())
+        let stack = (defaultCatalog()).asStack()
         var agrees = true
-        if !kcuColorsEqual(resolveColor(stack, colorPrimary(), kcuDark()), resolveColor(stack, colorLabel(), kcuDark())) {
+        if !colorsEqual(
+            stack.resolveColor(ColorName.primary, dark()),
+            stack.resolveColor(ColorName.label, dark())
+        ) {
             agrees = false
         }
-        if !kcuColorsEqual(resolveColor(stack, colorForeground(), kcuLight()), resolveColor(stack, colorLabel(), kcuLight())) {
+        if !colorsEqual(
+            stack.resolveColor(ColorName.foreground, light()),
+            stack.resolveColor(ColorName.label, light())
+        ) {
             agrees = false
         }
-        if !kcuColorsEqual(resolveColor(stack, colorAccentColor(), kcuDark()), resolveColor(stack, colorTint(), kcuDark())) {
+        if !colorsEqual(
+            stack.resolveColor(ColorName.accentColor, dark()),
+            stack.resolveColor(ColorName.tint, dark())
+        ) {
             agrees = false
         }
         return agrees
@@ -149,17 +177,17 @@ construct KcuTheHierarchicalStylesAliasTheLabels() extends Test {
 // the recipe names a color rather than carrying one.
 construct KcuTheMaterialLadderThickensAndFollowsTheAppearance() extends Test {
     test {
-        let stack = catalogStackOf(kcuDefaultCatalog())
-        let thin = resolveMaterial(stack, materialUltraThin(), kcuLight())
-        let thick = resolveMaterial(stack, materialUltraThick(), kcuLight())
-        if materialBlurRadius(thin) >= materialBlurRadius(thick) {
+        let stack = (defaultCatalog()).asStack()
+        let thin = stack.resolveMaterial(MaterialName.ultraThin, light())
+        let thick = stack.resolveMaterial(MaterialName.ultraThick, light())
+        if thin.blurRadius() >= thick.blurRadius() {
             return false
         }
-        let lightRegular = resolveMaterial(stack, materialRegular(), kcuLight())
-        let darkRegular = resolveMaterial(stack, materialRegular(), kcuDark())
-        let background = resolveColor(stack, colorSystemBackground(), kcuDark())
-        return kcuColorsEqual(darkRegular.layers[2].color, background)
-            && !kcuColorsEqual(lightRegular.layers[2].color, darkRegular.layers[2].color)
+        let lightRegular = stack.resolveMaterial(MaterialName.regular, light())
+        let darkRegular = stack.resolveMaterial(MaterialName.regular, dark())
+        let background = stack.resolveColor(ColorName.systemBackground, dark())
+        return colorsEqual(darkRegular.layers[2].color, background)
+            && !colorsEqual(lightRegular.layers[2].color, darkRegular.layers[2].color)
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok(true)
@@ -170,10 +198,10 @@ construct KcuTheMaterialLadderThickensAndFollowsTheAppearance() extends Test {
 // Reduced transparency swaps the recipe rather than dimming it.
 construct KcuReducedTransparencyRemovesTheBlurFromEveryMaterial() extends Test {
     test {
-        let stack = catalogStackOf(kcuDefaultCatalog())
+        let stack = (defaultCatalog()).asStack()
         var opaque = true
-        for name in allMaterialNames() {
-            if materialBlurRadius(resolveMaterial(stack, name, kcuReducedTransparency())) != 0.0 {
+        for name in MaterialName.all {
+            if (stack.resolveMaterial(name, reducedTransparency())).blurRadius() != 0.0 {
                 opaque = false
             }
         }
@@ -188,12 +216,12 @@ construct KcuReducedTransparencyRemovesTheBlurFromEveryMaterial() extends Test {
 // The bar is the only material in the ladder that draws its own hairline.
 construct KcuOnlyTheBarMaterialCarriesABorder() extends Test {
     test {
-        let stack = catalogStackOf(kcuDefaultCatalog())
+        let stack = (defaultCatalog()).asStack()
         var borders = 0
-        for name in allMaterialNames() {
-            for layer in resolveMaterial(stack, name, kcuLight()).layers {
+        for name in MaterialName.all {
+            for layer in stack.resolveMaterial(name, light()).layers {
                 if layer.kind == .Border {
-                    borders = borders + 1
+                    borders++
                 }
             }
         }
@@ -211,12 +239,12 @@ construct KcuOnlyTheBarMaterialCarriesABorder() extends Test {
 // rest.
 construct KcuTheTextLadderBracketsEveryStyle() extends Test {
     test {
-        let stack = catalogStackOf(kcuDefaultCatalog())
-        let largest = resolveTypography(stack, textLargeTitle(), kcuLight()).value.size
-        let smallest = resolveTypography(stack, textCaption2(), kcuLight()).value.size
+        let stack = (defaultCatalog()).asStack()
+        let largest = stack.resolveTypography(TextStyleName.largeTitle, light()).value.size
+        let smallest = stack.resolveTypography(TextStyleName.caption2, light()).value.size
         var bracketed = largest > smallest
-        for name in allTextStyleNames() {
-            let style = resolveTypography(stack, name, kcuLight()).value
+        for name in TextStyleName.all {
+            let style = stack.resolveTypography(name, light()).value
             if style.size > largest || style.size < smallest {
                 bracketed = false
             }
@@ -236,9 +264,38 @@ construct KcuTheTextLadderBracketsEveryStyle() extends Test {
 // toolkit's text would move.
 construct KcuTheBodyStyleKeepsTheKitsMetrics() extends Test {
     test {
-        let stack = catalogStackOf(kcuDefaultCatalog())
-        let body = resolveTypography(stack, textBody(), kcuLight()).value
+        let stack = (defaultCatalog()).asStack()
+        let body = stack.resolveTypography(TextStyleName.body, tablet()).value
         return body.size == 17.0 && body.lineHeight == 22.0 && body.weight == 400
+    }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
+}
+
+construct KcuADesktopSetsTheBodyStyleAtTheMacsSize() extends Test {
+    test {
+        let stack = (defaultCatalog()).asStack()
+        let body = stack.resolveTypography(TextStyleName.body, desktop()).value
+        return body.size == 13.0 && body.lineHeight == 16.0 && body.weight == 400
+    }
+    expect {
+        let e: Result<Any, TestFailure> = .Ok(true)
+        return e
+    }
+}
+
+// A Mac's sidebar row is AppKit's medium row, 32 since macOS 26; its push
+// moves on the same spring as the kit's.
+construct KcuADesktopLaysOutAtTheMacsSizeAndMovesAtTheKitsPace() extends Test {
+    test {
+        let stack = (defaultCatalog()).asStack()
+        let tabletRow = stack.resolveMetric(MetricName.sidebarRowHeight, tablet()).points
+        let desktopRow = stack.resolveMetric(MetricName.sidebarRowHeight, desktop()).points
+        let tabletPush = stack.resolveMetric(MetricName.navigationPushResponse, tablet()).points
+        let desktopPush = stack.resolveMetric(MetricName.navigationPushResponse, desktop()).points
+        return tabletRow == 44.0 && desktopRow == 32.0 && tabletPush == desktopPush
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok(true)

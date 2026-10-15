@@ -19,191 +19,227 @@ import Foundation
 
 public struct CacheEntry {
     var used: Bool = false
-    var hash: Int = 0
+    var hash: Number = 0
     var name: String = ""
     var kind: ResourceKind = .Color
     var environmentKey: UIEnvironmentKey = UIEnvironmentKey(0)
     var customKey: UICustomTraitKey = UICustomTraitKey(0)
     var resolved: ResolvedRendition = ResolvedRendition()
-    var color: Color = Color()
+    var color: RGBAColor = RGBAColor()
     var colorReady: Bool = false
 }
 
 public struct ResolutionCache {
     var entries: [CacheEntry] = []
-    var mask: Int = 0
-    var hits: Int = 0
-    var misses: Int = 0
-    var evictions: Int = 0
+    var mask: Number = 0
+    var hits: Number = 0
+    var misses: Number = 0
+    var evictions: Number = 0
 }
 
 // How far a lookup probes before it evicts rather than growing. A short bound
 // keeps the worst case flat; the table is sized so it is rarely reached.
-public function cacheProbeLimit() -> Int { return 8 }
+public namespace CacheSizing {
+    let probeLimit: Number = 8
 
-public function defaultCacheCapacity() -> Int { return 1024 }
+    let defaultCapacity: Number = 1024
+}
 
 // A cache with `capacity` slots, rounded up to a power of two so the index is a
 // mask rather than a remainder.
-public function makeResolutionCache(capacity: Int) -> ResolutionCache {
+public function makeResolutionCache(capacity: Number) -> ResolutionCache {
     var size = 16
     while size < capacity {
         size = size * 2
     }
     var cache = ResolutionCache()
-    var index = 0
-    while index < size {
+    for _ in 0..size {
         cache.entries.append(CacheEntry())
-        index = index + 1
     }
     cache.mask = size - 1
     return cache
 }
 
 public function makeDefaultCache() -> ResolutionCache {
-    return makeResolutionCache(defaultCacheCapacity())
+    return makeResolutionCache(CacheSizing.defaultCapacity)
 }
 
-// Drop everything. Call when the catalog stack changes; an environment change
-// needs nothing, because the environment is part of the key.
-public function clearCache(cache: borrow mut ResolutionCache) {
-    for index in 0..cache.entries.count {
-        cache.entries[index] = CacheEntry()
+extend ResolutionCache {
+    // Drop everything. Call when the catalog stack changes; an environment change
+    // needs nothing, because the environment is part of the key.
+    function clear(borrow mut self) {
+        for index in 0..self.entries.count {
+            self.entries[index] = CacheEntry()
+        }
+        self.hits = 0
+        self.misses = 0
+        self.evictions = 0
     }
-    cache.hits = 0
-    cache.misses = 0
-    cache.evictions = 0
 }
 
 // FNV-1a over the name's bytes, folded with the environment words at probe time.
-public function nameHash(name: borrow String) -> Int {
+public function nameHash(name: borrow String) -> Number {
     var hash = 2166136261
     for index in 0..name.count {
-        hash = hash ^ Int(name.charAt(index))
+        hash = hash ^ Number(name.charAt(index))
         hash = wrappingMul(hash, 16777619)
     }
     return hash & 4611686018427387903
 }
 
-public function probeStart(cache: borrow ResolutionCache, hash: Int, environmentKey: UIEnvironmentKey, customKey: UICustomTraitKey) -> Int {
-    var mixed = hash ^ wrappingMul(environmentKey.raw, 2654435761)
-    mixed = mixed ^ wrappingMul(customKey.raw, 40503)
-    mixed = mixed ^ (mixed >> 21)
-    return mixed & cache.mask
+extend ResolutionCache {
+    function probeStart(
+        hash: Number,
+        environmentKey: UIEnvironmentKey,
+        customKey: UICustomTraitKey
+    ) -> Number {
+        var mixed = hash ^ wrappingMul(environmentKey.raw, 2654435761)
+        mixed = mixed ^ wrappingMul(customKey.raw, 40503)
+        mixed = mixed ^ (mixed >> 21)
+        return mixed & self.mask
+    }
 }
 
-public function entryMatches(entry: borrow CacheEntry, hash: Int, name: borrow String, kind: borrow ResourceKind, environmentKey: UIEnvironmentKey, customKey: UICustomTraitKey) -> Bool {
-    if !entry.used || entry.hash != hash || !resourceKindsEqual(entry.kind, kind) {
-        return false
-    }
-    if entry.environmentKey != environmentKey || entry.customKey != customKey {
-        return false
-    }
-    return compareStrings(entry.name, name) == 0
-}
-
-// The slot this key occupies, or -1. Never writes.
-public function findCacheSlot(cache: borrow ResolutionCache, hash: Int, name: borrow String, kind: borrow ResourceKind, environmentKey: UIEnvironmentKey, customKey: UICustomTraitKey) -> Int {
-    let start = probeStart(cache, hash, environmentKey, customKey)
-    var step = 0
-    while step < cacheProbeLimit() {
-        let slot = (start + step) & cache.mask
-        if entryMatches(cache.entries[slot], hash, name, kind, environmentKey, customKey) {
-            return slot
+extend CacheEntry {
+    function matches(
+        hash: Number,
+        name: borrow String,
+        kind: borrow ResourceKind,
+        environmentKey: UIEnvironmentKey,
+        customKey: UICustomTraitKey
+    ) -> Bool {
+        if !self.used || self.hash != hash || !self.kind.equals(kind) {
+            return false
         }
-        if !cache.entries[slot].used {
-            return 0 - 1
+        if self.environmentKey != environmentKey || self.customKey != customKey {
+            return false
         }
-        step = step + 1
+        return compareStrings(self.name, name) == 0
     }
-    return 0 - 1
 }
 
-// The slot a new entry goes in: the first free one within the probe bound, or
-// the start of the run, which evicts.
-public function claimCacheSlot(cache: borrow mut ResolutionCache, hash: Int, environmentKey: UIEnvironmentKey, customKey: UICustomTraitKey) -> Int {
-    let start = probeStart(cache, hash, environmentKey, customKey)
-    var step = 0
-    while step < cacheProbeLimit() {
-        let slot = (start + step) & cache.mask
-        if !cache.entries[slot].used {
-            return slot
+extend ResolutionCache {
+    // The slot this key occupies, or -1. Never writes.
+    function findSlot(
+        hash: Number,
+        name: borrow String,
+        kind: borrow ResourceKind,
+        environmentKey: UIEnvironmentKey,
+        customKey: UICustomTraitKey
+    ) -> Number {
+        let start = self.probeStart(hash, environmentKey, customKey)
+        for step in 0..CacheSizing.probeLimit {
+            let slot = (start + step) & self.mask
+            if self.entries[slot].matches(hash, name, kind, environmentKey, customKey) {
+                return slot
+            }
+            if !self.entries[slot].used {
+                return -1
+            }
         }
-        step = step + 1
-    }
-    cache.evictions = cache.evictions + 1
-    return start
-}
-
-// Level one: the rendition a name and an environment select.
-public function cachedResolve(cache: borrow mut ResolutionCache, stack: borrow CatalogStack, name: borrow String, kind: borrow ResourceKind, environment: borrow UIEnvironment) -> ResolvedRendition {
-    let hash = nameHash(name)
-    let fixedKey = environmentKey(environment)
-    let customKey = environmentCustomKey(environment)
-    let existing = findCacheSlot(cache, hash, name, kind, fixedKey, customKey)
-    if existing >= 0 {
-        cache.hits = cache.hits + 1
-        return cache.entries[existing].resolved
-    }
-    cache.misses = cache.misses + 1
-    let resolved = resolveResource(stack, name, kind, environment)
-    let slot = claimCacheSlot(cache, hash, fixedKey, customKey)
-    var entry = CacheEntry()
-    entry.used = true
-    entry.hash = hash
-    entry.name = name
-    entry.kind = kind
-    entry.environmentKey = fixedKey
-    entry.customKey = customKey
-    entry.resolved = resolved
-    cache.entries[slot] = entry
-    return resolved
-}
-
-// Level two: the decoded color, kept beside the rendition that produced it.
-public function cachedColor(cache: borrow mut ResolutionCache, stack: borrow CatalogStack, name: borrow String, environment: borrow UIEnvironment) -> Color {
-    let kind: ResourceKind = .Color
-    let hash = nameHash(name)
-    let fixedKey = environmentKey(environment)
-    let customKey = environmentCustomKey(environment)
-    let existing = findCacheSlot(cache, hash, name, kind, fixedKey, customKey)
-    if existing >= 0 && cache.entries[existing].colorReady {
-        cache.hits = cache.hits + 1
-        return cache.entries[existing].color
+        return -1
     }
 
-    let resolution = resolveColorChecked(stack, name, environment)
-    if existing >= 0 {
-        cache.hits = cache.hits + 1
-        cache.entries[existing].color = resolution.color
-        cache.entries[existing].colorReady = true
+    // The slot a new entry goes in: the first free one within the probe bound, or
+    // the start of the run, which evicts.
+    function claimSlot(
+        borrow mut self,
+        hash: Number,
+        environmentKey: UIEnvironmentKey,
+        customKey: UICustomTraitKey
+    ) -> Number {
+        let start = self.probeStart(hash, environmentKey, customKey)
+        for step in 0..CacheSizing.probeLimit {
+            let slot = (start + step) & self.mask
+            if !self.entries[slot].used {
+                return slot
+            }
+        }
+        self.evictions++
+        return start
+    }
+
+    // Level one: the rendition a name and an environment select.
+    function resolve(
+        borrow mut self,
+        stack: borrow CatalogStack,
+        name: borrow String,
+        kind: borrow ResourceKind,
+        environment: borrow UIEnvironment
+    ) -> ResolvedRendition {
+        let hash = nameHash(name)
+        let fixedKey = environment.key()
+        let customKey = environment.customKey()
+        let existing = self.findSlot(hash, name, kind, fixedKey, customKey)
+        if existing >= 0 {
+            self.hits++
+            return self.entries[existing].resolved
+        }
+        self.misses++
+        let resolved = stack.resolveResource(name, kind, environment)
+        let slot = self.claimSlot(hash, fixedKey, customKey)
+        var entry = CacheEntry()
+        entry.used = true
+        entry.hash = hash
+        entry.name = name
+        entry.kind = kind
+        entry.environmentKey = fixedKey
+        entry.customKey = customKey
+        entry.resolved = resolved
+        self.entries[slot] = entry
+        return resolved
+    }
+
+    // Level two: the decoded color, kept beside the rendition that produced it.
+    function color(
+        borrow mut self,
+        stack: borrow CatalogStack,
+        name: borrow String,
+        environment: borrow UIEnvironment
+    ) -> RGBAColor {
+        let kind: ResourceKind = .Color
+        let hash = nameHash(name)
+        let fixedKey = environment.key()
+        let customKey = environment.customKey()
+        let existing = self.findSlot(hash, name, kind, fixedKey, customKey)
+        if existing >= 0 && self.entries[existing].colorReady {
+            self.hits++
+            return self.entries[existing].color
+        }
+
+        let resolution = stack.resolveColorChecked(name, environment)
+        if existing >= 0 {
+            self.hits++
+            self.entries[existing].color = resolution.color
+            self.entries[existing].colorReady = true
+            return resolution.color
+        }
+
+        self.misses++
+        let slot = self.claimSlot(hash, fixedKey, customKey)
+        var entry = CacheEntry()
+        entry.used = true
+        entry.hash = hash
+        entry.name = name
+        entry.environmentKey = fixedKey
+        entry.customKey = customKey
+        entry.resolved = stack.resolveResource(name, kind, environment)
+        entry.color = resolution.color
+        entry.colorReady = true
+        // Stored last: assigning the owned `kind` into the entry moves it, so the
+        // resolve above, which only borrows it, must run first.
+        entry.kind = kind
+        self.entries[slot] = entry
         return resolution.color
     }
 
-    cache.misses = cache.misses + 1
-    let slot = claimCacheSlot(cache, hash, fixedKey, customKey)
-    var entry = CacheEntry()
-    entry.used = true
-    entry.hash = hash
-    entry.name = name
-    entry.environmentKey = fixedKey
-    entry.customKey = customKey
-    entry.resolved = resolveResource(stack, name, kind, environment)
-    entry.color = resolution.color
-    entry.colorReady = true
-    // Stored last: assigning the owned `kind` into the entry moves it, so the
-    // resolve above, which only borrows it, must run first.
-    entry.kind = kind
-    cache.entries[slot] = entry
-    return resolution.color
-}
-
-// What fraction of lookups the cache answered, as a percentage. For a
-// diagnostic overlay; a paint pass never asks.
-public function cacheHitRate(cache: borrow ResolutionCache) -> Int {
-    let total = cache.hits + cache.misses
-    if total == 0 {
-        return 0
+    // What fraction of lookups the cache answered, as a percentage. For a
+    // diagnostic overlay; a paint pass never asks.
+    function hitRate() -> Number {
+        let total = self.hits + self.misses
+        if total == 0 {
+            return 0
+        }
+        return trunc((self.hits * 100) / total)
     }
-    return (cache.hits * 100) / total
 }

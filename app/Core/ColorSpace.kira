@@ -28,7 +28,7 @@ import Foundation
 // the matrix in the middle.
 
 // An encoded channel to linear light.
-public function transferDecode(channel: Float) -> Float {
+public function transferDecode(channel: Number) -> Number {
     if channel <= 0.04045 {
         return channel / 12.92
     }
@@ -36,7 +36,7 @@ public function transferDecode(channel: Float) -> Float {
 }
 
 // Linear light back to an encoded channel.
-public function transferEncode(channel: Float) -> Float {
+public function transferEncode(channel: Number) -> Number {
     if channel <= 0.0031308 {
         return channel * 12.92
     }
@@ -49,73 +49,77 @@ public function transferEncode(channel: Float) -> Float {
 // conversion is one 3x3 matrix each way. The coefficients are the product of
 // the two RGB-to-XYZ matrices, written out rather than multiplied at run time.
 
-// Linear Display P3 to linear sRGB.
-public function p3ToSrgbLinear(color: borrow Color) -> Color {
-    return Color {
-        r: 1.2249401 * color.r - 0.2249404 * color.g + 0.0 * color.b,
-        g: 0.0 - 0.0420569 * color.r + 1.0420571 * color.g + 0.0 * color.b,
-        b: 0.0 - 0.0196376 * color.r - 0.0786361 * color.g + 1.0982735 * color.b,
-        a: color.a
+extend RGBAColor {
+    // Linear Display P3 to linear sRGB.
+    function p3ToSrgbLinear() -> RGBAColor {
+        return RGBAColor {
+            r: 1.2249401 * self.r - 0.2249404 * self.g + 0.0 * self.b,
+            g: -0.0420569 * self.r + 1.0420571 * self.g + 0.0 * self.b,
+            b: -0.0196376 * self.r - 0.0786361 * self.g + 1.0982735 * self.b,
+            a: self.a
+        }
     }
-}
 
-// Linear sRGB to linear Display P3, for authoring a value quoted in sRGB.
-public function srgbToP3Linear(color: borrow Color) -> Color {
-    return Color {
-        r: 0.8224621 * color.r + 0.1775380 * color.g + 0.0 * color.b,
-        g: 0.0331941 * color.r + 0.9668058 * color.g + 0.0 * color.b,
-        b: 0.0170827 * color.r + 0.0723974 * color.g + 0.9105199 * color.b,
-        a: color.a
+    // Linear sRGB to linear Display P3, for authoring a value quoted in sRGB.
+    function srgbToP3Linear() -> RGBAColor {
+        return RGBAColor {
+            r: 0.8224621 * self.r + 0.1775380 * self.g + 0.0 * self.b,
+            g: 0.0331941 * self.r + 0.9668058 * self.g + 0.0 * self.b,
+            b: 0.0170827 * self.r + 0.0723974 * self.g + 0.9105199 * self.b,
+            a: self.a
+        }
     }
 }
 
 // --- Whole-color conversions ----------------------------------------------
 
-// An encoded color to linear light, alpha untouched.
-//
-// Alpha is a coverage fraction rather than a light measurement, so it never
-// travels through a transfer curve.
-public function decodeColor(color: borrow Color) -> Color {
-    return Color {
-        r: transferDecode(color.r),
-        g: transferDecode(color.g),
-        b: transferDecode(color.b),
-        a: color.a
+extend RGBAColor {
+    // An encoded color to linear light, alpha untouched.
+    //
+    // Alpha is a coverage fraction rather than a light measurement, so it never
+    // travels through a transfer curve.
+    function decoded() -> RGBAColor {
+        return RGBAColor {
+            r: transferDecode(self.r),
+            g: transferDecode(self.g),
+            b: transferDecode(self.b),
+            a: self.a
+        }
     }
-}
 
-public function encodeColorChannels(color: borrow Color) -> Color {
-    return Color {
-        r: transferEncode(color.r),
-        g: transferEncode(color.g),
-        b: transferEncode(color.b),
-        a: color.a
+    function encodedChannels() -> RGBAColor {
+        return RGBAColor {
+            r: transferEncode(self.r),
+            g: transferEncode(self.g),
+            b: transferEncode(self.b),
+            a: self.a
+        }
     }
-}
 
-// An encoded Display P3 color as an encoded sRGB one.
-//
-// Out-of-gamut channels are clamped after the matrix: a saturated P3 green has
-// no sRGB spelling, and the nearest one it does have is the edge of the space.
-public function p3ToSrgb(color: borrow Color) -> Color {
-    let converted = p3ToSrgbLinear(decodeColor(color))
-    let clamped = Color {
-        r: clampChannel(converted.r),
-        g: clampChannel(converted.g),
-        b: clampChannel(converted.b),
-        a: converted.a
+    // An encoded Display P3 color as an encoded sRGB one.
+    //
+    // Out-of-gamut channels are clamped after the matrix: a saturated P3 green has
+    // no sRGB spelling, and the nearest one it does have is the edge of the space.
+    function p3ToSrgb() -> RGBAColor {
+        let converted = (self.decoded()).p3ToSrgbLinear()
+        let clamped = RGBAColor {
+            r: clampChannel(converted.r),
+            g: clampChannel(converted.g),
+            b: clampChannel(converted.b),
+            a: converted.a
+        }
+        return clamped.encodedChannels()
     }
-    return encodeColorChannels(clamped)
-}
 
-// The inverse, which is what authors a P3 catalog from values quoted in sRGB.
-// Nothing is clamped: every sRGB color is inside P3.
-public function srgbToP3(color: borrow Color) -> Color {
-    return encodeColorChannels(srgbToP3Linear(decodeColor(color)))
+    // The inverse, which is what authors a P3 catalog from values quoted in sRGB.
+    // Nothing is clamped: every sRGB color is inside P3.
+    function srgbToP3() -> RGBAColor {
+        return ((self.decoded()).srgbToP3Linear()).encodedChannels()
+    }
 }
 
 // A color held to [0, 1] on every channel.
-public function clampChannel(value: Float) -> Float {
+public function clampChannel(value: Number) -> Number {
     if value < 0.0 {
         return 0.0
     }
@@ -125,36 +129,40 @@ public function clampChannel(value: Float) -> Float {
     return value
 }
 
-// The catalog's color, in the gamut this environment reports.
-//
-// The one place a resolved color leaves Display P3. A renderer that is not
-// color managed is an sRGB one as far as this is concerned, which is what the
-// environment's default says.
-public function colorForGamut(color: borrow Color, gamut: borrow DisplayGamut) -> Color {
-    match gamut {
-        SRGB -> return p3ToSrgb(color)
-        P3 -> return color
+extend RGBAColor {
+    // The catalog's color, in the gamut this environment reports.
+    //
+    // The one place a resolved color leaves Display P3. A renderer that is not
+    // color managed is an sRGB one as far as this is concerned, which is what the
+    // environment's default says.
+    function forGamut(gamut: borrow DisplayGamut) -> RGBAColor {
+        match gamut {
+            SRGB -> return self.p3ToSrgb()
+            P3 -> return self
+        }
     }
 }
 
 // --- Compositing -----------------------------------------------------------
 
-// One layer over what is beneath it, source-over, in linear light.
-//
-// The standard Porter-Duff composite: the result's alpha is what the two cover
-// together, and each channel is weighted by how much of the result each layer
-// accounts for. A fully transparent result has no color to speak of and
-// answers black rather than dividing by zero.
-public function compositeOver(source: borrow Color, backdrop: borrow Color) -> Color {
-    let outAlpha = source.a + backdrop.a * (1.0 - source.a)
-    if outAlpha <= 0.0 {
-        return Color(r: 0.0, g: 0.0, b: 0.0, a: 0.0)
-    }
-    let backdropWeight = backdrop.a * (1.0 - source.a)
-    return Color {
-        r: (source.r * source.a + backdrop.r * backdropWeight) / outAlpha,
-        g: (source.g * source.a + backdrop.g * backdropWeight) / outAlpha,
-        b: (source.b * source.a + backdrop.b * backdropWeight) / outAlpha,
-        a: outAlpha
+extend RGBAColor {
+    // One layer over what is beneath it, source-over, in linear light.
+    //
+    // The standard Porter-Duff composite: the result's alpha is what the two cover
+    // together, and each channel is weighted by how much of the result each layer
+    // accounts for. A fully transparent result has no color to speak of and
+    // answers black rather than dividing by zero.
+    function compositeOver(backdrop: borrow RGBAColor) -> RGBAColor {
+        let outAlpha = self.a + backdrop.a * (1.0 - self.a)
+        if outAlpha <= 0.0 {
+            return RGBAColor(r: 0.0, g: 0.0, b: 0.0, a: 0.0)
+        }
+        let backdropWeight = backdrop.a * (1.0 - self.a)
+        return RGBAColor {
+            r: (self.r * self.a + backdrop.r * backdropWeight) / outAlpha,
+            g: (self.g * self.a + backdrop.g * backdropWeight) / outAlpha,
+            b: (self.b * self.a + backdrop.b * backdropWeight) / outAlpha,
+            a: outAlpha
+        }
     }
 }

@@ -23,19 +23,23 @@ import KCoreUI
 // light gray. The burn is a line from that gray at 48 points to white — no
 // burn at all — at 160.
 
-function glassResource(name: borrow String, light: borrow GlassValue, dark: borrow GlassValue) -> ResourceRecord {
+function glassResource(
+    name: borrow String,
+    light: borrow GlassValue,
+    dark: borrow GlassValue
+) -> ResourceRecord {
     var resource = ResourceRecord()
     resource.name = name
     resource.kind = .Glass
 
     var lightRendition = RenditionRecord()
-    lightRendition.constraints.append(whenAppearance(.Light))
-    lightRendition.payload = encodeGlass(light)
+    lightRendition.constraints.append(Appearance.Light.constraint())
+    lightRendition.payload = light.encoded()
     resource.renditions.append(lightRendition)
 
     var darkRendition = RenditionRecord()
-    darkRendition.constraints.append(whenAppearance(.Dark))
-    darkRendition.payload = encodeGlass(dark)
+    darkRendition.constraints.append(Appearance.Dark.constraint())
+    darkRendition.payload = dark.encoded()
     resource.renditions.append(darkRendition)
     return resource
 }
@@ -105,7 +109,9 @@ function clearGlass() -> GlassValue {
 
 function defaultGlassResources() -> [ResourceRecord] {
     var records: [ResourceRecord] = []
-    records.append(glassResource(glassRegular(), lightEdge(regularGlass()), darkEdge(regularGlass())))
-    records.append(glassResource(glassClear(), clearGlass(), clearGlass()))
+    records.append(
+        glassResource(GlassName.regular, lightEdge(regularGlass()), darkEdge(regularGlass()))
+    )
+    records.append(glassResource(GlassName.clear, clearGlass(), clearGlass()))
     return records
 }

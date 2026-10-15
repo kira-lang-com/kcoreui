@@ -12,7 +12,9 @@ import Foundation
 // it does not know answers `ok: false` rather than reading the bytes as if it
 // did.
 
-public function payloadVersion() -> Int { return 1 }
+public namespace PayloadFormat {
+    let version: Number = 1
+}
 
 // --- Color sources --------------------------------------------------------
 //
@@ -23,12 +25,14 @@ public function payloadVersion() -> Int { return 1 }
 // contrast, because the reference resolves against the same environment the
 // material did.
 
-public function colorSourceLiteral() -> Int { return 1 }
-public function colorSourceReference() -> Int { return 2 }
+public namespace ColorSourceTag {
+    let literal: Number = 1
+    let reference: Number = 2
+}
 
 public struct ColorSource {
     var isReference: Bool = false
-    var color: Color = Color()
+    var color: RGBAColor = RGBAColor()
     var reference: String = ""
 }
 
@@ -36,11 +40,11 @@ public struct ColorSource {
 // on the stack, or when a reference chain does not terminate. Deliberately
 // loud: the bottom catalog is required to be complete and an integrity test
 // proves it, so seeing this on screen means the stack was built wrong.
-public function debugColor() -> Color {
-    return Color(r: 1.0, g: 0.0, b: 1.0, a: 1.0)
+public namespace ResolverFallback {
+    let color: RGBAColor = RGBAColor(r: 1.0, g: 0.0, b: 1.0, a: 1.0)
 }
 
-public function literalColor(color: borrow Color) -> ColorSource {
+public function literalColor(color: borrow RGBAColor) -> ColorSource {
     var source = ColorSource()
     source.isReference = false
     source.color = color
@@ -56,15 +60,15 @@ public function referenceColor(name: borrow String) -> ColorSource {
 
 public function appendColorSource(bytes: borrow mut [U8], source: borrow ColorSource) {
     if source.isReference {
-        appendU8(bytes, colorSourceReference())
+        appendU8(bytes, ColorSourceTag.reference)
         appendU16(bytes, source.reference.count)
         appendStringBytes(bytes, source.reference)
     } else {
-        appendU8(bytes, colorSourceLiteral())
-        appendI32(bytes, fixedFromFloat(source.color.r))
-        appendI32(bytes, fixedFromFloat(source.color.g))
-        appendI32(bytes, fixedFromFloat(source.color.b))
-        appendI32(bytes, fixedFromFloat(source.color.a))
+        appendU8(bytes, ColorSourceTag.literal)
+        appendI32(bytes, fixedFromNumber(source.color.r))
+        appendI32(bytes, fixedFromNumber(source.color.g))
+        appendI32(bytes, fixedFromNumber(source.color.b))
+        appendI32(bytes, fixedFromNumber(source.color.a))
     }
 }
 
@@ -72,22 +76,22 @@ public function appendColorSource(bytes: borrow mut [U8], source: borrow ColorSo
 // that advances a cursor answers one of these.
 public struct ColorSourceRead {
     var value: ColorSource = ColorSource()
-    var next: Int = 0
+    var next: Number = 0
     var ok: Bool = false
 }
 
-public function readColorSource(bytes: borrow [U8], offset: Int) -> ColorSourceRead {
+public function readColorSource(bytes: borrow [U8], offset: Number) -> ColorSourceRead {
     var read = ColorSourceRead()
     read.next = offset
     if offset < 0 || offset >= bytes.count {
         return read
     }
     let tag = readU8(bytes, offset)
-    if tag == colorSourceLiteral() {
+    if tag == ColorSourceTag.literal {
         if offset + 17 > bytes.count {
             return read
         }
-        var color = Color()
+        var color = RGBAColor()
         color.r = floatFromFixed(readI32(bytes, offset + 1))
         color.g = floatFromFixed(readI32(bytes, offset + 5))
         color.b = floatFromFixed(readI32(bytes, offset + 9))
@@ -97,7 +101,7 @@ public function readColorSource(bytes: borrow [U8], offset: Int) -> ColorSourceR
         read.ok = true
         return read
     }
-    if tag == colorSourceReference() {
+    if tag == ColorSourceTag.reference {
         let length = readU16(bytes, offset + 1)
         if offset + 3 + length > bytes.count {
             return read
@@ -130,14 +134,14 @@ public struct ColorLayer {
     // Multiplies the source's own alpha. A layer written as "this ink at 10%"
     // says so here rather than by editing the ink's alpha, so the ink stays the
     // named color it is.
-    var opacity: Float = 1.0
+    var opacity: Number = 1.0
 }
 
 public struct ColorValue {
     var layers: [ColorLayer] = []
 }
 
-public function colorLayer(source: borrow ColorSource, opacity: Float) -> ColorLayer {
+public function colorLayer(source: borrow ColorSource, opacity: Number) -> ColorLayer {
     var layer = ColorLayer()
     layer.source = source
     layer.opacity = opacity
@@ -145,7 +149,7 @@ public function colorLayer(source: borrow ColorSource, opacity: Float) -> ColorL
 }
 
 // The one-layer case, which is most of them.
-public function singleLayer(color: borrow Color) -> ColorValue {
+public function singleLayer(color: borrow RGBAColor) -> ColorValue {
     var value = ColorValue()
     value.layers.append(colorLayer(literalColor(color), 1.0))
     return value
@@ -158,24 +162,26 @@ public function aliasLayer(name: borrow String) -> ColorValue {
     return value
 }
 
-public function encodeColorValue(value: borrow ColorValue) -> [U8] {
-    var bytes: [U8] = []
-    appendU8(bytes, payloadVersion())
-    appendU16(bytes, value.layers.count)
-    for layer in value.layers {
-        appendI32(bytes, fixedFromFloat(layer.opacity))
-        appendColorSource(bytes, layer.source)
+extend ColorValue {
+    function encoded() -> [U8] {
+        var bytes: [U8] = []
+        appendU8(bytes, PayloadFormat.version)
+        appendU16(bytes, self.layers.count)
+        for layer in self.layers {
+            appendI32(bytes, fixedFromNumber(layer.opacity))
+            appendColorSource(bytes, layer.source)
+        }
+        return bytes
     }
-    return bytes
 }
 
 // The common spellings, so a producer authoring one flat color writes one call.
-public function encodeColor(color: borrow Color) -> [U8] {
-    return encodeColorValue(singleLayer(color))
+public function encodeColor(color: borrow RGBAColor) -> [U8] {
+    return (singleLayer(color)).encoded()
 }
 
 public function encodeColorAlias(name: borrow String) -> [U8] {
-    return encodeColorValue(aliasLayer(name))
+    return (aliasLayer(name)).encoded()
 }
 
 public struct ColorValueRead {
@@ -185,14 +191,13 @@ public struct ColorValueRead {
 
 public function decodeColorPayload(bytes: borrow [U8]) -> ColorValueRead {
     var read = ColorValueRead()
-    if bytes.count < 3 || readU8(bytes, 0) != payloadVersion() {
+    if bytes.count < 3 || readU8(bytes, 0) != PayloadFormat.version {
         return read
     }
     let layerCount = readU16(bytes, 1)
     var value = ColorValue()
     var cursor = 3
-    var index = 0
-    while index < layerCount {
+    for _ in 0..layerCount {
         if cursor + 4 > bytes.count {
             return read
         }
@@ -205,7 +210,6 @@ public function decodeColorPayload(bytes: borrow [U8]) -> ColorValueRead {
         layer.source = sourceRead.value
         value.layers.append(layer)
         cursor = sourceRead.next
-        index = index + 1
     }
     read.value = value
     read.ok = true
@@ -220,15 +224,17 @@ public enum GradientKind {
     Angular
 }
 
-public function gradientKindValue(kind: borrow GradientKind) -> Int {
-    match kind {
-        Linear -> return 1
-        Radial -> return 2
-        Angular -> return 3
+extend GradientKind {
+    function value() -> Number {
+        match self {
+            Linear -> return 1
+            Radial -> return 2
+            Angular -> return 3
+        }
     }
 }
 
-public function gradientKindFromValue(value: Int) -> GradientKind {
+public function gradientKindFromValue(value: Number) -> GradientKind {
     if value == 2 { return .Radial }
     if value == 3 { return .Angular }
     return .Linear
@@ -236,7 +242,7 @@ public function gradientKindFromValue(value: Int) -> GradientKind {
 
 // One stop, at a position along the gradient's own 0-to-1 axis.
 public struct GradientStop {
-    var position: Float = 0.0
+    var position: Number = 0.0
     var color: ColorSource = ColorSource()
 }
 
@@ -245,27 +251,29 @@ public struct GradientStop {
 // and an angular one sweeps around start beginning at the angle to end.
 public struct GradientValue {
     var kind: GradientKind = .Linear
-    var startX: Float = 0.0
-    var startY: Float = 0.0
-    var endX: Float = 0.0
-    var endY: Float = 1.0
+    var startX: Number = 0.0
+    var startY: Number = 0.0
+    var endX: Number = 0.0
+    var endY: Number = 1.0
     var stops: [GradientStop] = []
 }
 
-public function encodeGradient(gradient: borrow GradientValue) -> [U8] {
-    var bytes: [U8] = []
-    appendU8(bytes, payloadVersion())
-    appendU8(bytes, gradientKindValue(gradient.kind))
-    appendI32(bytes, fixedFromFloat(gradient.startX))
-    appendI32(bytes, fixedFromFloat(gradient.startY))
-    appendI32(bytes, fixedFromFloat(gradient.endX))
-    appendI32(bytes, fixedFromFloat(gradient.endY))
-    appendU16(bytes, gradient.stops.count)
-    for stop in gradient.stops {
-        appendI32(bytes, fixedFromFloat(stop.position))
-        appendColorSource(bytes, stop.color)
+extend GradientValue {
+    function encoded() -> [U8] {
+        var bytes: [U8] = []
+        appendU8(bytes, PayloadFormat.version)
+        appendU8(bytes, self.kind.value())
+        appendI32(bytes, fixedFromNumber(self.startX))
+        appendI32(bytes, fixedFromNumber(self.startY))
+        appendI32(bytes, fixedFromNumber(self.endX))
+        appendI32(bytes, fixedFromNumber(self.endY))
+        appendU16(bytes, self.stops.count)
+        for stop in self.stops {
+            appendI32(bytes, fixedFromNumber(stop.position))
+            appendColorSource(bytes, stop.color)
+        }
+        return bytes
     }
-    return bytes
 }
 
 public struct GradientRead {
@@ -275,7 +283,7 @@ public struct GradientRead {
 
 public function decodeGradient(bytes: borrow [U8]) -> GradientRead {
     var read = GradientRead()
-    if bytes.count < 20 || readU8(bytes, 0) != payloadVersion() {
+    if bytes.count < 20 || readU8(bytes, 0) != PayloadFormat.version {
         return read
     }
     var gradient = GradientValue()
@@ -286,8 +294,7 @@ public function decodeGradient(bytes: borrow [U8]) -> GradientRead {
     gradient.endY = floatFromFixed(readI32(bytes, 14))
     let stopCount = readU16(bytes, 18)
     var cursor = 20
-    var index = 0
-    while index < stopCount {
+    for _ in 0..stopCount {
         if cursor + 4 > bytes.count {
             return read
         }
@@ -300,7 +307,6 @@ public function decodeGradient(bytes: borrow [U8]) -> GradientRead {
         stop.color = sourceRead.value
         gradient.stops.append(stop)
         cursor = sourceRead.next
-        index = index + 1
     }
     read.value = gradient
     read.ok = true

@@ -20,39 +20,38 @@ import Foundation
 // survives load and write-back untouched, because nothing between the two ever
 // looks inside.
 
-public function blobMagic0() -> Int { return 75 }
-public function blobMagic1() -> Int { return 67 }
-public function blobMagic2() -> Int { return 85 }
-public function blobMagic3() -> Int { return 73 }
+public namespace BlobLayout {
+    let magic0: Number = 75
+    let magic1: Number = 67
+    let magic2: Number = 85
+    let magic3: Number = 73
 
-// A major bump means a reader of the old version must refuse the blob. A minor
-// bump means new information a reader may ignore, so an old reader loads it.
-public function blobMajorVersion() -> Int { return 1 }
-public function blobMinorVersion() -> Int { return 0 }
+    // A major bump means a reader of the old version must refuse the blob. A minor
+    // bump means new information a reader may ignore, so an old reader loads it.
+    let majorVersion: Number = 1
+    let minorVersion: Number = 0
 
-public function blobHeaderSize() -> Int { return 56 }
-public function blobResourceEntrySize() -> Int { return 20 }
-public function blobRenditionEntrySize() -> Int { return 16 }
-public function blobConstraintEntrySize() -> Int { return 8 }
+    let headerSize: Number = 56
+    let resourceEntrySize: Number = 20
+    let renditionEntrySize: Number = 16
+    let constraintEntrySize: Number = 8
+}
 
 // Header field offsets.
-public function blobOffsetMagic() -> Int { return 0 }
-public function blobOffsetMajor() -> Int { return 4 }
-public function blobOffsetMinor() -> Int { return 6 }
-public function blobOffsetFlags() -> Int { return 8 }
-public function blobOffsetResourceCount() -> Int { return 12 }
-public function blobOffsetResourceStart() -> Int { return 16 }
-public function blobOffsetRenditionCount() -> Int { return 20 }
-public function blobOffsetRenditionStart() -> Int { return 24 }
-public function blobOffsetConstraintCount() -> Int { return 28 }
-public function blobOffsetConstraintStart() -> Int { return 32 }
-public function blobOffsetNameStart() -> Int { return 36 }
-public function blobOffsetNameCount() -> Int { return 40 }
-public function blobOffsetPayloadStart() -> Int { return 44 }
-public function blobOffsetPayloadCount() -> Int { return 48 }
-public function blobOffsetTotalSize() -> Int { return 52 }
-
-// The default file name a catalog is shipped under.
-public function blobFileExtension() -> String {
-    return ".kcui"
+public namespace BlobHeaderOffset {
+    let magic: Number = 0
+    let major: Number = 4
+    let minor: Number = 6
+    let flags: Number = 8
+    let resourceCount: Number = 12
+    let resourceStart: Number = 16
+    let renditionCount: Number = 20
+    let renditionStart: Number = 24
+    let constraintCount: Number = 28
+    let constraintStart: Number = 32
+    let nameStart: Number = 36
+    let nameCount: Number = 40
+    let payloadStart: Number = 44
+    let payloadCount: Number = 48
+    let totalSize: Number = 52
 }

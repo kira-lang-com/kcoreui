@@ -17,7 +17,12 @@ import KCoreUI
 // answers and one every renderer has to remember.
 
 // The blur radii the ladder steps through, and the tint opacity at each step.
-function materialResource(name: borrow String, blurRadius: Float, tintOpacity: Float, hasBorder: Bool) -> ResourceRecord {
+function materialResource(
+    name: borrow String,
+    blurRadius: Number,
+    tintOpacity: Number,
+    hasBorder: Bool
+) -> ResourceRecord {
     var resource = ResourceRecord()
     resource.name = name
     resource.kind = .Material
@@ -25,34 +30,38 @@ function materialResource(name: borrow String, blurRadius: Float, tintOpacity: F
     var translucent = MaterialValue()
     translucent.layers.append(backdropBlurLayer(blurRadius))
     translucent.layers.append(saturationLayer(1.4))
-    translucent.layers.append(tintLayer(referenceColor(colorSystemBackground()), tintOpacity, .Normal))
+    translucent.layers.append(
+        tintLayer(referenceColor(ColorName.systemBackground), tintOpacity, .Normal)
+    )
     if hasBorder {
-        translucent.layers.append(borderLayer(referenceColor(colorSeparator()), 1.0))
+        translucent.layers.append(borderLayer(referenceColor(ColorName.separator), 1.0))
     }
     var translucentRendition = RenditionRecord()
-    translucentRendition.payload = encodeMaterial(translucent)
+    translucentRendition.payload = translucent.encoded()
     resource.renditions.append(translucentRendition)
 
     var opaque = MaterialValue()
-    opaque.layers.append(fillLayer(referenceColor(colorSystemBackground()), 1.0, .Normal))
+    opaque.layers.append(fillLayer(referenceColor(ColorName.systemBackground), 1.0, .Normal))
     if hasBorder {
-        opaque.layers.append(borderLayer(referenceColor(colorSeparator()), 1.0))
+        opaque.layers.append(borderLayer(referenceColor(ColorName.separator), 1.0))
     }
     var opaqueRendition = RenditionRecord()
-    opaqueRendition.constraints.append(constrain(.ReduceTransparency, flagValue(true)))
-    opaqueRendition.payload = encodeMaterial(opaque)
+    opaqueRendition.constraints.append(
+        TraitIdentifier.ReduceTransparency.constrain(flagValue(true))
+    )
+    opaqueRendition.payload = opaque.encoded()
     resource.renditions.append(opaqueRendition)
     return resource
 }
 
 function defaultMaterialResources() -> [ResourceRecord] {
     var records: [ResourceRecord] = []
-    records.append(materialResource(materialUltraThin(), 20.0, 0.3, false))
-    records.append(materialResource(materialThin(), 24.0, 0.5, false))
-    records.append(materialResource(materialRegular(), 28.0, 0.68, false))
-    records.append(materialResource(materialThick(), 32.0, 0.82, false))
-    records.append(materialResource(materialUltraThick(), 36.0, 0.94, false))
-    records.append(materialResource(materialBar(), 28.0, 0.8, true))
+    records.append(materialResource(MaterialName.ultraThin, 20.0, 0.3, false))
+    records.append(materialResource(MaterialName.thin, 24.0, 0.5, false))
+    records.append(materialResource(MaterialName.regular, 28.0, 0.68, false))
+    records.append(materialResource(MaterialName.thick, 32.0, 0.82, false))
+    records.append(materialResource(MaterialName.ultraThick, 36.0, 0.94, false))
+    records.append(materialResource(MaterialName.bar, 28.0, 0.8, true))
     return records
 }
 
@@ -61,7 +70,7 @@ function defaultMaterialResources() -> [ResourceRecord] {
 // Apple's kit inks a control's symbol in its "Labels - Vibrant" grays, burned
 // into the glass in the light appearance and dodged into it in the dark —
 // so one fill layer per appearance, the gray and the blend together.
-function vibrancyResource(name: borrow String, light: Float, dark: Float) -> ResourceRecord {
+function vibrancyResource(name: borrow String, light: Number, dark: Number) -> ResourceRecord {
     var resource = ResourceRecord()
     resource.name = name
     resource.kind = .Material
@@ -69,25 +78,25 @@ function vibrancyResource(name: borrow String, light: Float, dark: Float) -> Res
     var burned = MaterialValue()
     burned.layers.append(fillLayer(literalColor(rgba(light, light, light, 1.0)), 1.0, .LinearBurn))
     var lightRendition = RenditionRecord()
-    lightRendition.constraints.append(whenAppearance(.Light))
-    lightRendition.payload = encodeMaterial(burned)
+    lightRendition.constraints.append(Appearance.Light.constraint())
+    lightRendition.payload = burned.encoded()
     resource.renditions.append(lightRendition)
 
     var dodged = MaterialValue()
     dodged.layers.append(fillLayer(literalColor(rgba(dark, dark, dark, 1.0)), 1.0, .LinearDodge))
     var darkRendition = RenditionRecord()
-    darkRendition.constraints.append(whenAppearance(.Dark))
-    darkRendition.payload = encodeMaterial(dodged)
+    darkRendition.constraints.append(Appearance.Dark.constraint())
+    darkRendition.payload = dodged.encoded()
     resource.renditions.append(darkRendition)
     return resource
 }
 
 function defaultVibrancyResources() -> [ResourceRecord] {
     var records: [ResourceRecord] = []
-    records.append(vibrancyResource(materialVibrantLabel(), 0.102, 0.9608))
-    records.append(vibrancyResource(materialVibrantSecondaryLabel(), 0.4471, 0.5412))
-    records.append(vibrancyResource(materialVibrantTertiaryLabel(), 0.749, 0.251))
-    records.append(vibrancyResource(materialVibrantQuaternaryLabel(), 0.851, 0.149))
+    records.append(vibrancyResource(MaterialName.vibrantLabel, 0.102, 0.9608))
+    records.append(vibrancyResource(MaterialName.vibrantSecondaryLabel, 0.4471, 0.5412))
+    records.append(vibrancyResource(MaterialName.vibrantTertiaryLabel, 0.749, 0.251))
+    records.append(vibrancyResource(MaterialName.vibrantQuaternaryLabel, 0.851, 0.149))
     return records
 }
 
@@ -96,50 +105,146 @@ function defaultVibrancyResources() -> [ResourceRecord] {
 // Every metric here is KiraUI's own, so a toolkit reading text through the
 // catalog lays out exactly what it laid out before.
 
-function fontWeightRegular() -> Int { return 400 }
-function fontWeightSemiBold() -> Int { return 600 }
-function fontWeightBold() -> Int { return 700 }
+namespace FontWeight {
+    let regular: Number = 400
+    let semiBold: Number = 600
+    let bold: Number = 700
+}
 
-function textStyleResource(name: borrow String, size: Float, weight: Int, lineHeight: Float, tracking: Float) -> ResourceRecord {
-    var resource = ResourceRecord()
-    resource.name = name
-    resource.kind = .Typography
-
+function textStyle(
+    size: Number,
+    weight: Number,
+    lineHeight: Number,
+    tracking: Number
+) -> TypographyValue {
     var value = TypographyValue()
     value.size = size
     value.weight = weight
     value.lineHeight = lineHeight
     value.tracking = tracking
+    return value
+}
+
+function textStyleResource(name: borrow String, style: borrow TypographyValue) -> ResourceRecord {
+    var resource = ResourceRecord()
+    resource.name = name
+    resource.kind = .Typography
 
     var rendition = RenditionRecord()
-    rendition.payload = encodeTypography(value)
+    rendition.payload = style.encoded()
+    resource.renditions.append(rendition)
+    return resource
+}
+
+// A text style that is the kit's on a phone or a tablet and the Mac's on a
+// desktop: the floor, and a rendition pinned to the desktop idiom over it.
+function sizedTextStyleResource(
+    name: borrow String,
+    mobile: borrow TypographyValue,
+    desktop: borrow TypographyValue
+) -> ResourceRecord {
+    var resource = textStyleResource(name, mobile)
+
+    var rendition = RenditionRecord()
+    rendition.constraints.append(Idiom.Desktop.constraint())
+    rendition.payload = desktop.encoded()
     resource.renditions.append(rendition)
     return resource
 }
 
 // Apple's eleven text styles, at the default Dynamic Type size.
 //
-// Read off the iOS and iPadOS 27 kit's typography variables: `Size`, the
-// default leading under `Large (Default)` and `letterSpacing`. Every style is
-// regular except `headline`; an emphasized title is the same style asked for
-// heavier, not a second style.
+// The mobile ramp is read off the iOS and iPadOS 27 kit's typography
+// variables: `Size`, the default leading under `Large (Default)` and
+// `letterSpacing`. The desktop ramp is macOS's, from the Human Interface
+// Guidelines: 13-point body, 26-point large title, nothing under 10, and SF
+// Pro's tracking at each size. Every style is regular except `headline`,
+// semibold on a phone and bold on a Mac; an emphasized title is the same style
+// asked for heavier, not a second style.
 function defaultTextStyleResources() -> [ResourceRecord] {
     var records: [ResourceRecord] = []
-    records.append(textStyleResource(textLargeTitle(), 34.0, fontWeightRegular(), 41.0, 0.4))
-    records.append(textStyleResource(textTitle(), 28.0, fontWeightRegular(), 34.0, 0.38))
-    records.append(textStyleResource(textTitle2(), 22.0, fontWeightRegular(), 28.0, 0.0 - 0.26))
-    records.append(textStyleResource(textTitle3(), 20.0, fontWeightRegular(), 25.0, 0.0 - 0.45))
-    records.append(textStyleResource(textHeadline(), 17.0, fontWeightSemiBold(), 22.0, 0.0 - 0.43))
-    records.append(textStyleResource(textSubheadline(), 15.0, fontWeightRegular(), 20.0, 0.0 - 0.23))
-    records.append(textStyleResource(textBody(), 17.0, fontWeightRegular(), 22.0, 0.0 - 0.43))
-    records.append(textStyleResource(textCallout(), 16.0, fontWeightRegular(), 21.0, 0.0 - 0.31))
-    records.append(textStyleResource(textFootnote(), 13.0, fontWeightRegular(), 18.0, 0.0 - 0.08))
-    records.append(textStyleResource(textCaption(), 12.0, fontWeightRegular(), 16.0, 0.0))
-    records.append(textStyleResource(textCaption2(), 11.0, fontWeightRegular(), 13.0, 0.06))
+    records.append(
+        sizedTextStyleResource(
+            TextStyleName.largeTitle,
+            textStyle(34.0, FontWeight.regular, 41.0, 0.4),
+            textStyle(26.0, FontWeight.regular, 32.0, 0.22)
+        )
+    )
+    records.append(
+        sizedTextStyleResource(
+            TextStyleName.title,
+            textStyle(28.0, FontWeight.regular, 34.0, 0.38),
+            textStyle(22.0, FontWeight.regular, 26.0, -0.26)
+        )
+    )
+    records.append(
+        sizedTextStyleResource(
+            TextStyleName.title2,
+            textStyle(22.0, FontWeight.regular, 28.0, -0.26),
+            textStyle(17.0, FontWeight.regular, 22.0, -0.43)
+        )
+    )
+    records.append(
+        sizedTextStyleResource(
+            TextStyleName.title3,
+            textStyle(20.0, FontWeight.regular, 25.0, -0.45),
+            textStyle(15.0, FontWeight.regular, 20.0, -0.23)
+        )
+    )
+    records.append(
+        sizedTextStyleResource(
+            TextStyleName.headline,
+            textStyle(17.0, FontWeight.semiBold, 22.0, -0.43),
+            textStyle(13.0, FontWeight.bold, 16.0, -0.08)
+        )
+    )
+    records.append(
+        sizedTextStyleResource(
+            TextStyleName.subheadline,
+            textStyle(15.0, FontWeight.regular, 20.0, -0.23),
+            textStyle(11.0, FontWeight.regular, 14.0, 0.06)
+        )
+    )
+    records.append(
+        sizedTextStyleResource(
+            TextStyleName.body,
+            textStyle(17.0, FontWeight.regular, 22.0, -0.43),
+            textStyle(13.0, FontWeight.regular, 16.0, -0.08)
+        )
+    )
+    records.append(
+        sizedTextStyleResource(
+            TextStyleName.callout,
+            textStyle(16.0, FontWeight.regular, 21.0, -0.31),
+            textStyle(12.0, FontWeight.regular, 15.0, 0.0)
+        )
+    )
+    records.append(
+        sizedTextStyleResource(
+            TextStyleName.footnote,
+            textStyle(13.0, FontWeight.regular, 18.0, -0.08),
+            textStyle(10.0, FontWeight.regular, 13.0, 0.12)
+        )
+    )
+    records.append(
+        sizedTextStyleResource(
+            TextStyleName.caption,
+            textStyle(12.0, FontWeight.regular, 16.0, 0.0),
+            textStyle(10.0, FontWeight.regular, 13.0, 0.12)
+        )
+    )
+    records.append(
+        sizedTextStyleResource(
+            TextStyleName.caption2,
+            textStyle(11.0, FontWeight.regular, 13.0, 0.06),
+            textStyle(10.0, FontWeight.regular, 13.0, 0.12)
+        )
+    )
     return records
 }
 
-// The text styles the toolkit has and Apple does not.
+// The text styles the toolkit has and Apple does not, each set on a desktop at
+// the size its nearest Apple style takes there.
 //
 // `label` is one of them, and it is also a color. That is not a collision: a
 // resource is keyed by name and kind together, so `label` the typeface and
@@ -147,17 +252,92 @@ function defaultTextStyleResources() -> [ResourceRecord] {
 // other.
 function toolkitTextStyleResources() -> [ResourceRecord] {
     var records: [ResourceRecord] = []
-    records.append(textStyleResource("control", 15.0, fontWeightSemiBold(), 20.0, 0.0))
-    records.append(textStyleResource("bodyEmphasis", 14.0, fontWeightSemiBold(), 20.0, 0.0))
-    records.append(textStyleResource("overline", 10.0, fontWeightSemiBold(), 13.0, 0.5))
-    records.append(textStyleResource("label", 12.0, fontWeightSemiBold(), 16.0, 0.0))
-    records.append(textStyleResource("section", 16.0, fontWeightBold(), 20.0, 0.0))
-    records.append(textStyleResource("title1", 30.0, fontWeightBold(), 36.0, 0.0 - 0.3))
+    records.append(
+        sizedTextStyleResource(
+            "control",
+            textStyle(15.0, FontWeight.semiBold, 20.0, 0.0),
+            textStyle(13.0, FontWeight.semiBold, 16.0, 0.0)
+        )
+    )
+    records.append(
+        sizedTextStyleResource(
+            "bodyEmphasis",
+            textStyle(14.0, FontWeight.semiBold, 20.0, 0.0),
+            textStyle(11.0, FontWeight.semiBold, 14.0, 0.0)
+        )
+    )
+    records.append(
+        sizedTextStyleResource(
+            "overline",
+            textStyle(10.0, FontWeight.semiBold, 13.0, 0.5),
+            textStyle(9.0, FontWeight.semiBold, 11.0, 0.5)
+        )
+    )
+    records.append(
+        sizedTextStyleResource(
+            "label",
+            textStyle(12.0, FontWeight.semiBold, 16.0, 0.0),
+            textStyle(10.0, FontWeight.semiBold, 13.0, 0.0)
+        )
+    )
+    records.append(
+        sizedTextStyleResource(
+            "section",
+            textStyle(16.0, FontWeight.bold, 20.0, 0.0),
+            textStyle(13.0, FontWeight.bold, 16.0, 0.0)
+        )
+    )
+    records.append(
+        sizedTextStyleResource(
+            "title1",
+            textStyle(30.0, FontWeight.bold, 36.0, -0.3),
+            textStyle(22.0, FontWeight.bold, 26.0, -0.26)
+        )
+    )
+    // An inset grouped section's header and footer. The iPadOS 27 kit sets
+    // the header bold at title 2's size and the footer as the footnote; a
+    // grouped `Form` on macOS 27 sets the header semibold at the body's 13 and
+    // the footer at 11 on a 14-point line, as measured.
+    records.append(
+        sizedTextStyleResource(
+            "listSectionHeader",
+            textStyle(22.0, FontWeight.bold, 28.0, -0.26),
+            textStyle(13.0, FontWeight.semiBold, 16.0, -0.08)
+        )
+    )
+    records.append(
+        sizedTextStyleResource(
+            "listSectionFooter",
+            textStyle(13.0, FontWeight.regular, 18.0, -0.08),
+            textStyle(11.0, FontWeight.regular, 14.0, 0.06)
+        )
+    )
     // A window's title on the toolbar band, measured on macOS 27: SF Pro
     // semibold at 15 points on a 19-point line.
-    records.append(textStyleResource("windowTitle", 15.0, fontWeightSemiBold(), 20.0, -0.23))
+    records.append(
+        textStyleResource("windowTitle", textStyle(15.0, FontWeight.semiBold, 20.0, -0.23))
+    )
     // The iPhone kit's toolbar title: SF Pro semibold at 17 on a 22-point line.
-    records.append(textStyleResource("windowTitleCompact", 17.0, fontWeightSemiBold(), 22.0, -0.43))
+    records.append(
+        textStyleResource("windowTitleCompact", textStyle(17.0, FontWeight.semiBold, 22.0, -0.43))
+    )
+    // A menu bar's titles: the iPadOS 27 kit's, SF Pro semibold at 15; and on
+    // a computer the size of macOS's, 13 points. The application's own menu
+    // leads the row in bold.
+    records.append(
+        sizedTextStyleResource(
+            "menuBarTitle",
+            textStyle(15.0, FontWeight.semiBold, 20.0, -0.23),
+            textStyle(13.0, FontWeight.semiBold, 16.0, -0.08)
+        )
+    )
+    records.append(
+        sizedTextStyleResource(
+            "menuBarApplicationTitle",
+            textStyle(15.0, FontWeight.bold, 20.0, -0.23),
+            textStyle(13.0, FontWeight.bold, 16.0, -0.08)
+        )
+    )
     return records
 }
 

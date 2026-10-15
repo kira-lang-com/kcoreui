@@ -9,41 +9,39 @@ import KCoreUI
 // else: the accepted set is the canonical set, so a catalog that loaded can
 // only have been laid out one way.
 
-function kcuGoodBytes() -> [U8] {
+function goodBytes() -> [U8] {
     var record = CatalogRecord()
-    record.resources.append(kcuAdaptive("label", kcuColor(0.1, 0.1, 0.1, 1.0), kcuColor(0.9, 0.9, 0.9, 1.0)))
-    record.resources.append(kcuFlat("separator", kcuColor(0.0, 0.0, 0.0, 0.1)))
-    return writeCatalogRecord(record)
+    record.resources.append(adaptive("label", color(0.1, 0.1, 0.1, 1.0), color(0.9, 0.9, 0.9, 1.0)))
+    record.resources.append(flat("separator", color(0.0, 0.0, 0.0, 0.1)))
+    return record.encoded()
 }
 
-function kcuWithByte(bytes: borrow [U8], offset: Int, value: Int) -> [U8] {
+function withByte(bytes: borrow [U8], offset: Number, value: Number) -> [U8] {
     var copied: [U8] = []
-    var index = 0
-    while index < bytes.count {
+    for index in 0..bytes.count {
         if index == offset {
             copied.append(value & 255)
         } else {
             copied.append(bytes[index])
         }
-        index = index + 1
     }
     return copied
 }
 
-function kcuWithU32(bytes: borrow [U8], offset: Int, value: Int) -> [U8] {
-    var copied = kcuWithByte(bytes, offset, value)
-    copied = kcuWithByte(copied, offset + 1, value >> 8)
-    copied = kcuWithByte(copied, offset + 2, value >> 16)
-    copied = kcuWithByte(copied, offset + 3, value >> 24)
+function withU32(bytes: borrow [U8], offset: Number, value: Number) -> [U8] {
+    var copied = withByte(bytes, offset, value)
+    copied = withByte(copied, offset + 1, value >> 8)
+    copied = withByte(copied, offset + 2, value >> 16)
+    copied = withByte(copied, offset + 3, value >> 24)
     return copied
 }
 
-function kcuTruncated(bytes: borrow [U8], count: Int) -> [U8] {
+function truncated(bytes: borrow [U8], count: Number) -> [U8] {
     return sliceBytes(bytes, 0, count)
 }
 
 construct KcuAGoodBlobParses() extends Test {
-    test { return kcuParses(kcuGoodBytes()) }
+    test { return parses(goodBytes()) }
     expect {
         let e: Result<Any, TestFailure> = .Ok(true)
         return e
@@ -51,7 +49,7 @@ construct KcuAGoodBlobParses() extends Test {
 }
 
 construct KcuWrongMagicIsRefused() extends Test {
-    test { return kcuParseFailure(kcuWithByte(kcuGoodBytes(), 0, 88)) }
+    test { return parseFailure(withByte(goodBytes(), 0, 88)) }
     expect {
         let e: Result<Any, TestFailure> = .Ok("not a KCoreUI catalog: wrong magic")
         return e
@@ -59,7 +57,11 @@ construct KcuWrongMagicIsRefused() extends Test {
 }
 
 construct KcuANewerMajorVersionIsRefused() extends Test {
-    test { return kcuParseFailure(kcuWithByte(kcuGoodBytes(), blobOffsetMajor(), blobMajorVersion() + 1)) }
+    test {
+        return parseFailure(
+            withByte(goodBytes(), BlobHeaderOffset.major, BlobLayout.majorVersion + 1)
+        )
+    }
     expect {
         let e: Result<Any, TestFailure> = .Ok("catalog major version is newer than this build")
         return e
@@ -67,7 +69,7 @@ construct KcuANewerMajorVersionIsRefused() extends Test {
 }
 
 construct KcuAShortHeaderIsRefused() extends Test {
-    test { return kcuParseFailure(kcuTruncated(kcuGoodBytes(), 12)) }
+    test { return parseFailure(truncated(goodBytes(), 12)) }
     expect {
         let e: Result<Any, TestFailure> = .Ok("catalog is shorter than its header")
         return e
@@ -77,7 +79,7 @@ construct KcuAShortHeaderIsRefused() extends Test {
 // Truncating the body leaves the header claiming a size the buffer does not
 // have, which is a layout the writer could not have produced.
 construct KcuATruncatedBodyIsRefused() extends Test {
-    test { return kcuParses(kcuTruncated(kcuGoodBytes(), blobHeaderSize() + 8)) }
+    test { return parses(truncated(goodBytes(), BlobLayout.headerSize + 8)) }
     expect {
         let e: Result<Any, TestFailure> = .Ok(false)
         return e
@@ -89,9 +91,9 @@ construct KcuATruncatedBodyIsRefused() extends Test {
 // offset it names is inside the buffer.
 construct KcuANonCanonicalLayoutIsRefused() extends Test {
     test {
-        let bytes = kcuGoodBytes()
-        let moved = kcuWithU32(bytes, blobOffsetResourceStart(), blobHeaderSize() + 4)
-        return kcuParseFailure(moved)
+        let bytes = goodBytes()
+        let moved = withU32(bytes, BlobHeaderOffset.resourceStart, BlobLayout.headerSize + 4)
+        return parseFailure(moved)
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok("a catalog entry points outside the blob")
@@ -101,8 +103,8 @@ construct KcuANonCanonicalLayoutIsRefused() extends Test {
 
 construct KcuATotalSizeThatDisagreesWithTheBufferIsRefused() extends Test {
     test {
-        let bytes = kcuGoodBytes()
-        return kcuParses(kcuWithU32(bytes, blobOffsetTotalSize(), bytes.count + 16))
+        let bytes = goodBytes()
+        return parses(withU32(bytes, BlobHeaderOffset.totalSize, bytes.count + 16))
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok(false)
@@ -114,12 +116,12 @@ construct KcuATotalSizeThatDisagreesWithTheBufferIsRefused() extends Test {
 // catalog whose lookups would silently miss.
 construct KcuAnUnsortedNameTableIsRefused() extends Test {
     test {
-        let bytes = kcuGoodBytes()
+        let bytes = goodBytes()
         // Two resources, `label` then `separator`. Pointing the first entry's
         // name span at the second name puts the table out of order.
-        let firstEntry = blobHeaderSize()
-        let swapped = kcuWithU32(kcuWithU32(bytes, firstEntry, 5), firstEntry + 4, 9)
-        return kcuParseFailure(swapped)
+        let firstEntry = BlobLayout.headerSize
+        let swapped = withU32(withU32(bytes, firstEntry, 5), firstEntry + 4, 9)
+        return parseFailure(swapped)
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok("the name table is not in byte order")
@@ -136,23 +138,25 @@ construct KcuUnsortedConstraintsAreRefused() extends Test {
         resource.name = "label"
         resource.kind = .Color
         var rendition = RenditionRecord()
-        rendition.constraints.append(whenAppearance(.Light))
-        rendition.constraints.append(whenContrast(.High))
-        rendition.payload = kcuAuthored(kcuColor(0.0, 0.0, 0.0, 1.0))
+        rendition.constraints.append(Appearance.Light.constraint())
+        rendition.constraints.append(Contrast.High.constraint())
+        rendition.payload = authored(color(0.0, 0.0, 0.0, 1.0))
         resource.renditions.append(rendition)
         record.resources.append(resource)
 
-        let bytes = writeCatalogRecord(record)
+        let bytes = record.encoded()
         // One resource, one rendition, two constraints. Reverse them in place.
-        let constraintStart = blobHeaderSize() + blobResourceEntrySize() + blobRenditionEntrySize()
-        var reversed = kcuWithU32(bytes, constraintStart, traitIdentifierValue(TraitIdentifier.Contrast))
-        reversed = kcuWithU32(reversed, constraintStart + 4, contrastValue(Contrast.High))
-        reversed = kcuWithU32(reversed, constraintStart + 8, traitIdentifierValue(TraitIdentifier.Appearance))
-        reversed = kcuWithU32(reversed, constraintStart + 12, appearanceValue(Appearance.Light))
-        return kcuParseFailure(reversed)
+        let constraintStart = BlobLayout.headerSize + BlobLayout.resourceEntrySize + BlobLayout.renditionEntrySize
+        var reversed = withU32(bytes, constraintStart, TraitIdentifier.Contrast.value())
+        reversed = withU32(reversed, constraintStart + 4, Contrast.High.value())
+        reversed = withU32(reversed, constraintStart + 8, TraitIdentifier.Appearance.value())
+        reversed = withU32(reversed, constraintStart + 12, Appearance.Light.value())
+        return parseFailure(reversed)
     }
     expect {
-        let e: Result<Any, TestFailure> = .Ok("a rendition's constraints are not in identifier order")
+        let e: Result<Any, TestFailure> = .Ok(
+            "a rendition's constraints are not in identifier order"
+        )
         return e
     }
 }
@@ -166,11 +170,11 @@ construct KcuAReservedTraitValueIsRefused() extends Test {
         resource.name = "label"
         resource.kind = .Color
         var rendition = RenditionRecord()
-        rendition.constraints.append(constrain(.Appearance, 0))
-        rendition.payload = kcuAuthored(kcuColor(0.0, 0.0, 0.0, 1.0))
+        rendition.constraints.append(TraitIdentifier.Appearance.constrain(0))
+        rendition.payload = authored(color(0.0, 0.0, 0.0, 1.0))
         resource.renditions.append(rendition)
         record.resources.append(resource)
-        return kcuParseFailure(writeCatalogRecord(record))
+        return parseFailure(record.encoded())
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok("a constraint carries the reserved value zero")
@@ -188,15 +192,15 @@ construct KcuADuplicateRenditionIsRefused() extends Test {
         resource.name = "label"
         resource.kind = .Color
         var first = RenditionRecord()
-        first.constraints.append(whenAppearance(.Light))
-        first.payload = kcuAuthored(kcuColor(0.0, 0.0, 0.0, 1.0))
+        first.constraints.append(Appearance.Light.constraint())
+        first.payload = authored(color(0.0, 0.0, 0.0, 1.0))
         resource.renditions.append(first)
         var second = RenditionRecord()
-        second.constraints.append(whenAppearance(.Light))
-        second.payload = kcuAuthored(kcuColor(1.0, 1.0, 1.0, 1.0))
+        second.constraints.append(Appearance.Light.constraint())
+        second.payload = authored(color(1.0, 1.0, 1.0, 1.0))
         resource.renditions.append(second)
         record.resources.append(resource)
-        return kcuParseFailure(writeCatalogRecord(record))
+        return parseFailure(record.encoded())
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok("two renditions of one resource pin the same traits")
@@ -207,7 +211,7 @@ construct KcuADuplicateRenditionIsRefused() extends Test {
 construct KcuAnEmptyBufferIsRefusedRatherThanTrapping() extends Test {
     test {
         var empty: [U8] = []
-        return kcuParses(empty)
+        return parses(empty)
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok(false)

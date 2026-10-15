@@ -15,66 +15,43 @@ import Foundation
 
 // --- Materials -------------------------------------------------------------
 
-public function materialUltraThin() -> String { return "ultraThin" }
-public function materialThin() -> String { return "thin" }
-public function materialRegular() -> String { return "regular" }
-public function materialThick() -> String { return "thick" }
-public function materialUltraThick() -> String { return "ultraThick" }
-public function materialBar() -> String { return "bar" }
+public namespace MaterialName {
+    let ultraThin: String = "ultraThin"
+    let thin: String = "thin"
+    let regular: String = "regular"
+    let thick: String = "thick"
+    let ultraThick: String = "ultraThick"
+    let bar: String = "bar"
 
-// --- Vibrancy --------------------------------------------------------------
-//
-// What content set INTO glass is inked with: UIKit's vibrancy effect styles,
-// each a color together with the way it composites, which is what makes it
-// vibrant rather than gray. A material because a material is exactly that — a
-// recipe the compositor applies, color and blend at once.
+    // --- Vibrancy --------------------------------------------------------------
+    //
+    // What content set INTO glass is inked with: UIKit's vibrancy effect styles,
+    // each a color together with the way it composites, which is what makes it
+    // vibrant rather than gray. A material because a material is exactly that — a
+    // recipe the compositor applies, color and blend at once.
 
-public function materialVibrantLabel() -> String { return "vibrantLabel" }
-public function materialVibrantSecondaryLabel() -> String { return "vibrantSecondaryLabel" }
-public function materialVibrantTertiaryLabel() -> String { return "vibrantTertiaryLabel" }
-public function materialVibrantQuaternaryLabel() -> String { return "vibrantQuaternaryLabel" }
+    let vibrantLabel: String = "vibrantLabel"
+    let vibrantSecondaryLabel: String = "vibrantSecondaryLabel"
+    let vibrantTertiaryLabel: String = "vibrantTertiaryLabel"
+    let vibrantQuaternaryLabel: String = "vibrantQuaternaryLabel"
 
-public function allMaterialNames() -> [String] {
-    var names: [String] = []
-    names.append(materialUltraThin())
-    names.append(materialThin())
-    names.append(materialRegular())
-    names.append(materialThick())
-    names.append(materialUltraThick())
-    names.append(materialBar())
-    names.append(materialVibrantLabel())
-    names.append(materialVibrantSecondaryLabel())
-    names.append(materialVibrantTertiaryLabel())
-    names.append(materialVibrantQuaternaryLabel())
-    return names
+    let all: [String] = [MaterialName.ultraThin, MaterialName.thin, MaterialName.regular, MaterialName.thick, MaterialName.ultraThick, MaterialName.bar, MaterialName.vibrantLabel, MaterialName.vibrantSecondaryLabel, MaterialName.vibrantTertiaryLabel, MaterialName.vibrantQuaternaryLabel]
 }
 
 // --- Text styles -----------------------------------------------------------
 
-public function textLargeTitle() -> String { return "largeTitle" }
-public function textTitle() -> String { return "title" }
-public function textTitle2() -> String { return "title2" }
-public function textTitle3() -> String { return "title3" }
-public function textHeadline() -> String { return "headline" }
-public function textSubheadline() -> String { return "subheadline" }
-public function textBody() -> String { return "body" }
-public function textCallout() -> String { return "callout" }
-public function textFootnote() -> String { return "footnote" }
-public function textCaption() -> String { return "caption" }
-public function textCaption2() -> String { return "caption2" }
+public namespace TextStyleName {
+    let largeTitle: String = "largeTitle"
+    let title: String = "title"
+    let title2: String = "title2"
+    let title3: String = "title3"
+    let headline: String = "headline"
+    let subheadline: String = "subheadline"
+    let body: String = "body"
+    let callout: String = "callout"
+    let footnote: String = "footnote"
+    let caption: String = "caption"
+    let caption2: String = "caption2"
 
-public function allTextStyleNames() -> [String] {
-    var names: [String] = []
-    names.append(textLargeTitle())
-    names.append(textTitle())
-    names.append(textTitle2())
-    names.append(textTitle3())
-    names.append(textHeadline())
-    names.append(textSubheadline())
-    names.append(textBody())
-    names.append(textCallout())
-    names.append(textFootnote())
-    names.append(textCaption())
-    names.append(textCaption2())
-    return names
+    let all: [String] = [TextStyleName.largeTitle, TextStyleName.title, TextStyleName.title2, TextStyleName.title3, TextStyleName.headline, TextStyleName.subheadline, TextStyleName.body, TextStyleName.callout, TextStyleName.footnote, TextStyleName.caption, TextStyleName.caption2]
 }

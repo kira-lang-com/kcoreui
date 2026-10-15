@@ -27,26 +27,28 @@ public enum BlendMode {
     Multiply
     Luminosity
     LinearBurn
-    Unknown(Int)
+    Unknown(Number)
 }
 
-public function blendModeValue(blend: borrow BlendMode) -> Int {
-    match blend {
-        Normal -> return 0
-        LinearDodge -> return 1
-        ColorDodge -> return 2
-        HardLight -> return 3
-        Overlay -> return 4
-        Lighten -> return 5
-        Darken -> return 6
-        Multiply -> return 7
-        Luminosity -> return 8
-        LinearBurn -> return 9
-        Unknown(value) -> return value
+extend BlendMode {
+    function value() -> Number {
+        match self {
+            Normal -> return 0
+            LinearDodge -> return 1
+            ColorDodge -> return 2
+            HardLight -> return 3
+            Overlay -> return 4
+            Lighten -> return 5
+            Darken -> return 6
+            Multiply -> return 7
+            Luminosity -> return 8
+            LinearBurn -> return 9
+            Unknown(value) -> return value
+        }
     }
 }
 
-public function blendModeFromValue(value: Int) -> BlendMode {
+public function blendModeFromValue(value: Number) -> BlendMode {
     if value == 0 { return .Normal }
     if value == 1 { return .LinearDodge }
     if value == 2 { return .ColorDodge }
@@ -71,18 +73,20 @@ public enum MaterialLayerKind {
     Fill
 }
 
-public function materialLayerValue(kind: borrow MaterialLayerKind) -> Int {
-    match kind {
-        BackdropBlur -> return 1
-        Saturation -> return 2
-        Tint -> return 3
-        Noise -> return 4
-        Border -> return 5
-        Fill -> return 6
+extend MaterialLayerKind {
+    function value() -> Number {
+        match self {
+            BackdropBlur -> return 1
+            Saturation -> return 2
+            Tint -> return 3
+            Noise -> return 4
+            Border -> return 5
+            Fill -> return 6
+        }
     }
 }
 
-public function materialLayerFromValue(value: Int) -> MaterialLayerKind {
+public function materialLayerFromValue(value: Number) -> MaterialLayerKind {
     if value == 2 { return .Saturation }
     if value == 3 { return .Tint }
     if value == 4 { return .Noise }
@@ -96,9 +100,9 @@ public function materialLayerFromValue(value: Int) -> MaterialLayerKind {
 // `color`, `opacity` and `blend` are read only by the layers that composite.
 public struct MaterialLayer {
     var kind: MaterialLayerKind = .Fill
-    var amount: Float = 0.0
+    var amount: Number = 0.0
     var color: ColorSource = ColorSource()
-    var opacity: Float = 1.0
+    var opacity: Number = 1.0
     var blend: BlendMode = .Normal
 }
 
@@ -106,21 +110,25 @@ public struct MaterialValue {
     var layers: [MaterialLayer] = []
 }
 
-public function backdropBlurLayer(radius: Float) -> MaterialLayer {
+public function backdropBlurLayer(radius: Number) -> MaterialLayer {
     var layer = MaterialLayer()
     layer.kind = .BackdropBlur
     layer.amount = radius
     return layer
 }
 
-public function saturationLayer(amount: Float) -> MaterialLayer {
+public function saturationLayer(amount: Number) -> MaterialLayer {
     var layer = MaterialLayer()
     layer.kind = .Saturation
     layer.amount = amount
     return layer
 }
 
-public function tintLayer(color: borrow ColorSource, opacity: Float, blend: borrow BlendMode) -> MaterialLayer {
+public function tintLayer(
+    color: borrow ColorSource,
+    opacity: Number,
+    blend: borrow BlendMode
+) -> MaterialLayer {
     var layer = MaterialLayer()
     layer.kind = .Tint
     layer.color = color
@@ -129,14 +137,14 @@ public function tintLayer(color: borrow ColorSource, opacity: Float, blend: borr
     return layer
 }
 
-public function noiseLayer(amount: Float) -> MaterialLayer {
+public function noiseLayer(amount: Number) -> MaterialLayer {
     var layer = MaterialLayer()
     layer.kind = .Noise
     layer.amount = amount
     return layer
 }
 
-public function borderLayer(color: borrow ColorSource, width: Float) -> MaterialLayer {
+public function borderLayer(color: borrow ColorSource, width: Number) -> MaterialLayer {
     var layer = MaterialLayer()
     layer.kind = .Border
     layer.color = color
@@ -145,7 +153,11 @@ public function borderLayer(color: borrow ColorSource, width: Float) -> Material
     return layer
 }
 
-public function fillLayer(color: borrow ColorSource, opacity: Float, blend: borrow BlendMode) -> MaterialLayer {
+public function fillLayer(
+    color: borrow ColorSource,
+    opacity: Number,
+    blend: borrow BlendMode
+) -> MaterialLayer {
     var layer = MaterialLayer()
     layer.kind = .Fill
     layer.color = color
@@ -155,21 +167,23 @@ public function fillLayer(color: borrow ColorSource, opacity: Float, blend: borr
 }
 
 public function appendMaterialLayer(bytes: borrow mut [U8], layer: borrow MaterialLayer) {
-    appendU8(bytes, materialLayerValue(layer.kind))
-    appendI32(bytes, fixedFromFloat(layer.amount))
-    appendI32(bytes, fixedFromFloat(layer.opacity))
-    appendU8(bytes, blendModeValue(layer.blend))
+    appendU8(bytes, layer.kind.value())
+    appendI32(bytes, fixedFromNumber(layer.amount))
+    appendI32(bytes, fixedFromNumber(layer.opacity))
+    appendU8(bytes, layer.blend.value())
     appendColorSource(bytes, layer.color)
 }
 
-public function encodeMaterial(material: borrow MaterialValue) -> [U8] {
-    var bytes: [U8] = []
-    appendU8(bytes, payloadVersion())
-    appendU16(bytes, material.layers.count)
-    for layer in material.layers {
-        appendMaterialLayer(bytes, layer)
+extend MaterialValue {
+    function encoded() -> [U8] {
+        var bytes: [U8] = []
+        appendU8(bytes, PayloadFormat.version)
+        appendU16(bytes, self.layers.count)
+        for layer in self.layers {
+            appendMaterialLayer(bytes, layer)
+        }
+        return bytes
     }
-    return bytes
 }
 
 public struct MaterialRead {
@@ -179,14 +193,13 @@ public struct MaterialRead {
 
 public function decodeMaterial(bytes: borrow [U8]) -> MaterialRead {
     var read = MaterialRead()
-    if bytes.count < 3 || readU8(bytes, 0) != payloadVersion() {
+    if bytes.count < 3 || readU8(bytes, 0) != PayloadFormat.version {
         return read
     }
     let layerCount = readU16(bytes, 1)
     var material = MaterialValue()
     var cursor = 3
-    var index = 0
-    while index < layerCount {
+    for _ in 0..layerCount {
         if cursor + 10 > bytes.count {
             return read
         }
@@ -202,7 +215,6 @@ public function decodeMaterial(bytes: borrow [U8]) -> MaterialRead {
         layer.color = colorRead.value
         material.layers.append(layer)
         cursor = colorRead.next
-        index = index + 1
     }
     read.value = material
     read.ok = true
@@ -218,16 +230,18 @@ public enum EffectOpKind {
     Opacity
 }
 
-public function effectOpValue(kind: borrow EffectOpKind) -> Int {
-    match kind {
-        Blur -> return 1
-        Shadow -> return 2
-        InnerShadow -> return 3
-        Opacity -> return 4
+extend EffectOpKind {
+    function value() -> Number {
+        match self {
+            Blur -> return 1
+            Shadow -> return 2
+            InnerShadow -> return 3
+            Opacity -> return 4
+        }
     }
 }
 
-public function effectOpFromValue(value: Int) -> EffectOpKind {
+public function effectOpFromValue(value: Number) -> EffectOpKind {
     if value == 2 { return .Shadow }
     if value == 3 { return .InnerShadow }
     if value == 4 { return .Opacity }
@@ -236,11 +250,11 @@ public function effectOpFromValue(value: Int) -> EffectOpKind {
 
 public struct EffectOp {
     var kind: EffectOpKind = .Blur
-    var radius: Float = 0.0
-    var offsetX: Float = 0.0
-    var offsetY: Float = 0.0
-    var spread: Float = 0.0
-    var amount: Float = 1.0
+    var radius: Number = 0.0
+    var offsetX: Number = 0.0
+    var offsetY: Number = 0.0
+    var spread: Number = 0.0
+    var amount: Number = 1.0
     var color: ColorSource = ColorSource()
 }
 
@@ -248,14 +262,20 @@ public struct EffectValue {
     var ops: [EffectOp] = []
 }
 
-public function blurOp(radius: Float) -> EffectOp {
+public function blurOp(radius: Number) -> EffectOp {
     var op = EffectOp()
     op.kind = .Blur
     op.radius = radius
     return op
 }
 
-public function shadowOp(color: borrow ColorSource, offsetX: Float, offsetY: Float, radius: Float, spread: Float) -> EffectOp {
+public function shadowOp(
+    color: borrow ColorSource,
+    offsetX: Number,
+    offsetY: Number,
+    radius: Number,
+    spread: Number
+) -> EffectOp {
     var op = EffectOp()
     op.kind = .Shadow
     op.color = color
@@ -266,33 +286,41 @@ public function shadowOp(color: borrow ColorSource, offsetX: Float, offsetY: Flo
     return op
 }
 
-public function innerShadowOp(color: borrow ColorSource, offsetX: Float, offsetY: Float, radius: Float, spread: Float) -> EffectOp {
+public function innerShadowOp(
+    color: borrow ColorSource,
+    offsetX: Number,
+    offsetY: Number,
+    radius: Number,
+    spread: Number
+) -> EffectOp {
     var op = shadowOp(color, offsetX, offsetY, radius, spread)
     op.kind = .InnerShadow
     return op
 }
 
-public function opacityOp(amount: Float) -> EffectOp {
+public function opacityOp(amount: Number) -> EffectOp {
     var op = EffectOp()
     op.kind = .Opacity
     op.amount = amount
     return op
 }
 
-public function encodeEffect(effect: borrow EffectValue) -> [U8] {
-    var bytes: [U8] = []
-    appendU8(bytes, payloadVersion())
-    appendU16(bytes, effect.ops.count)
-    for op in effect.ops {
-        appendU8(bytes, effectOpValue(op.kind))
-        appendI32(bytes, fixedFromFloat(op.radius))
-        appendI32(bytes, fixedFromFloat(op.offsetX))
-        appendI32(bytes, fixedFromFloat(op.offsetY))
-        appendI32(bytes, fixedFromFloat(op.spread))
-        appendI32(bytes, fixedFromFloat(op.amount))
-        appendColorSource(bytes, op.color)
+extend EffectValue {
+    function encoded() -> [U8] {
+        var bytes: [U8] = []
+        appendU8(bytes, PayloadFormat.version)
+        appendU16(bytes, self.ops.count)
+        for op in self.ops {
+            appendU8(bytes, op.kind.value())
+            appendI32(bytes, fixedFromNumber(op.radius))
+            appendI32(bytes, fixedFromNumber(op.offsetX))
+            appendI32(bytes, fixedFromNumber(op.offsetY))
+            appendI32(bytes, fixedFromNumber(op.spread))
+            appendI32(bytes, fixedFromNumber(op.amount))
+            appendColorSource(bytes, op.color)
+        }
+        return bytes
     }
-    return bytes
 }
 
 public struct EffectRead {
@@ -302,14 +330,13 @@ public struct EffectRead {
 
 public function decodeEffect(bytes: borrow [U8]) -> EffectRead {
     var read = EffectRead()
-    if bytes.count < 3 || readU8(bytes, 0) != payloadVersion() {
+    if bytes.count < 3 || readU8(bytes, 0) != PayloadFormat.version {
         return read
     }
     let opCount = readU16(bytes, 1)
     var effect = EffectValue()
     var cursor = 3
-    var index = 0
-    while index < opCount {
+    for _ in 0..opCount {
         if cursor + 21 > bytes.count {
             return read
         }
@@ -327,7 +354,6 @@ public function decodeEffect(bytes: borrow [U8]) -> EffectRead {
         op.color = colorRead.value
         effect.ops.append(op)
         cursor = colorRead.next
-        index = index + 1
     }
     read.value = effect
     read.ok = true
@@ -343,24 +369,26 @@ public function decodeEffect(bytes: borrow [U8]) -> EffectRead {
 // multiplied out at the boundary.
 public struct TypographyValue {
     var family: String = ""
-    var size: Float = 0.0
-    var weight: Int = 400
-    var slant: Float = 0.0
-    var tracking: Float = 0.0
-    var lineHeight: Float = 0.0
+    var size: Number = 0.0
+    var weight: Number = 400
+    var slant: Number = 0.0
+    var tracking: Number = 0.0
+    var lineHeight: Number = 0.0
 }
 
-public function encodeTypography(typography: borrow TypographyValue) -> [U8] {
-    var bytes: [U8] = []
-    appendU8(bytes, payloadVersion())
-    appendU16(bytes, typography.family.count)
-    appendStringBytes(bytes, typography.family)
-    appendI32(bytes, fixedFromFloat(typography.size))
-    appendU16(bytes, typography.weight)
-    appendI32(bytes, fixedFromFloat(typography.slant))
-    appendI32(bytes, fixedFromFloat(typography.tracking))
-    appendI32(bytes, fixedFromFloat(typography.lineHeight))
-    return bytes
+extend TypographyValue {
+    function encoded() -> [U8] {
+        var bytes: [U8] = []
+        appendU8(bytes, PayloadFormat.version)
+        appendU16(bytes, self.family.count)
+        appendStringBytes(bytes, self.family)
+        appendI32(bytes, fixedFromNumber(self.size))
+        appendU16(bytes, self.weight)
+        appendI32(bytes, fixedFromNumber(self.slant))
+        appendI32(bytes, fixedFromNumber(self.tracking))
+        appendI32(bytes, fixedFromNumber(self.lineHeight))
+        return bytes
+    }
 }
 
 public struct TypographyRead {
@@ -370,7 +398,7 @@ public struct TypographyRead {
 
 public function decodeTypography(bytes: borrow [U8]) -> TypographyRead {
     var read = TypographyRead()
-    if bytes.count < 3 || readU8(bytes, 0) != payloadVersion() {
+    if bytes.count < 3 || readU8(bytes, 0) != PayloadFormat.version {
         return read
     }
     let familyLength = readU16(bytes, 1)
@@ -398,14 +426,16 @@ public function decodeTypography(bytes: borrow [U8]) -> TypographyRead {
 // platform, by idiom and by size class, and the toolkit asking for it should
 // not have to know which of those it is running under.
 public struct MetricValue {
-    var points: Float = 0.0
+    var points: Number = 0.0
 }
 
-public function encodeMetric(metric: borrow MetricValue) -> [U8] {
-    var bytes: [U8] = []
-    appendU8(bytes, payloadVersion())
-    appendI32(bytes, fixedFromFloat(metric.points))
-    return bytes
+extend MetricValue {
+    function encoded() -> [U8] {
+        var bytes: [U8] = []
+        appendU8(bytes, PayloadFormat.version)
+        appendI32(bytes, fixedFromNumber(self.points))
+        return bytes
+    }
 }
 
 public struct MetricRead {
@@ -415,7 +445,7 @@ public struct MetricRead {
 
 public function decodeMetric(bytes: borrow [U8]) -> MetricRead {
     var read = MetricRead()
-    if bytes.count < 5 || readU8(bytes, 0) != payloadVersion() {
+    if bytes.count < 5 || readU8(bytes, 0) != PayloadFormat.version {
         return read
     }
     read.value.points = floatFromFixed(readI32(bytes, 1))
@@ -452,31 +482,33 @@ public enum GlassInput {
     EdgeSideTone
     EdgeLightDodge
     EdgeLightBurn
-    Unknown(Int)
+    Unknown(Number)
 }
 
-public function glassInputValue(input: borrow GlassInput) -> Int {
-    match input {
-        InnerRefractionAmount -> return 1
-        InnerRefractionHeight -> return 2
-        OuterRefractionAmount -> return 3
-        OuterRefractionHeight -> return 4
-        RefractionOpacity -> return 5
-        BlurRadius -> return 6
-        BlurDistance -> return 7
-        BlurOpacity -> return 8
-        BlurOpacityFar -> return 9
-        BleedAmount -> return 10
-        BleedOpacity -> return 11
-        EdgeRingTone -> return 12
-        EdgeSideTone -> return 13
-        EdgeLightDodge -> return 14
-        EdgeLightBurn -> return 15
-        Unknown(value) -> return value
+extend GlassInput {
+    function value() -> Number {
+        match self {
+            InnerRefractionAmount -> return 1
+            InnerRefractionHeight -> return 2
+            OuterRefractionAmount -> return 3
+            OuterRefractionHeight -> return 4
+            RefractionOpacity -> return 5
+            BlurRadius -> return 6
+            BlurDistance -> return 7
+            BlurOpacity -> return 8
+            BlurOpacityFar -> return 9
+            BleedAmount -> return 10
+            BleedOpacity -> return 11
+            EdgeRingTone -> return 12
+            EdgeSideTone -> return 13
+            EdgeLightDodge -> return 14
+            EdgeLightBurn -> return 15
+            Unknown(value) -> return value
+        }
     }
 }
 
-public function glassInputFromValue(value: Int) -> GlassInput {
+public function glassInputFromValue(value: Number) -> GlassInput {
     if value == 1 { return .InnerRefractionAmount }
     if value == 2 { return .InnerRefractionHeight }
     if value == 3 { return .OuterRefractionAmount }
@@ -500,13 +532,19 @@ public function glassInputFromValue(value: Int) -> GlassInput {
 // points. A figure that does not change with size has a slope of zero.
 public struct GlassRamp {
     var input: GlassInput = .InnerRefractionAmount
-    var base: Float = 0.0
-    var slope: Float = 0.0
-    var minimum: Float = 0.0
-    var maximum: Float = 0.0
+    var base: Number = 0.0
+    var slope: Number = 0.0
+    var minimum: Number = 0.0
+    var maximum: Number = 0.0
 }
 
-public function glassRamp(input: GlassInput, base: Float, slope: Float, minimum: Float, maximum: Float) -> GlassRamp {
+public function glassRamp(
+    input: GlassInput,
+    base: Number,
+    slope: Number,
+    minimum: Number,
+    maximum: Number
+) -> GlassRamp {
     var ramp = GlassRamp()
     ramp.input = move input
     ramp.base = base
@@ -516,31 +554,35 @@ public function glassRamp(input: GlassInput, base: Float, slope: Float, minimum:
     return ramp
 }
 
-public function glassConstant(input: GlassInput, value: Float) -> GlassRamp {
+public function glassConstant(input: GlassInput, value: Number) -> GlassRamp {
     return glassRamp(move input, value, 0.0, value, value)
 }
 
-// What a ramp comes to on a surface whose shorter side is `extent`.
-public function glassRampAt(ramp: borrow GlassRamp, extent: Float) -> Float {
-    return clamp(ramp.base + ramp.slope * extent, ramp.minimum, ramp.maximum)
+extend GlassRamp {
+    // What a ramp comes to on a surface whose shorter side is `extent`.
+    function at(extent: Number) -> Number {
+        return clamp(self.base + self.slope * extent, self.minimum, self.maximum)
+    }
 }
 
 public struct GlassValue {
     var ramps: [GlassRamp] = []
 }
 
-public function encodeGlass(glass: borrow GlassValue) -> [U8] {
-    var bytes: [U8] = []
-    appendU8(bytes, payloadVersion())
-    appendU16(bytes, glass.ramps.count)
-    for ramp in glass.ramps {
-        appendU16(bytes, glassInputValue(ramp.input))
-        appendI32(bytes, fixedFromFloat(ramp.base))
-        appendI32(bytes, fixedFromFloat(ramp.slope))
-        appendI32(bytes, fixedFromFloat(ramp.minimum))
-        appendI32(bytes, fixedFromFloat(ramp.maximum))
+extend GlassValue {
+    function encoded() -> [U8] {
+        var bytes: [U8] = []
+        appendU8(bytes, PayloadFormat.version)
+        appendU16(bytes, self.ramps.count)
+        for ramp in self.ramps {
+            appendU16(bytes, ramp.input.value())
+            appendI32(bytes, fixedFromNumber(ramp.base))
+            appendI32(bytes, fixedFromNumber(ramp.slope))
+            appendI32(bytes, fixedFromNumber(ramp.minimum))
+            appendI32(bytes, fixedFromNumber(ramp.maximum))
+        }
+        return bytes
     }
-    return bytes
 }
 
 public struct GlassRead {
@@ -550,7 +592,7 @@ public struct GlassRead {
 
 public function decodeGlass(bytes: borrow [U8]) -> GlassRead {
     var read = GlassRead()
-    if bytes.count < 3 || readU8(bytes, 0) != payloadVersion() {
+    if bytes.count < 3 || readU8(bytes, 0) != PayloadFormat.version {
         return read
     }
     let rampCount = readU16(bytes, 1)
@@ -559,8 +601,7 @@ public function decodeGlass(bytes: borrow [U8]) -> GlassRead {
     }
     var glass = GlassValue()
     var cursor = 3
-    var index = 0
-    while index < rampCount {
+    for _ in 0..rampCount {
         var ramp = GlassRamp()
         ramp.input = glassInputFromValue(readU16(bytes, cursor))
         ramp.base = floatFromFixed(readI32(bytes, cursor + 2))
@@ -569,7 +610,6 @@ public function decodeGlass(bytes: borrow [U8]) -> GlassRead {
         ramp.maximum = floatFromFixed(readI32(bytes, cursor + 14))
         glass.ramps.append(ramp)
         cursor = cursor + 18
-        index = index + 1
     }
     read.value = glass
     read.ok = true

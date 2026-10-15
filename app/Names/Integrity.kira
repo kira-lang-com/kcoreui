@@ -24,37 +24,45 @@ public struct IntegrityReport {
     var undeclaredGlass: [String] = []
 }
 
-// Whether every declared name has a resource behind it. Undeclared extras do
-// not fail: a catalog is allowed to carry more than this build knows about.
-public function integrityHolds(report: borrow IntegrityReport) -> Bool {
-    if report.missingColors.count > 0 { return false }
-    if report.missingMaterials.count > 0 { return false }
-    if report.missingTextStyles.count > 0 { return false }
-    if report.missingMetrics.count > 0 { return false }
-    return report.missingGlass.count == 0
+extend IntegrityReport {
+    // Whether every declared name has a resource behind it. Undeclared extras do
+    // not fail: a catalog is allowed to carry more than this build knows about.
+    function holds() -> Bool {
+        if self.missingColors.count > 0 { return false }
+        if self.missingMaterials.count > 0 { return false }
+        if self.missingTextStyles.count > 0 { return false }
+        if self.missingMetrics.count > 0 { return false }
+        return self.missingGlass.count == 0
+    }
 }
 
-public function checkIntegrity(catalog: borrow Catalog) -> IntegrityReport {
-    var report = IntegrityReport()
-    let colors = allColorNames()
-    let materials = allMaterialNames()
-    let textStyles = allTextStyleNames()
-    let metrics = allMetricNames()
-    let glass = allGlassNames()
-    report.missingColors = missingNames(catalog, colors, .Color)
-    report.missingMaterials = missingNames(catalog, materials, .Material)
-    report.missingTextStyles = missingNames(catalog, textStyles, .Typography)
-    report.missingMetrics = missingNames(catalog, metrics, .Metric)
-    report.missingGlass = missingNames(catalog, glass, .Glass)
-    report.undeclaredColors = undeclaredNames(catalog, colors, .Color)
-    report.undeclaredMaterials = undeclaredNames(catalog, materials, .Material)
-    report.undeclaredTextStyles = undeclaredNames(catalog, textStyles, .Typography)
-    report.undeclaredMetrics = undeclaredNames(catalog, metrics, .Metric)
-    report.undeclaredGlass = undeclaredNames(catalog, glass, .Glass)
-    return report
+extend Catalog {
+    function checkIntegrity() -> IntegrityReport {
+        var report = IntegrityReport()
+        let colors = ColorName.all
+        let materials = MaterialName.all
+        let textStyles = TextStyleName.all
+        let metrics = MetricName.all
+        let glass = GlassName.all
+        report.missingColors = self.missingNames(colors, .Color)
+        report.missingMaterials = self.missingNames(materials, .Material)
+        report.missingTextStyles = self.missingNames(textStyles, .Typography)
+        report.missingMetrics = self.missingNames(metrics, .Metric)
+        report.missingGlass = self.missingNames(glass, .Glass)
+        report.undeclaredColors = self.undeclaredNames(colors, .Color)
+        report.undeclaredMaterials = self.undeclaredNames(materials, .Material)
+        report.undeclaredTextStyles = self.undeclaredNames(textStyles, .Typography)
+        report.undeclaredMetrics = self.undeclaredNames(metrics, .Metric)
+        report.undeclaredGlass = self.undeclaredNames(glass, .Glass)
+        return report
+    }
 }
 
-public function appendNameList(text: borrow String, label: borrow String, names: borrow [String]) -> String {
+public function appendNameList(
+    text: borrow String,
+    label: borrow String,
+    names: borrow [String]
+) -> String {
     if names.count == 0 {
         return text
     }
@@ -65,41 +73,43 @@ public function appendNameList(text: borrow String, label: borrow String, names:
     return built + "\n"
 }
 
-public function integrityText(report: borrow IntegrityReport) -> String {
-    var text = ""
-    text = appendNameList(text, "missing colors:", report.missingColors)
-    text = appendNameList(text, "missing materials:", report.missingMaterials)
-    text = appendNameList(text, "missing text styles:", report.missingTextStyles)
-    text = appendNameList(text, "missing metrics:", report.missingMetrics)
-    text = appendNameList(text, "missing glass:", report.missingGlass)
-    text = appendNameList(text, "undeclared colors:", report.undeclaredColors)
-    text = appendNameList(text, "undeclared materials:", report.undeclaredMaterials)
-    text = appendNameList(text, "undeclared text styles:", report.undeclaredTextStyles)
-    text = appendNameList(text, "undeclared metrics:", report.undeclaredMetrics)
-    text = appendNameList(text, "undeclared glass:", report.undeclaredGlass)
-    if text.count == 0 {
-        return "catalog and name surface agree\n"
+extend IntegrityReport {
+    function text() -> String {
+        var text = ""
+        text = appendNameList(text, "missing colors:", self.missingColors)
+        text = appendNameList(text, "missing materials:", self.missingMaterials)
+        text = appendNameList(text, "missing text styles:", self.missingTextStyles)
+        text = appendNameList(text, "missing metrics:", self.missingMetrics)
+        text = appendNameList(text, "missing glass:", self.missingGlass)
+        text = appendNameList(text, "undeclared colors:", self.undeclaredColors)
+        text = appendNameList(text, "undeclared materials:", self.undeclaredMaterials)
+        text = appendNameList(text, "undeclared text styles:", self.undeclaredTextStyles)
+        text = appendNameList(text, "undeclared metrics:", self.undeclaredMetrics)
+        text = appendNameList(text, "undeclared glass:", self.undeclaredGlass)
+        if text.count == 0 {
+            return "catalog and name surface agree\n"
+        }
+        return text
     }
-    return text
 }
 
 // Every name this build declares, across every kind. For an editor's outline
 // and for a catalog author checking coverage.
 public function allDeclaredNames() -> [String] {
     var names: [String] = []
-    for name in allColorNames() {
+    for name in ColorName.all {
         names.append(name)
     }
-    for name in allMaterialNames() {
+    for name in MaterialName.all {
         names.append(name)
     }
-    for name in allTextStyleNames() {
+    for name in TextStyleName.all {
         names.append(name)
     }
-    for name in allMetricNames() {
+    for name in MetricName.all {
         names.append(name)
     }
-    for name in allGlassNames() {
+    for name in GlassName.all {
         names.append(name)
     }
     return names

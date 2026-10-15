@@ -12,7 +12,7 @@ import Foundation
 construct FileLength() extends Lint {
     let code: KiraError = .KLINT003
     let level: LintLevel = .Warn
-    let limit: Int = 700
+    let limit: Number = 700
 }
 
 // A variant written with the type it already belongs to. Kira resolves a

@@ -34,6 +34,23 @@ import Foundation
 // This file is the facade. `app/Core` is the framework and knows no names;
 // `app/Names` is Apple's vocabulary and knows no format.
 
+public namespace CatalogFile {
+    // Where the default catalog sits, relative to the directory the program runs
+    // from.
+    //
+    // A path and not an `Asset` declaration: `Asset`'s registry collects the
+    // declarations of the *program* being compiled, and a library's do not join it,
+    // so an `Asset` written here is a name the consuming program cannot see. The
+    // program that ships this file is the one that declares it.
+    //
+    // There is nothing special about the file. It is a `.kcui` like any other, and
+    // it is the floor only because a program puts it at the bottom of its stack.
+    let defaultPath: String = "Resources/Default.kcui"
+
+    // The default file name a catalog is shipped under.
+    let fileExtension: String = ".kcui"
+}
+
 // Everything a consumer needs to answer a lookup: what catalogs are in effect,
 // what the environment currently is, and the cache between them.
 //
@@ -48,111 +65,106 @@ public struct UIResources {
 }
 
 // Resources over one catalog, which becomes the floor.
-public function makeResources(base: borrow Catalog, environment: borrow UIEnvironment) -> UIResources {
+public function makeResources(
+    base: borrow Catalog,
+    environment: borrow UIEnvironment
+) -> UIResources {
     var resources = UIResources()
-    resources.stack = catalogStackOf(base)
+    resources.stack = base.asStack()
     resources.environment = environment
     resources.cache = makeDefaultCache()
     return resources
 }
 
-// Put a catalog above the ones already in effect. This is how a theme, a
-// package's resources and an application's own arrive: as blobs at different
-// heights, not as an override API.
-//
-// The cache is dropped, because a new catalog can change what any name means.
-public function pushCatalog(resources: borrow mut UIResources, overlay: borrow Catalog) {
-    resources.stack = catalogStackOverride(resources.stack, overlay)
-    clearCache(resources.cache)
-}
+extend UIResources {
+    // Put a catalog above the ones already in effect. This is how a theme, a
+    // package's resources and an application's own arrive: as blobs at different
+    // heights, not as an override API.
+    //
+    // The cache is dropped, because a new catalog can change what any name means.
+    function pushCatalog(borrow mut self, overlay: borrow Catalog) {
+        self.stack = self.stack.overlaid(overlay)
+        self.cache.clear()
+    }
 
-// Change the environment. Nothing is invalidated: the environment is part of
-// every cache key, so the new one simply fills different slots.
-public function setEnvironment(resources: borrow mut UIResources, environment: borrow UIEnvironment) {
-    resources.environment = environment
-}
+    // Change the environment. Nothing is invalidated: the environment is part of
+    // every cache key, so the new one simply fills different slots.
+    function setEnvironment(borrow mut self, environment: borrow UIEnvironment) {
+        self.environment = environment
+    }
 
-// The appearance alone, which is the trait that changes most and the one a
-// platform hands a toolkit on its own.
-public function setAppearance(resources: borrow mut UIResources, appearance: borrow Appearance) {
-    resources.environment.appearance = appearance
+    // The appearance alone, which is the trait that changes most and the one a
+    // platform hands a toolkit on its own.
+    function setAppearance(borrow mut self, appearance: borrow Appearance) {
+        self.environment.appearance = appearance
+    }
 }
 
 // --- Lookups ---------------------------------------------------------------
 
-// The color a name means right now. Cached at both levels, so a repeat within
-// a frame is a probe and a comparison.
-public function color(resources: borrow mut UIResources, name: borrow String) -> Color {
-    return cachedColor(resources.cache, resources.stack, name, resources.environment)
-}
+extend UIResources {
+    // The color a name means right now. Cached at both levels, so a repeat within
+    // a frame is a probe and a comparison.
+    function color(borrow mut self, name: borrow String) -> RGBAColor {
+        return self.cache.color(self.stack, name, self.environment)
+    }
 
-// The material recipe a name means right now, with every color reference
-// already followed against this environment.
-public function material(resources: borrow UIResources, name: borrow String) -> ResolvedMaterial {
-    return resolveMaterial(resources.stack, name, resources.environment)
-}
+    // The material recipe a name means right now, with every color reference
+    // already followed against this environment.
+    function material(name: borrow String) -> ResolvedMaterial {
+        return self.stack.resolveMaterial(name, self.environment)
+    }
 
-public function gradient(resources: borrow UIResources, name: borrow String) -> ResolvedGradient {
-    return resolveGradient(resources.stack, name, resources.environment)
-}
+    function gradient(name: borrow String) -> ResolvedGradient {
+        return self.stack.resolveGradient(name, self.environment)
+    }
 
-public function effect(resources: borrow UIResources, name: borrow String) -> ResolvedEffect {
-    return resolveEffect(resources.stack, name, resources.environment)
-}
+    function effect(name: borrow String) -> ResolvedEffect {
+        return self.stack.resolveEffect(name, self.environment)
+    }
 
-public function typography(resources: borrow UIResources, name: borrow String) -> ResolvedTypography {
-    return resolveTypography(resources.stack, name, resources.environment)
-}
+    function typography(name: borrow String) -> ResolvedTypography {
+        return self.stack.resolveTypography(name, self.environment)
+    }
 
-// The length a metric name means right now, in points.
-public function metric(resources: borrow UIResources, name: borrow String) -> Float {
-    return resolveMetric(resources.stack, name, resources.environment).points
-}
+    // The length a metric name means right now, in points.
+    function metric(name: borrow String) -> Number {
+        return self.stack.resolveMetric(name, self.environment).points
+    }
 
-// The glass recipe a name means right now: each input with the ramp that
-// carries it across sizes. The size itself is the caller's, applied with
-// `glassFigure` once the surface is laid out.
-public function glass(resources: borrow UIResources, name: borrow String) -> ResolvedGlass {
-    return resolveGlass(resources.stack, name, resources.environment)
+    // The glass recipe a name means right now: each input with the ramp that
+    // carries it across sizes. The size itself is the caller's, applied with
+    // `glassFigure` once the surface is laid out.
+    function glass(name: borrow String) -> ResolvedGlass {
+        return self.stack.resolveGlass(name, self.environment)
+    }
 }
 
 // --- Diagnostics -----------------------------------------------------------
 
-// Why a name resolved the way it did, as text. The failure mode of a variant
-// system is a value that is right everywhere except one combination of traits,
-// and this is what finds it.
-public function explain(resources: borrow UIResources, name: borrow String, kind: borrow ResourceKind) -> String {
-    return resolutionReport(traceResolution(resources.stack, name, kind, resources.environment))
-}
+extend UIResources {
+    // Why a name resolved the way it did, as text. The failure mode of a variant
+    // system is a value that is right everywhere except one combination of traits,
+    // and this is what finds it.
+    function explain(name: borrow String, kind: borrow ResourceKind) -> String {
+        return (self.stack.traceResolution(name, kind, self.environment)).report()
+    }
 
-public function explainColor(resources: borrow UIResources, name: borrow String) -> String {
-    return explain(resources, name, .Color)
-}
+    function explainColor(name: borrow String) -> String {
+        return self.explain(name, .Color)
+    }
 
-public function explainMaterial(resources: borrow UIResources, name: borrow String) -> String {
-    return explain(resources, name, .Material)
+    function explainMaterial(name: borrow String) -> String {
+        return self.explain(name, .Material)
+    }
 }
 
 // --- The catalog a program ships -------------------------------------------
-
-// Where the default catalog sits, relative to the directory the program runs
-// from.
-//
-// A path and not an `Asset` declaration: `Asset`'s registry collects the
-// declarations of the *program* being compiled, and a library's do not join it,
-// so an `Asset` written here is a name the consuming program cannot see. The
-// program that ships this file is the one that declares it.
-//
-// There is nothing special about the file. It is a `.kcui` like any other, and
-// it is the floor only because a program puts it at the bottom of its stack.
-public function defaultCatalogPath() -> String {
-    return "Resources/Default.kcui"
-}
 
 // A catalog read from disk.
 //
 // A file read and a parse. A program does this once, keeps the `UIResources` it
 // builds, and never asks again.
 public function loadDefaultCatalog() -> Result<Catalog, CatalogLoadFailure> {
-    return loadCatalogFile(defaultCatalogPath())
+    return loadCatalogFile(CatalogFile.defaultPath)
 }

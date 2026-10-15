@@ -18,7 +18,9 @@ import Foundation
 //
 // The catalog validator rejects cycles before a blob is written, so this is a
 // backstop for a blob that arrived from somewhere else, not the mechanism.
-public function referenceDepthLimit() -> Int { return 16 }
+public namespace ReferenceChain {
+    let depthLimit: Number = 16
+}
 
 // --- Colors ---------------------------------------------------------------
 //
@@ -30,121 +32,149 @@ public function referenceDepthLimit() -> Int { return 16 }
 // A caller sees neither: what it receives is an encoded color in its own
 // gamut, which is what a renderer draws.
 
-// One layer's color, in linear Display P3, with its references followed.
-public function resolveSourceLinear(stack: borrow CatalogStack, source: borrow ColorSource, environment: borrow UIEnvironment, depth: Int) -> Color {
-    if !source.isReference {
-        return decodeColor(source.color)
+extend CatalogStack {
+    // One layer's color, in linear Display P3, with its references followed.
+    function resolveSourceLinear(
+        source: borrow ColorSource,
+        environment: borrow UIEnvironment,
+        depth: Number
+    ) -> RGBAColor {
+        if !source.isReference {
+            return source.color.decoded()
+        }
+        if depth >= ReferenceChain.depthLimit {
+            return ResolverFallback.color.decoded()
+        }
+        let resolved = self.resolveResource(source.reference, .Color, environment)
+        if !resolved.found {
+            return ResolverFallback.color.decoded()
+        }
+        let read = decodeColorPayload(self.payload(resolved))
+        if !read.ok {
+            return ResolverFallback.color.decoded()
+        }
+        return self.compositeLayers(read.value, environment, depth + 1)
     }
-    if depth >= referenceDepthLimit() {
-        return decodeColor(debugColor())
-    }
-    let resolved = resolveResource(stack, source.reference, .Color, environment)
-    if !resolved.found {
-        return decodeColor(debugColor())
-    }
-    let read = decodeColorPayload(resolvedPayload(stack, resolved))
-    if !read.ok {
-        return decodeColor(debugColor())
-    }
-    return compositeLayers(stack, read.value, environment, depth + 1)
-}
 
-// A layer stack composited, in linear Display P3.
-//
-// Bottom to top, source-over. An empty stack is fully transparent, which is a
-// color a catalog is entitled to hold: a token meaning "draw nothing here"
-// says so with no layers rather than with an alpha nobody can see.
-public function compositeLayers(stack: borrow CatalogStack, value: borrow ColorValue, environment: borrow UIEnvironment, depth: Int) -> Color {
-    var result = Color(r: 0.0, g: 0.0, b: 0.0, a: 0.0)
-    for layer in value.layers {
-        var source = resolveSourceLinear(stack, layer.source, environment, depth)
-        source.a = source.a * layer.opacity
-        result = compositeOver(source, result)
+    // A layer stack composited, in linear Display P3.
+    //
+    // Bottom to top, source-over. An empty stack is fully transparent, which is a
+    // color a catalog is entitled to hold: a token meaning "draw nothing here"
+    // says so with no layers rather than with an alpha nobody can see.
+    function compositeLayers(
+        value: borrow ColorValue,
+        environment: borrow UIEnvironment,
+        depth: Number
+    ) -> RGBAColor {
+        var result = RGBAColor(r: 0.0, g: 0.0, b: 0.0, a: 0.0)
+        for layer in value.layers {
+            var source = self.resolveSourceLinear(layer.source, environment, depth)
+            source.a = source.a * layer.opacity
+            result = source.compositeOver(result)
+        }
+        return result
     }
-    return result
-}
 
-// A color value composited and handed back in the environment's gamut.
-public function resolveColorValue(stack: borrow CatalogStack, value: borrow ColorValue, environment: borrow UIEnvironment, depth: Int) -> Color {
-    let composited = compositeLayers(stack, value, environment, depth)
-    return colorForGamut(encodeColorChannels(composited), environment.gamut)
-}
+    // A color value composited and handed back in the environment's gamut.
+    function resolveColorValue(
+        value: borrow ColorValue,
+        environment: borrow UIEnvironment,
+        depth: Number
+    ) -> RGBAColor {
+        let composited = self.compositeLayers(value, environment, depth)
+        return (composited.encodedChannels()).forGamut(environment.gamut)
+    }
 
-// One layer source, resolved the way a gradient stop and a material tint need
-// it: followed, encoded, and in the environment's gamut.
-public function resolveColorSource(stack: borrow CatalogStack, source: borrow ColorSource, environment: borrow UIEnvironment, depth: Int) -> Color {
-    let linear = resolveSourceLinear(stack, source, environment, depth)
-    return colorForGamut(encodeColorChannels(linear), environment.gamut)
+    // One layer source, resolved the way a gradient stop and a material tint need
+    // it: followed, encoded, and in the environment's gamut.
+    function resolveColorSource(
+        source: borrow ColorSource,
+        environment: borrow UIEnvironment,
+        depth: Number
+    ) -> RGBAColor {
+        let linear = self.resolveSourceLinear(source, environment, depth)
+        return (linear.encodedChannels()).forGamut(environment.gamut)
+    }
 }
 
 // Whether a color resolved, alongside the color. For a debugger and for the
 // integrity check; ordinary drawing code wants `resolveColor`.
 public struct ColorResolution {
-    var color: Color = Color()
+    var color: RGBAColor = RGBAColor()
     var found: Bool = false
 }
 
-public function resolveColorChecked(stack: borrow CatalogStack, name: borrow String, environment: borrow UIEnvironment) -> ColorResolution {
-    var resolution = ColorResolution()
-    resolution.color = debugColor()
-    let resolved = resolveResource(stack, name, .Color, environment)
-    if !resolved.found || !resourceKindsEqual(resolved.kind, .Color) {
+extend CatalogStack {
+    function resolveColorChecked(
+        name: borrow String,
+        environment: borrow UIEnvironment
+    ) -> ColorResolution {
+        var resolution = ColorResolution()
+        resolution.color = ResolverFallback.color
+        let resolved = self.resolveResource(name, .Color, environment)
+        if !resolved.found || !resolved.kind.equals(.Color) {
+            return resolution
+        }
+        let read = decodeColorPayload(self.payload(resolved))
+        if !read.ok {
+            return resolution
+        }
+        resolution.color = self.resolveColorValue(read.value, environment, 0)
+        resolution.found = true
         return resolution
     }
-    let read = decodeColorPayload(resolvedPayload(stack, resolved))
-    if !read.ok {
-        return resolution
-    }
-    resolution.color = resolveColorValue(stack, read.value, environment, 0)
-    resolution.found = true
-    return resolution
-}
 
-// The color a semantic name means in this environment.
-public function resolveColor(stack: borrow CatalogStack, name: borrow String, environment: borrow UIEnvironment) -> Color {
-    return resolveColorChecked(stack, name, environment).color
+    // The color a semantic name means in this environment.
+    function resolveColor(name: borrow String, environment: borrow UIEnvironment) -> RGBAColor {
+        return self.resolveColorChecked(name, environment).color
+    }
 }
 
 // --- Gradients -------------------------------------------------------------
 
 public struct ResolvedGradientStop {
-    var position: Float = 0.0
-    var color: Color = Color()
+    var position: Number = 0.0
+    var color: RGBAColor = RGBAColor()
 }
 
 public struct ResolvedGradient {
     var found: Bool = false
     var kind: GradientKind = .Linear
-    var startX: Float = 0.0
-    var startY: Float = 0.0
-    var endX: Float = 0.0
-    var endY: Float = 1.0
+    var startX: Number = 0.0
+    var startY: Number = 0.0
+    var endX: Number = 0.0
+    var endY: Number = 1.0
     var stops: [ResolvedGradientStop] = []
 }
 
-public function resolveGradient(stack: borrow CatalogStack, name: borrow String, environment: borrow UIEnvironment) -> ResolvedGradient {
-    var gradient = ResolvedGradient()
-    let resolved = resolveResource(stack, name, .Gradient, environment)
-    if !resolved.found || !resourceKindsEqual(resolved.kind, .Gradient) {
+extend CatalogStack {
+    function resolveGradient(
+        name: borrow String,
+        environment: borrow UIEnvironment
+    ) -> ResolvedGradient {
+        var gradient = ResolvedGradient()
+        let resolved = self.resolveResource(name, .Gradient, environment)
+        if !resolved.found || !resolved.kind.equals(.Gradient) {
+            return gradient
+        }
+        let read = decodeGradient(self.payload(resolved))
+        if !read.ok {
+            return gradient
+        }
+        gradient.found = true
+        gradient.kind = read.value.kind
+        gradient.startX = read.value.startX
+        gradient.startY = read.value.startY
+        gradient.endX = read.value.endX
+        gradient.endY = read.value.endY
+        for stop in read.value.stops {
+            var resolvedStop = ResolvedGradientStop()
+            resolvedStop.position = stop.position
+            resolvedStop.color = self.resolveColorSource(stop.color, environment, 0)
+            gradient.stops.append(resolvedStop)
+        }
         return gradient
     }
-    let read = decodeGradient(resolvedPayload(stack, resolved))
-    if !read.ok {
-        return gradient
-    }
-    gradient.found = true
-    gradient.kind = read.value.kind
-    gradient.startX = read.value.startX
-    gradient.startY = read.value.startY
-    gradient.endX = read.value.endX
-    gradient.endY = read.value.endY
-    for stop in read.value.stops {
-        var resolvedStop = ResolvedGradientStop()
-        resolvedStop.position = stop.position
-        resolvedStop.color = resolveColorSource(stack, stop.color, environment, 0)
-        gradient.stops.append(resolvedStop)
-    }
-    return gradient
 }
 
 // --- Materials -------------------------------------------------------------
@@ -152,9 +182,9 @@ public function resolveGradient(stack: borrow CatalogStack, name: borrow String,
 // A layer with nothing left to look up. This is what a compositor is handed.
 public struct ResolvedMaterialLayer {
     var kind: MaterialLayerKind = .Fill
-    var amount: Float = 0.0
-    var color: Color = Color()
-    var opacity: Float = 1.0
+    var amount: Number = 0.0
+    var color: RGBAColor = RGBAColor()
+    var opacity: Number = 1.0
     var blend: BlendMode = .Normal
 }
 
@@ -163,50 +193,57 @@ public struct ResolvedMaterial {
     var layers: [ResolvedMaterialLayer] = []
 }
 
-public function resolveMaterial(stack: borrow CatalogStack, name: borrow String, environment: borrow UIEnvironment) -> ResolvedMaterial {
-    var material = ResolvedMaterial()
-    let resolved = resolveResource(stack, name, .Material, environment)
-    if !resolved.found || !resourceKindsEqual(resolved.kind, .Material) {
+extend CatalogStack {
+    function resolveMaterial(
+        name: borrow String,
+        environment: borrow UIEnvironment
+    ) -> ResolvedMaterial {
+        var material = ResolvedMaterial()
+        let resolved = self.resolveResource(name, .Material, environment)
+        if !resolved.found || !resolved.kind.equals(.Material) {
+            return material
+        }
+        let read = decodeMaterial(self.payload(resolved))
+        if !read.ok {
+            return material
+        }
+        material.found = true
+        for layer in read.value.layers {
+            var resolvedLayer = ResolvedMaterialLayer()
+            resolvedLayer.kind = layer.kind
+            resolvedLayer.amount = layer.amount
+            resolvedLayer.opacity = layer.opacity
+            resolvedLayer.blend = layer.blend
+            resolvedLayer.color = self.resolveColorSource(layer.color, environment, 0)
+            material.layers.append(resolvedLayer)
+        }
         return material
     }
-    let read = decodeMaterial(resolvedPayload(stack, resolved))
-    if !read.ok {
-        return material
-    }
-    material.found = true
-    for layer in read.value.layers {
-        var resolvedLayer = ResolvedMaterialLayer()
-        resolvedLayer.kind = layer.kind
-        resolvedLayer.amount = layer.amount
-        resolvedLayer.opacity = layer.opacity
-        resolvedLayer.blend = layer.blend
-        resolvedLayer.color = resolveColorSource(stack, layer.color, environment, 0)
-        material.layers.append(resolvedLayer)
-    }
-    return material
 }
 
-// The blur radius a material asks for, or zero. A surface that needs one number
-// rather than the whole recipe asks for it here instead of walking the layers.
-public function materialBlurRadius(material: borrow ResolvedMaterial) -> Float {
-    for layer in material.layers {
-        if layer.kind == .BackdropBlur {
-            return layer.amount
+extend ResolvedMaterial {
+    // The blur radius a material asks for, or zero. A surface that needs one number
+    // rather than the whole recipe asks for it here instead of walking the layers.
+    function blurRadius() -> Number {
+        for layer in self.layers {
+            if layer.kind == .BackdropBlur {
+                return layer.amount
+            }
         }
+        return 0.0
     }
-    return 0.0
 }
 
 // --- Effects ---------------------------------------------------------------
 
 public struct ResolvedEffectOp {
     var kind: EffectOpKind = .Blur
-    var radius: Float = 0.0
-    var offsetX: Float = 0.0
-    var offsetY: Float = 0.0
-    var spread: Float = 0.0
-    var amount: Float = 1.0
-    var color: Color = Color()
+    var radius: Number = 0.0
+    var offsetX: Number = 0.0
+    var offsetY: Number = 0.0
+    var spread: Number = 0.0
+    var amount: Number = 1.0
+    var color: RGBAColor = RGBAColor()
 }
 
 public struct ResolvedEffect {
@@ -214,29 +251,34 @@ public struct ResolvedEffect {
     var ops: [ResolvedEffectOp] = []
 }
 
-public function resolveEffect(stack: borrow CatalogStack, name: borrow String, environment: borrow UIEnvironment) -> ResolvedEffect {
-    var effect = ResolvedEffect()
-    let resolved = resolveResource(stack, name, .Effect, environment)
-    if !resolved.found || !resourceKindsEqual(resolved.kind, .Effect) {
+extend CatalogStack {
+    function resolveEffect(
+        name: borrow String,
+        environment: borrow UIEnvironment
+    ) -> ResolvedEffect {
+        var effect = ResolvedEffect()
+        let resolved = self.resolveResource(name, .Effect, environment)
+        if !resolved.found || !resolved.kind.equals(.Effect) {
+            return effect
+        }
+        let read = decodeEffect(self.payload(resolved))
+        if !read.ok {
+            return effect
+        }
+        effect.found = true
+        for op in read.value.ops {
+            var resolvedOp = ResolvedEffectOp()
+            resolvedOp.kind = op.kind
+            resolvedOp.radius = op.radius
+            resolvedOp.offsetX = op.offsetX
+            resolvedOp.offsetY = op.offsetY
+            resolvedOp.spread = op.spread
+            resolvedOp.amount = op.amount
+            resolvedOp.color = self.resolveColorSource(op.color, environment, 0)
+            effect.ops.append(resolvedOp)
+        }
         return effect
     }
-    let read = decodeEffect(resolvedPayload(stack, resolved))
-    if !read.ok {
-        return effect
-    }
-    effect.found = true
-    for op in read.value.ops {
-        var resolvedOp = ResolvedEffectOp()
-        resolvedOp.kind = op.kind
-        resolvedOp.radius = op.radius
-        resolvedOp.offsetX = op.offsetX
-        resolvedOp.offsetY = op.offsetY
-        resolvedOp.spread = op.spread
-        resolvedOp.amount = op.amount
-        resolvedOp.color = resolveColorSource(stack, op.color, environment, 0)
-        effect.ops.append(resolvedOp)
-    }
-    return effect
 }
 
 // --- Typography ------------------------------------------------------------
@@ -246,41 +288,51 @@ public struct ResolvedTypography {
     var value: TypographyValue = TypographyValue()
 }
 
-public function resolveTypography(stack: borrow CatalogStack, name: borrow String, environment: borrow UIEnvironment) -> ResolvedTypography {
-    var typography = ResolvedTypography()
-    let resolved = resolveResource(stack, name, .Typography, environment)
-    if !resolved.found || !resourceKindsEqual(resolved.kind, .Typography) {
+extend CatalogStack {
+    function resolveTypography(
+        name: borrow String,
+        environment: borrow UIEnvironment
+    ) -> ResolvedTypography {
+        var typography = ResolvedTypography()
+        let resolved = self.resolveResource(name, .Typography, environment)
+        if !resolved.found || !resolved.kind.equals(.Typography) {
+            return typography
+        }
+        let read = decodeTypography(self.payload(resolved))
+        if !read.ok {
+            return typography
+        }
+        typography.found = true
+        typography.value = read.value
         return typography
     }
-    let read = decodeTypography(resolvedPayload(stack, resolved))
-    if !read.ok {
-        return typography
-    }
-    typography.found = true
-    typography.value = read.value
-    return typography
 }
 
 // --- Metrics ---------------------------------------------------------------
 
 public struct ResolvedMetric {
     var found: Bool = false
-    var points: Float = 0.0
+    var points: Number = 0.0
 }
 
-public function resolveMetric(stack: borrow CatalogStack, name: borrow String, environment: borrow UIEnvironment) -> ResolvedMetric {
-    var metric = ResolvedMetric()
-    let resolved = resolveResource(stack, name, .Metric, environment)
-    if !resolved.found || !resourceKindsEqual(resolved.kind, .Metric) {
+extend CatalogStack {
+    function resolveMetric(
+        name: borrow String,
+        environment: borrow UIEnvironment
+    ) -> ResolvedMetric {
+        var metric = ResolvedMetric()
+        let resolved = self.resolveResource(name, .Metric, environment)
+        if !resolved.found || !resolved.kind.equals(.Metric) {
+            return metric
+        }
+        let read = decodeMetric(self.payload(resolved))
+        if !read.ok {
+            return metric
+        }
+        metric.found = true
+        metric.points = read.value.points
         return metric
     }
-    let read = decodeMetric(resolvedPayload(stack, resolved))
-    if !read.ok {
-        return metric
-    }
-    metric.found = true
-    metric.points = read.value.points
-    return metric
 }
 
 // --- Glass -----------------------------------------------------------------
@@ -290,42 +342,46 @@ public struct ResolvedGlass {
     var ramps: [GlassRamp] = []
 }
 
-public function resolveGlass(stack: borrow CatalogStack, name: borrow String, environment: borrow UIEnvironment) -> ResolvedGlass {
-    var glass = ResolvedGlass()
-    let resolved = resolveResource(stack, name, .Glass, environment)
-    if !resolved.found || !resourceKindsEqual(resolved.kind, .Glass) {
+extend CatalogStack {
+    function resolveGlass(name: borrow String, environment: borrow UIEnvironment) -> ResolvedGlass {
+        var glass = ResolvedGlass()
+        let resolved = self.resolveResource(name, .Glass, environment)
+        if !resolved.found || !resolved.kind.equals(.Glass) {
+            return glass
+        }
+        let read = decodeGlass(self.payload(resolved))
+        if !read.ok {
+            return glass
+        }
+        glass.found = true
+        glass.ramps = read.value.ramps
         return glass
     }
-    let read = decodeGlass(resolvedPayload(stack, resolved))
-    if !read.ok {
-        return glass
-    }
-    glass.found = true
-    glass.ramps = read.value.ramps
-    return glass
 }
 
-// Whether a recipe states an input at all. An input it leaves out is one the
-// platform does not draw for this glass, which is different from one it draws
-// at zero.
-public function glassStates(glass: borrow ResolvedGlass, input: GlassInput) -> Bool {
-    let wanted = glassInputValue(input)
-    for ramp in glass.ramps {
-        if glassInputValue(ramp.input) == wanted {
-            return true
+extend ResolvedGlass {
+    // Whether a recipe states an input at all. An input it leaves out is one the
+    // platform does not draw for this glass, which is different from one it draws
+    // at zero.
+    function states(input: GlassInput) -> Bool {
+        let wanted = input.value()
+        for ramp in self.ramps {
+            if ramp.input.value() == wanted {
+                return true
+            }
         }
+        return false
     }
-    return false
-}
 
-// One input of a recipe on a surface whose shorter side is `extent`, or zero
-// when the recipe does not state it.
-public function glassFigure(glass: borrow ResolvedGlass, input: GlassInput, extent: Float) -> Float {
-    let wanted = glassInputValue(input)
-    for ramp in glass.ramps {
-        if glassInputValue(ramp.input) == wanted {
-            return glassRampAt(ramp, extent)
+    // One input of a recipe on a surface whose shorter side is `extent`, or zero
+    // when the recipe does not state it.
+    function figure(input: GlassInput, extent: Number) -> Number {
+        let wanted = input.value()
+        for ramp in self.ramps {
+            if ramp.input.value() == wanted {
+                return ramp.at(extent)
+            }
         }
+        return 0.0
     }
-    return 0.0
 }

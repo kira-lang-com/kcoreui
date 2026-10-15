@@ -7,11 +7,11 @@ import KCoreUI
 // catalog. Both matter, and they catch different things: a cycle is perfectly
 // well-formed bytes describing a graph no resolver can finish walking.
 
-function kcuIssueCount(record: borrow CatalogRecord, kind: borrow ValidationKind) -> Int {
+function issueCount(record: borrow CatalogRecord, kind: borrow ValidationKind) -> Number {
     var count = 0
-    for entry in validateRecord(record) {
+    for entry in record.validate() {
         if entry.kind == kind {
-            count = count + 1
+            count++
         }
     }
     return count
@@ -20,9 +20,11 @@ function kcuIssueCount(record: borrow CatalogRecord, kind: borrow ValidationKind
 construct KcuACleanRecordHasNoIssues() extends Test {
     test {
         var record = CatalogRecord()
-        record.resources.append(kcuAdaptive("label", kcuColor(0.0, 0.0, 0.0, 1.0), kcuColor(1.0, 1.0, 1.0, 1.0)))
-        record.resources.append(kcuAlias("foreground", "label"))
-        return validateRecord(record).count
+        record.resources.append(
+            adaptive("label", color(0.0, 0.0, 0.0, 1.0), color(1.0, 1.0, 1.0, 1.0))
+        )
+        record.resources.append(alias("foreground", "label"))
+        return record.validate().count
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok(0)
@@ -33,8 +35,8 @@ construct KcuACleanRecordHasNoIssues() extends Test {
 construct KcuADanglingReferenceIsReported() extends Test {
     test {
         var record = CatalogRecord()
-        record.resources.append(kcuAlias("foreground", "nothingDefinesThis"))
-        return kcuIssueCount(record, ValidationKind.MissingReference)
+        record.resources.append(alias("foreground", "nothingDefinesThis"))
+        return issueCount(record, ValidationKind.MissingReference)
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok(1)
@@ -47,9 +49,9 @@ construct KcuADanglingReferenceIsReported() extends Test {
 construct KcuATwoStepCycleIsReported() extends Test {
     test {
         var record = CatalogRecord()
-        record.resources.append(kcuAlias("a", "b"))
-        record.resources.append(kcuAlias("b", "a"))
-        return kcuIssueCount(record, ValidationKind.ReferenceCycle)
+        record.resources.append(alias("a", "b"))
+        record.resources.append(alias("b", "a"))
+        return issueCount(record, ValidationKind.ReferenceCycle)
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok(2)
@@ -60,8 +62,8 @@ construct KcuATwoStepCycleIsReported() extends Test {
 construct KcuASelfReferenceIsReported() extends Test {
     test {
         var record = CatalogRecord()
-        record.resources.append(kcuAlias("a", "a"))
-        return kcuIssueCount(record, ValidationKind.ReferenceCycle)
+        record.resources.append(alias("a", "a"))
+        return issueCount(record, ValidationKind.ReferenceCycle)
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok(1)
@@ -72,10 +74,10 @@ construct KcuASelfReferenceIsReported() extends Test {
 construct KcuALongerCycleIsReported() extends Test {
     test {
         var record = CatalogRecord()
-        record.resources.append(kcuAlias("a", "b"))
-        record.resources.append(kcuAlias("b", "c"))
-        record.resources.append(kcuAlias("c", "a"))
-        return kcuIssueCount(record, ValidationKind.ReferenceCycle)
+        record.resources.append(alias("a", "b"))
+        record.resources.append(alias("b", "c"))
+        record.resources.append(alias("c", "a"))
+        return issueCount(record, ValidationKind.ReferenceCycle)
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok(3)
@@ -87,12 +89,12 @@ construct KcuALongerCycleIsReported() extends Test {
 construct KcuADeepChainIsNotACycle() extends Test {
     test {
         var record = CatalogRecord()
-        record.resources.append(kcuFlat("root", kcuColor(0.0, 0.0, 0.0, 1.0)))
-        record.resources.append(kcuAlias("a", "root"))
-        record.resources.append(kcuAlias("b", "a"))
-        record.resources.append(kcuAlias("c", "b"))
-        record.resources.append(kcuAlias("d", "c"))
-        return validateRecord(record).count
+        record.resources.append(flat("root", color(0.0, 0.0, 0.0, 1.0)))
+        record.resources.append(alias("a", "root"))
+        record.resources.append(alias("b", "a"))
+        record.resources.append(alias("c", "b"))
+        record.resources.append(alias("d", "c"))
+        return record.validate().count
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok(0)
@@ -115,7 +117,7 @@ construct KcuACycleThroughAMaterialIsReported() extends Test {
 
         var record = CatalogRecord()
         record.resources.append(material)
-        return kcuIssueCount(record, ValidationKind.ReferenceCycle)
+        return issueCount(record, ValidationKind.ReferenceCycle)
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok(1)
@@ -126,9 +128,9 @@ construct KcuACycleThroughAMaterialIsReported() extends Test {
 construct KcuADuplicateNameOfTheSameKindIsReported() extends Test {
     test {
         var record = CatalogRecord()
-        record.resources.append(kcuFlat("label", kcuColor(0.0, 0.0, 0.0, 1.0)))
-        record.resources.append(kcuFlat("label", kcuColor(1.0, 1.0, 1.0, 1.0)))
-        return kcuIssueCount(record, ValidationKind.DuplicateName)
+        record.resources.append(flat("label", color(0.0, 0.0, 0.0, 1.0)))
+        record.resources.append(flat("label", color(1.0, 1.0, 1.0, 1.0)))
+        return issueCount(record, ValidationKind.DuplicateName)
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok(1)
@@ -145,13 +147,13 @@ construct KcuTheSameNameUnderTwoKindsIsNotADuplicate() extends Test {
         var recipe = MaterialValue()
         recipe.layers.append(backdropBlurLayer(28.0))
         var rendition = RenditionRecord()
-        rendition.payload = encodeMaterial(recipe)
+        rendition.payload = recipe.encoded()
         material.renditions.append(rendition)
 
         var record = CatalogRecord()
-        record.resources.append(kcuFlat("regular", kcuColor(0.5, 0.5, 0.5, 1.0)))
+        record.resources.append(flat("regular", color(0.5, 0.5, 0.5, 1.0)))
         record.resources.append(material)
-        return validateRecord(record).count
+        return record.validate().count
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok(0)
@@ -166,7 +168,7 @@ construct KcuAResourceWithNoRenditionsIsReported() extends Test {
         resource.kind = .Color
         var record = CatalogRecord()
         record.resources.append(resource)
-        return kcuIssueCount(record, ValidationKind.NoRenditions)
+        return issueCount(record, ValidationKind.NoRenditions)
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok(1)
@@ -180,12 +182,12 @@ construct KcuAReservedTraitValueIsReportedBeforeWriting() extends Test {
         resource.name = "label"
         resource.kind = .Color
         var rendition = RenditionRecord()
-        rendition.constraints.append(constrain(.Contrast, 0))
-        rendition.payload = kcuAuthored(kcuColor(0.0, 0.0, 0.0, 1.0))
+        rendition.constraints.append(TraitIdentifier.Contrast.constrain(0))
+        rendition.payload = authored(color(0.0, 0.0, 0.0, 1.0))
         resource.renditions.append(rendition)
         var record = CatalogRecord()
         record.resources.append(resource)
-        return kcuIssueCount(record, ValidationKind.ReservedTraitValue)
+        return issueCount(record, ValidationKind.ReservedTraitValue)
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok(1)
@@ -199,16 +201,16 @@ construct KcuTwoRenditionsPinningTheSameTraitsAreReported() extends Test {
         resource.name = "label"
         resource.kind = .Color
         var first = RenditionRecord()
-        first.constraints.append(whenAppearance(.Dark))
-        first.payload = kcuAuthored(kcuColor(0.0, 0.0, 0.0, 1.0))
+        first.constraints.append(Appearance.Dark.constraint())
+        first.payload = authored(color(0.0, 0.0, 0.0, 1.0))
         resource.renditions.append(first)
         var second = RenditionRecord()
-        second.constraints.append(whenAppearance(.Dark))
-        second.payload = kcuAuthored(kcuColor(1.0, 1.0, 1.0, 1.0))
+        second.constraints.append(Appearance.Dark.constraint())
+        second.payload = authored(color(1.0, 1.0, 1.0, 1.0))
         resource.renditions.append(second)
         var record = CatalogRecord()
         record.resources.append(resource)
-        return kcuIssueCount(record, ValidationKind.DuplicateRendition)
+        return issueCount(record, ValidationKind.DuplicateRendition)
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok(1)
@@ -231,7 +233,7 @@ construct KcuAPayloadThatDoesNotMatchItsKindIsReported() extends Test {
         resource.renditions.append(rendition)
         var record = CatalogRecord()
         record.resources.append(resource)
-        return kcuIssueCount(record, ValidationKind.UndecodablePayload)
+        return issueCount(record, ValidationKind.UndecodablePayload)
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok(1)
@@ -244,8 +246,8 @@ construct KcuAPayloadThatDoesNotMatchItsKindIsReported() extends Test {
 construct KcuAnUndecodableKindIsNotAValidationFailure() extends Test {
     test {
         var record = CatalogRecord()
-        record.resources.append(kcuOpaqueResource("somethingElse"))
-        return validateRecord(record).count
+        record.resources.append(opaqueResource("somethingElse"))
+        return record.validate().count
     }
     expect {
         let e: Result<Any, TestFailure> = .Ok(0)

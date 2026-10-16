@@ -63,19 +63,30 @@ function defaultMetricResources() -> [ResourceRecord] {
     // A symbol button is a 44-point square of glass around a 36-point symbol
     // box. A button group holds its symbols 20 apart and 6 off its ends, which
     // is 44-point items 12 apart, 2 off the ends: two buttons come to 104.
-    // The menu row above it provides the top clearance, so in both sizings
-    // the band is its items and one workspace gap below them: the panels hang
-    // the same gap under the bar as they stand apart from each other.
+    // The menu row above it provides the top clearance, so on a tablet the
+    // band is its items and one workspace gap below them: the panels hang the
+    // same gap under the bar as they stand apart from each other.
+    //
+    // A Mac's band is the macOS 27 toolbar, 52 tall, its items 36-point
+    // circles of glass centered in it: 8 above them, which the window's top
+    // clearance is, and the 44 here. Measured on a live window, AppKit's and
+    // SwiftUI's alike.
+    let desktopToolbarBand = 52.0
+    let desktopToolbarItem = 36.0
     records.append(
-        sizedMetricResource(MetricName.toolbarHeight, 44.0 + mobileWorkspaceGap, 28.0 + desktopWorkspaceGap)
+        sizedMetricResource(
+            MetricName.toolbarHeight,
+            44.0 + mobileWorkspaceGap,
+            desktopToolbarItem + (desktopToolbarBand - desktopToolbarItem) / 2.0
+        )
     )
     // An iPhone has no window around the bar: UIKit's navigation bar is its
     // 44-point row, flush under the status bar, and the band content is held
     // under -- the scroll edge effect's depth -- runs 10 past it.
     records.append(metricResource(MetricName.toolbarCompactHeight, 44.0))
     records.append(metricResource(MetricName.toolbarCompactBandHeight, 54.0))
-    records.append(sizedMetricResource(MetricName.toolbarItemHeight, 44.0, 28.0))
-    records.append(sizedMetricResource(MetricName.toolbarItemWidth, 44.0, 28.0))
+    records.append(sizedMetricResource(MetricName.toolbarItemHeight, 44.0, desktopToolbarItem))
+    records.append(sizedMetricResource(MetricName.toolbarItemWidth, 44.0, desktopToolbarItem))
     records.append(sizedMetricResource(MetricName.toolbarGroupSpacing, 12.0, 9.0))
     records.append(metricResource(MetricName.toolbarGroupInset, 2.0))
 
@@ -88,7 +99,9 @@ function defaultMetricResources() -> [ResourceRecord] {
     records.append(metricResource(MetricName.toolbarCompactEdgeInset, 16.0))
 
     // An inline title starts at the column's 20-point margin, or 12 past a
-    // back button's glass.
+    // back button's glass. A Mac's leads its column 18 in, as the macOS kit's
+    // toolbar title does.
+    records.append(sizedMetricResource(MetricName.toolbarTitleLeading, 20.0, 18.0))
 
     // A back button stays through the pop and leaves after it, swelling a
     // tenth as it fades in under a fifth of a second. Set by eye against the
@@ -104,22 +117,44 @@ function defaultMetricResources() -> [ResourceRecord] {
     records.append(sizedMetricResource(MetricName.toolbarSearchTrailing, 10.0, 8.0))
     records.append(sizedMetricResource(MetricName.toolbarSearchSpacing, 4.0, 3.0))
 
+    // The field `.searchable` sets under a phone's large title, measured on an
+    // iPhone 13 Pro Max on iOS 26 (the kits draw only the iOS 18 one): a
+    // capsule 42 tall across the column, 8 under the title's line, the
+    // magnifier's ink 14 in from its leading end and the prompt's 39. Only a
+    // phone draws it, so one value serves every mode.
+    records.append(metricResource(MetricName.searchFieldHeight, 42.0))
+    records.append(metricResource(MetricName.searchFieldLeading, 14.0))
+    records.append(metricResource(MetricName.searchFieldSpacing, 9.0))
+    records.append(metricResource(MetricName.searchFieldTitleSpacing, 8.0))
+
+    // Where no tab bar holds the foot of a phone's screen, iOS 26 floats the
+    // field there instead, as Settings does: a capsule of glass 48 tall, 28
+    // off the screen's sides and its bottom. Presented, it reaches to 8 off
+    // the sides, its cancel button a circle as tall as it, a bar's spacing
+    // past it. Measured on an iPhone 13 Pro Max, the glass's hairline rim
+    // standing outside these.
+    records.append(metricResource(MetricName.bottomSearchFieldHeight, 48.0))
+    records.append(metricResource(MetricName.bottomSearchFieldInset, 28.0))
+    records.append(metricResource(MetricName.bottomSearchFieldPresentedInset, 8.0))
+
     // A text button holds its label 14 off its glass's ends: 8 to the label's
     // own capsule and 6 inside it. Symbols are SF Pro Medium at 17 points:
-    // weight 510.
+    // weight 510. A Mac sets its toolbar symbols at 13 points in SF's large
+    // scale, which inks 1.3 times the medium one: 16.9 points at medium.
+    let desktopToolbarSymbol = 13.0 * 1.3
     records.append(sizedMetricResource(MetricName.toolbarItemLabelInset, 14.0, 11.0))
-    records.append(sizedMetricResource(MetricName.toolbarSymbolSize, 17.0, 13.0))
+    records.append(sizedMetricResource(MetricName.toolbarSymbolSize, 17.0, desktopToolbarSymbol))
     records.append(metricResource(MetricName.toolbarSymbolWeight, 510.0))
 
     // The iPad kit's window: a continuous corner of 34.
     records.append(sizedMetricResource(MetricName.windowCornerRadius, 34.0, 26.0))
 
     // Three 14-point buttons at x = 19, 42 and 65; the bar's own items start at
-    // 92, 13 points after the last.
+    // 92, 13 points after the last, and a Mac's at 96, 17 after it.
     records.append(metricResource(MetricName.windowControlsLeading, 19.0))
     records.append(metricResource(MetricName.windowControlDiameter, windowControlDiameter))
     records.append(metricResource(MetricName.windowControlSpacing, 9.0))
-    records.append(metricResource(MetricName.windowControlsTrailing, 13.0))
+    records.append(sizedMetricResource(MetricName.windowControlsTrailing, 13.0, 17.0))
 
     // A `List` in the sidebar column, from the iPadOS 27 kit's split view: the
     // column holds its rows 10 off each edge. A section's header row is 54
@@ -152,10 +187,17 @@ function defaultMetricResources() -> [ResourceRecord] {
 
     // The kit's list screen: a 648-point column, 10 between a header, its
     // card and the next section, 10 above the first. The card's corner is 26;
-    // a row is 52 at least, its content and separator 16 in and 15 off its
-    // top and bottom (`defaultCellLayoutMarginsForTableStyle:`), the separator
-    // a hairline, accessories 16 apart. A header holds 10 above its title and
-    // 20 down to its card; a footer 8 above and 6 below.
+    // a row's content stands 16 in, accessories 16 apart. A header holds 10
+    // above its title and 20 down to its card; a footer 8 above and 6 below.
+    //
+    // A SwiftUI `List` on an iPhone 13 Pro Max under iOS 26 sets its rows 51
+    // apart: a cell is SwiftUI's `defaultMinListRowHeight`, the body's leading
+    // and 30 under Solarium (`ListMetrics.Row.scaledTextOnlyHeight`,
+    // `_bodyLeading + 30`), 51 for SF's 21-point body leading. Its separator
+    // is the cell's last point (`_UISeparatorThicknessForTraitCollection`
+    // gives 1 under Solarium, where it gave a hairline before), and a row of
+    // body text is centered in the 50 over it, at least 14 off its top and
+    // bottom.
     //
     // A grouped `Form` on macOS 27, measured 400 to 1600 wide: a column 704
     // wide at most, 20 around it, 10 between two cards, 30 when a header or
@@ -168,10 +210,10 @@ function defaultMetricResources() -> [ResourceRecord] {
     records.append(sizedMetricResource(MetricName.listLabeledSectionSpacing, 10.0, 30.0))
     records.append(sizedMetricResource(MetricName.listTopInset, 10.0, 20.0))
     records.append(sizedMetricResource(MetricName.listCornerRadius, 26.0, 12.0))
-    records.append(sizedMetricResource(MetricName.listRowHeight, 52.0, 36.0))
+    records.append(sizedMetricResource(MetricName.listRowHeight, 51.0, 36.0))
     records.append(sizedMetricResource(MetricName.listRowInset, 16.0, 10.0))
-    records.append(sizedMetricResource(MetricName.listRowVerticalInset, 15.0, 10.0))
-    records.append(metricResource(MetricName.listSeparatorThickness, 0.5))
+    records.append(sizedMetricResource(MetricName.listRowVerticalInset, 14.0, 10.0))
+    records.append(sizedMetricResource(MetricName.listSeparatorThickness, 1.0, 0.5))
     records.append(sizedMetricResource(MetricName.listAccessorySpacing, 16.0, 10.0))
     // A grouped `Form` on macOS 27 splits a labeled row 45 to 55 between the
     // label and the value, measured 500 and 800 wide, whatever the label
@@ -354,17 +396,20 @@ function defaultMetricResources() -> [ResourceRecord] {
 
     // The kit's iPhone tab bar, which floats at the foot of the screen: its
     // row of tabs keeps 25 off the screen's sides at most and 25 off its
-    // bottom, under glass reaching 4 past it. A tab is 102 wide, 2 in from the
-    // row's ends, its 54-point selection capsule 2 past either end of it, and
-    // overlaps the next by 8: so 106 wide with the capsule, overlapping by 12,
-    // from end to end of the row.
-    // Its 18-point semibold symbol is set on a 28-point line 6 under its top,
-    // over a 10-point semibold title on a 12-point line 1 under it, both 8 in
-    // from the tab's ends. Four tabs or more shrink to fit the row.
+    // bottom, under glass reaching 4 past it. The row is 86 for each tab and 4
+    // more at each end: the kit's bars of two, three and four tabs are 180, 266
+    // and 352 wide, and five share the 352 the screen leaves. Its tabs share
+    // the row: each is 2 in from the row's ends, its 54-point selection capsule
+    // 2 past either end of it, and overlaps the next by 8, so the capsules
+    // overlap by 12 and reach from end to end of the row.
+    // Its 18-point symbol is set on a 28-point line 6 under its top, over a
+    // 10-point title on a 12-point line 1 under it, both 8 in from the tab's
+    // ends.
     records.append(metricResource(MetricName.phoneTabBarEdgeInset, 25.0))
     records.append(metricResource(MetricName.phoneTabBarBottomInset, 25.0))
     records.append(metricResource(MetricName.phoneTabBarGlassOutset, 4.0))
-    records.append(metricResource(MetricName.phoneTabWidth, 106.0))
+    records.append(metricResource(MetricName.phoneTabAdvance, 86.0))
+    records.append(metricResource(MetricName.phoneTabRowInset, 4.0))
     records.append(metricResource(MetricName.phoneTabHeight, 54.0))
     records.append(metricResource(MetricName.phoneTabOverlap, 12.0))
     records.append(metricResource(MetricName.phoneTabTopInset, 6.0))
@@ -586,7 +631,9 @@ function defaultMetricResources() -> [ResourceRecord] {
     // the height of a compact control. The navigator side opens narrower than
     // the inspector side, as Xcode's do, and a divider dragged under the
     // minimum folds its edge away.
-    records.append(sizedMetricResource(MetricName.workspaceGap, mobileWorkspaceGap, desktopWorkspaceGap))
+    records.append(
+        sizedMetricResource(MetricName.workspaceGap, mobileWorkspaceGap, desktopWorkspaceGap)
+    )
     records.append(sizedMetricResource(MetricName.workspaceTabSpacing, 4.0, 2.0))
     records.append(sizedMetricResource(MetricName.workspaceStripInset, 8.0, 6.0))
     records.append(sizedMetricResource(MetricName.workspaceDividerThickness, 16.0, 8.0))

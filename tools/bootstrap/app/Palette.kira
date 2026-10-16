@@ -235,7 +235,11 @@ function paletteResources() -> [ResourceRecord] {
 
 // --- The content hierarchy -------------------------------------------------
 //
-// The kit's `Labels` collection.
+// The kit's `Labels` collection, as iOS 26 draws it: where the kit and the
+// system's own color catalog (CoreUI's `DesignLibrary-iOS.bundle`,
+// `iOSRepositories/*Standard.car`) part, the catalog's value is the one set.
+// The kit's dark secondary label is 0.7 opaque; the catalog's, and the
+// device's, is 0.6.
 
 function labelResources() -> [ResourceRecord] {
     var records: [ResourceRecord] = []
@@ -252,7 +256,7 @@ function labelResources() -> [ResourceRecord] {
         sizedAdaptiveColor(
             ColorName.secondaryLabel,
             rgba255(60.0, 60.0, 67.0, 0.6),
-            rgba255(235.0, 235.0, 245.0, 0.7),
+            rgba255(235.0, 235.0, 245.0, 0.6),
             rgba255(0.0, 0.0, 0.0, 0.5),
             rgba255(255.0, 255.0, 255.0, 0.55)
         )
@@ -374,7 +378,9 @@ function surfaceResources() -> [ResourceRecord] {
     records.append(
         sizedAdaptiveColor(
             ColorName.systemFill,
-            rgba255(120.0, 120.0, 120.0, 0.2),
+            // The catalog's light fill is blued as the others are; the kit's
+            // is a neutral gray.
+            rgba255(120.0, 120.0, 128.0, 0.2),
             rgba255(120.0, 120.0, 128.0, 0.36),
             rgba255(0.0, 0.0, 0.0, 0.1),
             rgba255(255.0, 255.0, 255.0, 0.1)
@@ -409,11 +415,14 @@ function surfaceResources() -> [ResourceRecord] {
     )
     records.append(aliasColor(ColorName.fill, ColorName.systemFill))
 
+    // A phone's separator is UIKit's under Solarium
+    // (`__colorsByThemeKeySolariumseparatorColor`): 60 60 67 at 0.12 in light,
+    // 84 84 88 at half in dark.
     records.append(
         sizedAdaptiveColor(
             ColorName.separator,
-            rgba255(0.0, 0.0, 0.0, 0.12),
-            rgba255(255.0, 255.0, 255.0, 0.17),
+            rgba255(60.0, 60.0, 67.0, 0.12),
+            rgba255(84.0, 84.0, 88.0, 0.5),
             rgba255(0.0, 0.0, 0.0, 0.1),
             rgba255(255.0, 255.0, 255.0, 0.1)
         )

@@ -1,0 +1,230 @@
+import Foundation
+import KCoreUI
+
+// References, recipes and the typed surface.
+//
+// The reference is what makes the design pay: a material's tint names a color
+// instead of copying one, so the recipe is authored once and is still correct
+// in an appearance nobody had in mind when it was written. These cases prove
+// that, and prove a reference chain cannot run away.
+
+function referenceRecord() -> CatalogRecord {
+    var record = CatalogRecord()
+    record.resources.append(adaptive("label", TestColor.ink, TestColor.paper))
+    record.resources.append(alias("foreground", "label"))
+    record.resources.append(alias("primary", "foreground"))
+    return record
+}
+
+function materialRecord() -> CatalogRecord {
+    var record = CatalogRecord()
+    record.resources.append(adaptive("systemBackground", TestColor.paper, TestColor.ink))
+    record.resources.append(flat("separator", color(0.0, 0.0, 0.0, 0.1)))
+
+    var translucent = MaterialValue()
+    translucent.layers.append(backdropBlurLayer(28.0))
+    translucent.layers.append(saturationLayer(1.4))
+    translucent.layers.append(tintLayer(referenceColor("systemBackground"), 0.68, .Normal))
+    translucent.layers.append(borderLayer(referenceColor("separator"), 1.0))
+
+    var opaque = MaterialValue()
+    opaque.layers.append(fillLayer(referenceColor("systemBackground"), 1.0, .Normal))
+
+    var resource = ResourceRecord()
+    resource.name = "regular"
+    resource.kind = .Material
+    var open = RenditionRecord()
+    open.payload = translucent.encoded()
+    resource.renditions.append(open)
+    var reduced = RenditionRecord()
+    reduced.constraints.append(TraitIdentifier.ReduceTransparency.constrain(flagValue(true)))
+    reduced.payload = opaque.encoded()
+    resource.renditions.append(reduced)
+    record.resources.append(resource)
+    return record
+}
+
+// --- References ------------------------------------------------------------
+
+@Test
+function aliasResolvesToWhatItNames() {
+    let stack = stackOf(referenceRecord())
+    expect!((colorsEqual(stack.resolveColor("foreground", light()), TestColor.ink)) == (true))
+}
+
+// The reference is followed against the caller's environment, which is why an
+// alias needs no renditions of its own to stay correct in dark appearance.
+@Test
+function aliasFollowsTheEnvironmentRatherThanACopy() {
+    let stack = stackOf(referenceRecord())
+    expect!((colorsEqual(stack.resolveColor("foreground", dark()), TestColor.paper)) == (true))
+    expect!((colorsEqual(stack.resolveColor("foreground", light()), TestColor.ink)) == (true))
+}
+
+@Test
+function chainOfAliasesResolves() {
+    let stack = stackOf(referenceRecord())
+    expect!((colorsEqual(stack.resolveColor("primary", dark()), TestColor.paper)) == (true))
+    expect!((colorsEqual(stack.resolveColor("primary", light()), TestColor.ink)) == (true))
+}
+
+// An override of the target moves everything pointing at it, with no second
+// edit anywhere.
+@Test
+function overridingATargetMovesEveryAliasPointingAtIt() {
+    var overlay = CatalogRecord()
+    overlay.resources.append(flat("label", TestColor.red))
+    let stack = (stackOf(referenceRecord())).overlaid(catalogOf(overlay))
+    expect!((colorsEqual(stack.resolveColor("primary", light()), TestColor.red)) == (true))
+    expect!((colorsEqual(stack.resolveColor("primary", dark()), TestColor.red)) == (true))
+}
+
+// A reference to a name nothing defines is the debug color rather than a trap
+// or a silent black.
+@Test
+function danglingReferenceIsTheDebugColor() {
+    var record = CatalogRecord()
+    record.resources.append(alias("foreground", "nothingDefinesThis"))
+    let stack = stackOf(record)
+    expect!((colorsEqual(stack.resolveColor("foreground", light()), ResolverFallback.color)) == (true))
+}
+
+// The validator rejects cycles before a blob is written; this proves the
+// runtime backstop for a blob that arrived from somewhere else stops rather
+// than recurring forever.
+@Test
+function referenceCycleStopsAtTheDepthLimit() {
+    var record = CatalogRecord()
+    record.resources.append(alias("a", "b"))
+    record.resources.append(alias("b", "a"))
+    let stack = stackOf(record)
+    expect!((colorsEqual(stack.resolveColor("a", light()), ResolverFallback.color)) == (true))
+}
+
+// --- Materials -------------------------------------------------------------
+
+@Test
+function materialResolvesItsWholeRecipe() {
+    let resolved = (stackOf(materialRecord())).resolveMaterial("regular", light())
+    expect!((resolved.found) == (true))
+    expect!((resolved.layers.count) == (4))
+    expect!((resolved.blurRadius()) == (28.0))
+}
+
+// The recipe is one authored thing; only what its references resolve to moves.
+@Test
+function materialTintFollowsTheAppearanceWithoutASecondRecipe() {
+    let stack = stackOf(materialRecord())
+    let lightMaterial = stack.resolveMaterial("regular", light())
+    let darkMaterial = stack.resolveMaterial("regular", dark())
+    expect!((lightMaterial.layers.count) == (darkMaterial.layers.count))
+    expect!((colorsEqual(lightMaterial.layers[2].color, TestColor.paper)) == (true))
+    expect!((colorsEqual(darkMaterial.layers[2].color, TestColor.ink)) == (true))
+    expect!((lightMaterial.layers[0].amount) == (darkMaterial.layers[0].amount))
+}
+
+// Reduced transparency is a different recipe, not the same one turned down,
+// and the catalog is where that is decided rather than in a compositor.
+@Test
+function reducedTransparencySelectsTheOpaqueRecipe() {
+    let stack = stackOf(materialRecord())
+    let reduced = stack.resolveMaterial("regular", reducedTransparency())
+    expect!((reduced.found) == (true))
+    expect!((reduced.layers.count) == (1))
+    expect!((reduced.blurRadius()) == (0.0))
+    expect!((colorsEqual(reduced.layers[0].color, TestColor.ink)) == (true))
+}
+
+// A material is looked up by its kind: a color filed under the same name is not one.
+@Test
+function materialLookupByTheNameOfAColorFindsNothing() {
+    expect!(((stackOf(materialRecord())).resolveMaterial("separator", light()).found) == (false))
+}
+
+// --- Gradients -------------------------------------------------------------
+
+@Test
+function gradientResolvesItsStops() {
+    var gradient = GradientValue()
+    gradient.kind = .Radial
+    gradient.startX = 0.5
+    gradient.startY = 0.5
+    gradient.endX = 1.0
+    gradient.endY = 0.5
+    gradient.stops.append(GradientStop(position: 0.0, color: referenceColor("systemBackground")))
+    gradient.stops.append(GradientStop(position: 1.0, color: literalColor(color(0.0, 0.0, 0.0, 0.0))))
+
+    var resource = ResourceRecord()
+    resource.name = "windowWash"
+    resource.kind = .Gradient
+    var rendition = RenditionRecord()
+    rendition.payload = gradient.encoded()
+    resource.renditions.append(rendition)
+
+    var record = materialRecord()
+    record.resources.append(resource)
+
+    let resolved = (stackOf(record)).resolveGradient("windowWash", dark())
+    expect!((resolved.found) == (true))
+    expect!((resolved.kind == .Radial) == (true))
+    expect!((resolved.stops.count) == (2))
+    expect!((resolved.startX) == (0.5))
+    expect!((colorsEqual(resolved.stops[0].color, TestColor.ink)) == (true))
+}
+
+// --- Effects ---------------------------------------------------------------
+
+@Test
+function effectResolvesItsOps() {
+    var effect = EffectValue()
+    effect.ops.append(shadowOp(referenceColor("separator"), 0.0, 2.0, 8.0, 0.0))
+    effect.ops.append(opacityOp(0.8))
+
+    var resource = ResourceRecord()
+    resource.name = "cardShadow"
+    resource.kind = .Effect
+    var rendition = RenditionRecord()
+    rendition.payload = effect.encoded()
+    resource.renditions.append(rendition)
+
+    var record = materialRecord()
+    record.resources.append(resource)
+
+    let resolved = (stackOf(record)).resolveEffect("cardShadow", light())
+    expect!((resolved.found) == (true))
+    expect!((resolved.ops.count) == (2))
+    expect!((resolved.ops[0].kind == .Shadow) == (true))
+    expect!((resolved.ops[0].offsetY) == (2.0))
+    expect!((resolved.ops[0].radius) == (8.0))
+    expect!((near(resolved.ops[1].amount, 0.8)) == (true))
+}
+
+// --- Typography ------------------------------------------------------------
+
+@Test
+function textStyleResolvesItsMetrics() {
+    var value = TypographyValue()
+    value.family = "Kira Sans"
+    value.size = 15.0
+    value.weight = 400
+    value.lineHeight = 21.0
+    value.tracking = -0.3
+
+    var resource = ResourceRecord()
+    resource.name = "body"
+    resource.kind = .Typography
+    var rendition = RenditionRecord()
+    rendition.payload = value.encoded()
+    resource.renditions.append(rendition)
+
+    var record = CatalogRecord()
+    record.resources.append(resource)
+
+    let resolved = (stackOf(record)).resolveTypography("body", light())
+    expect!((resolved.found) == (true))
+    expect!((resolved.value.size) == (15.0))
+    expect!((resolved.value.weight) == (400))
+    expect!((resolved.value.lineHeight) == (21.0))
+    expect!((near(resolved.value.tracking, -0.3)) == (true))
+    expect!((compareStrings(resolved.value.family, "Kira Sans")) == (0))
+}

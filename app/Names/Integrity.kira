@@ -1,0 +1,116 @@
+import Foundation
+
+// The contract between the hardcoded name surface and a shipped catalog.
+//
+// The surface is code and the catalog is data, so nothing but a check keeps
+// them agreeing. A name declared with no resource behind it resolves through
+// the floor and paints the debug color; a resource in the catalog that no name
+// declares is merely unused. The first is a defect and the second is not, which
+// is why they are reported separately.
+//
+// The test package runs this against the default catalog on every build. It is
+// the whole reason the floor can be promised to be complete.
+
+public struct IntegrityReport {
+    var missingColors: [String] = []
+    var missingMaterials: [String] = []
+    var missingTextStyles: [String] = []
+    var missingMetrics: [String] = []
+    var missingGlass: [String] = []
+    var undeclaredColors: [String] = []
+    var undeclaredMaterials: [String] = []
+    var undeclaredTextStyles: [String] = []
+    var undeclaredMetrics: [String] = []
+    var undeclaredGlass: [String] = []
+}
+
+extend IntegrityReport {
+    // Whether every declared name has a resource behind it. Undeclared extras do
+    // not fail: a catalog is allowed to carry more than this build knows about.
+    function holds() -> Bool {
+        if self.missingColors.count > 0 { return false }
+        if self.missingMaterials.count > 0 { return false }
+        if self.missingTextStyles.count > 0 { return false }
+        if self.missingMetrics.count > 0 { return false }
+        return self.missingGlass.count == 0
+    }
+}
+
+extend Catalog {
+    function checkIntegrity() -> IntegrityReport {
+        var report = IntegrityReport()
+        let colors = ColorName.all
+        let materials = MaterialName.all
+        let textStyles = TextStyleName.all
+        let metrics = MetricName.all
+        let glass = GlassName.all
+        report.missingColors = self.missingNames(colors, .Color)
+        report.missingMaterials = self.missingNames(materials, .Material)
+        report.missingTextStyles = self.missingNames(textStyles, .Typography)
+        report.missingMetrics = self.missingNames(metrics, .Metric)
+        report.missingGlass = self.missingNames(glass, .Glass)
+        report.undeclaredColors = self.undeclaredNames(colors, .Color)
+        report.undeclaredMaterials = self.undeclaredNames(materials, .Material)
+        report.undeclaredTextStyles = self.undeclaredNames(textStyles, .Typography)
+        report.undeclaredMetrics = self.undeclaredNames(metrics, .Metric)
+        report.undeclaredGlass = self.undeclaredNames(glass, .Glass)
+        return report
+    }
+}
+
+public function appendNameList(
+    text: borrow String,
+    label: borrow String,
+    names: borrow [String]
+) -> String {
+    if names.count == 0 {
+        return text
+    }
+    var built = text + label
+    for name in names {
+        built = built + " " + name
+    }
+    return built + "\n"
+}
+
+extend IntegrityReport {
+    function text() -> String {
+        var text = ""
+        text = appendNameList(text, "missing colors:", self.missingColors)
+        text = appendNameList(text, "missing materials:", self.missingMaterials)
+        text = appendNameList(text, "missing text styles:", self.missingTextStyles)
+        text = appendNameList(text, "missing metrics:", self.missingMetrics)
+        text = appendNameList(text, "missing glass:", self.missingGlass)
+        text = appendNameList(text, "undeclared colors:", self.undeclaredColors)
+        text = appendNameList(text, "undeclared materials:", self.undeclaredMaterials)
+        text = appendNameList(text, "undeclared text styles:", self.undeclaredTextStyles)
+        text = appendNameList(text, "undeclared metrics:", self.undeclaredMetrics)
+        text = appendNameList(text, "undeclared glass:", self.undeclaredGlass)
+        if text.count == 0 {
+            return "catalog and name surface agree\n"
+        }
+        return text
+    }
+}
+
+// Every name this build declares, across every kind. For an editor's outline
+// and for a catalog author checking coverage.
+public function allDeclaredNames() -> [String] {
+    var names: [String] = []
+    for name in ColorName.all {
+        names.append(name)
+    }
+    for name in MaterialName.all {
+        names.append(name)
+    }
+    for name in TextStyleName.all {
+        names.append(name)
+    }
+    for name in MetricName.all {
+        names.append(name)
+    }
+    for name in GlassName.all {
+        names.append(name)
+    }
+    return names
+}

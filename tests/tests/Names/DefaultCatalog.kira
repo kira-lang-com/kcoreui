@@ -1,0 +1,231 @@
+import Foundation
+import KCoreUI
+
+// The catalog this repository ships.
+//
+// These cases read `Resources/Default.kcui` off disk, through the same parser
+// an application uses. The integrity case is the load-bearing one: it is what
+// lets the rest of the framework promise that resolution is total, because it
+// proves the floor answers for every name the hardcoded surface declares.
+
+// How many colors of the declared surface do not resolve in a given environment.
+function unresolvedColors(stack: borrow CatalogStack, environment: borrow UIEnvironment) -> Number {
+    var missing = 0
+    for name in ColorName.all {
+        if !stack.resolveColorChecked(name, environment).found {
+            missing = missing + 1
+        }
+    }
+    return missing
+}
+
+function unresolvedMaterials(stack: borrow CatalogStack, environment: borrow UIEnvironment) -> Number {
+    var missing = 0
+    for name in MaterialName.all {
+        if !stack.resolveMaterial(name, environment).found {
+            missing = missing + 1
+        }
+    }
+    return missing
+}
+
+@Test
+function theDefaultCatalogLoadsWithResources() {
+    expect!((defaultCatalog().resources.count > 0) == (true))
+}
+
+// Every resource in the shipped catalog is found by its own name and kind, so
+// the lookup never skips one.
+@Test
+function everyDefaultCatalogResourceCanBeFound() {
+    let catalog = defaultCatalog()
+    var misses = 0
+    for index in 0..catalog.resources.count {
+        let name = catalog.resourceName(index)
+        if catalog.findResource(name, catalog.resources[index].kind) != index {
+            misses = misses + 1
+        }
+    }
+    expect!((misses) == (0))
+}
+
+// The shipped blob is canonical, so an editor that opens and saves it without
+// changing anything writes the same file back.
+@Test
+function theDefaultCatalogWritesBackByteForByte() {
+    match defaultCatalogBytes() {
+        Ok(bytes) -> {
+            expect!((bytesEqual(bytes, (defaultCatalog()).encoded())) == (true))
+        }
+        Error(failure) -> {
+            expect!(("unreadable: \(failure)") == "")
+        }
+    }
+}
+
+// The contract between the hardcoded name surface and the shipped catalog. A
+// name declared with nothing behind it would resolve through the floor and
+// paint the debug color.
+@Test
+function theDefaultCatalogCoversEveryDeclaredName() {
+    let report = (defaultCatalog()).checkIntegrity()
+    expect!((report.holds()) == (true))
+}
+
+@Test
+function theDefaultCatalogDeclaresNothingItDoesNotCarry() {
+    let report = (defaultCatalog()).checkIntegrity()
+    expect!((report.missingColors.count) == (0))
+    expect!((report.missingMaterials.count) == (0))
+    expect!((report.missingTextStyles.count) == (0))
+}
+
+// Every declared color answers in every appearance and in high contrast. This
+// is the case that would catch a rendition set that covers light and forgets
+// dark.
+@Test
+function everyDeclaredColorResolvesInEveryAppearance() {
+    let stack = (defaultCatalog()).asStack()
+    expect!((unresolvedColors(stack, light())) == (0))
+    expect!((unresolvedColors(stack, dark())) == (0))
+    expect!((unresolvedColors(stack, lightHighContrast())) == (0))
+}
+
+@Test
+function everyDeclaredMaterialResolvesInEveryAppearance() {
+    let stack = (defaultCatalog()).asStack()
+    expect!((unresolvedMaterials(stack, light())) == (0))
+    expect!((unresolvedMaterials(stack, dark())) == (0))
+    expect!((unresolvedMaterials(stack, reducedTransparency())) == (0))
+}
+
+@Test
+function everyDeclaredTextStyleResolvesWithPositiveMetrics() {
+    let stack = (defaultCatalog()).asStack()
+    var broken = 0
+    for name in TextStyleName.all {
+        let resolved = stack.resolveTypography(name, light())
+        if !resolved.found || resolved.value.size <= 0.0 || resolved.value.lineHeight <= 0.0 {
+            broken = broken + 1
+        }
+    }
+    expect!((broken) == (0))
+}
+
+// A label that did not change between appearances would mean the catalog is
+// carrying one value under two renditions.
+@Test
+function theLabelColorDiffersBetweenAppearances() {
+    let stack = (defaultCatalog()).asStack()
+    let lightLabel = stack.resolveColor(ColorName.label, light())
+    let darkLabel = stack.resolveColor(ColorName.label, dark())
+    expect!((colorsEqual(lightLabel, darkLabel)) == (false))
+    expect!((lightLabel.r < darkLabel.r) == (true))
+}
+
+// Apple's hierarchical styles are aliases in the shipped catalog, so they track
+// the labels they name in every appearance without a second set of numbers.
+@Test
+function theHierarchicalStylesAliasTheLabels() {
+    let stack = (defaultCatalog()).asStack()
+    expect!((colorsEqual(stack.resolveColor(ColorName.primary, dark()), stack.resolveColor(ColorName.label, dark()))) == (true))
+    expect!((colorsEqual(stack.resolveColor(ColorName.foreground, light()), stack.resolveColor(ColorName.label, light()))) == (true))
+    expect!((colorsEqual(stack.resolveColor(ColorName.accentColor, dark()), stack.resolveColor(ColorName.tint, dark()))) == (true))
+}
+
+// The material ladder gets thicker, and its tint follows the appearance because
+// the recipe names a color rather than carrying one.
+@Test
+function theMaterialLadderThickensAndFollowsTheAppearance() {
+    let stack = (defaultCatalog()).asStack()
+    let thin = stack.resolveMaterial(MaterialName.ultraThin, light())
+    let thick = stack.resolveMaterial(MaterialName.ultraThick, light())
+    expect!((thin.blurRadius() < thick.blurRadius()) == (true))
+
+    let lightRegular = stack.resolveMaterial(MaterialName.regular, light())
+    let darkRegular = stack.resolveMaterial(MaterialName.regular, dark())
+    let background = stack.resolveColor(ColorName.systemBackground, dark())
+    expect!((colorsEqual(darkRegular.layers[2].color, background)) == (true))
+    expect!((colorsEqual(lightRegular.layers[2].color, darkRegular.layers[2].color)) == (false))
+}
+
+// Reduced transparency swaps the recipe rather than dimming it: no material in
+// the ladder keeps its blur.
+@Test
+function reducedTransparencyRemovesTheBlurFromEveryMaterial() {
+    let stack = (defaultCatalog()).asStack()
+    var blurred = 0
+    for name in MaterialName.all {
+        if (stack.resolveMaterial(name, reducedTransparency())).blurRadius() != 0.0 {
+            blurred = blurred + 1
+        }
+    }
+    expect!((blurred) == (0))
+}
+
+// The bar is the only material in the ladder that draws its own hairline.
+@Test
+function onlyTheBarMaterialCarriesABorder() {
+    let stack = (defaultCatalog()).asStack()
+    var borders = 0
+    for name in MaterialName.all {
+        for layer in stack.resolveMaterial(name, light()).layers {
+            if layer.kind == .Border {
+                borders = borders + 1
+            }
+        }
+    }
+    expect!((borders) == (1))
+}
+
+// The declared order is Apple's vocabulary order, which is not sorted by size.
+// What the ladder does promise is that every style is usable, that the ends
+// bracket the rest, and that no line is shorter than its text.
+@Test
+function theTextLadderBracketsEveryStyle() {
+    let stack = (defaultCatalog()).asStack()
+    let largest = stack.resolveTypography(TextStyleName.largeTitle, light()).value.size
+    let smallest = stack.resolveTypography(TextStyleName.caption2, light()).value.size
+    expect!((largest > smallest) == (true))
+    var outside = 0
+    var shortLines = 0
+    for name in TextStyleName.all {
+        let style = stack.resolveTypography(name, light()).value
+        if style.size > largest || style.size < smallest {
+            outside = outside + 1
+        }
+        if style.lineHeight < style.size {
+            shortLines = shortLines + 1
+        }
+    }
+    expect!((outside) == (0))
+    expect!((shortLines) == (0))
+}
+
+// The kit's body style: 17 on a 22 line, regular. A change here means the
+// toolkit's text would move.
+@Test
+function theBodyStyleKeepsTheKitsMetrics() {
+    let body = (defaultCatalog()).asStack().resolveTypography(TextStyleName.body, tablet()).value
+    expect!((body.size) == (17.0))
+    expect!((body.lineHeight) == (22.0))
+    expect!((body.weight) == (400))
+}
+
+@Test
+function desktopSetsTheBodyStyleAtTheMacsSize() {
+    let body = (defaultCatalog()).asStack().resolveTypography(TextStyleName.body, desktop()).value
+    expect!((body.size) == (13.0))
+    expect!((body.lineHeight) == (16.0))
+    expect!((body.weight) == (400))
+}
+
+// A Mac's sidebar row is AppKit's medium row, 32 since macOS 26; its push
+// moves on the same spring as the kit's.
+@Test
+function desktopLaysOutAtTheMacsSizeAndMovesAtTheKitsPace() {
+    let stack = (defaultCatalog()).asStack()
+    expect!((stack.resolveMetric(MetricName.sidebarRowHeight, tablet()).points) == (44.0))
+    expect!((stack.resolveMetric(MetricName.sidebarRowHeight, desktop()).points) == (32.0))
+    expect!((stack.resolveMetric(MetricName.navigationPushResponse, tablet()).points) == (stack.resolveMetric(MetricName.navigationPushResponse, desktop()).points))
+}

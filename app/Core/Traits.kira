@@ -1,0 +1,375 @@
+import Foundation
+
+// The typed index schema. Every rendition in a catalog is selected by comparing
+// its constraints against one of these, so this file is the only part of KCoreUI
+// that both a writer and a resolver must agree on exactly.
+//
+// The catalog is agnostic about what a resource *is* — a payload is bytes the
+// format never inspects — and opinionated about what a resource is *selected by*.
+// That split is what lets a reader round-trip a resource kind it has never heard
+// of while still resolving it correctly.
+
+// Trait identifiers. A rendition constrains a subset of these; the ones it
+// leaves out match anything.
+//
+// The wire values are u32, assigned in `traitIdentifierValue`, and never
+// renumbered. The mapping is total in both directions: `Custom` carries an
+// identifier in the producer-owned range at or above
+// `TraitIdentifierRange.customBase`, and `Unknown` carries any other identifier this
+// build has no name for. KCoreUI carries both through resolution by the same
+// rules without knowing what they mean.
+
+public enum TraitIdentifier {
+    UIAppearance
+    Contrast
+    Gamut
+    Scale
+    Idiom
+    Platform
+    LayoutDirection
+    HorizontalSizeClass
+    VerticalSizeClass
+    ReduceTransparency
+    ReduceMotion
+    InvertColors
+    DifferentiateWithoutColor
+    Custom(Number)
+    Unknown(Number)
+}
+
+// The first trait identifier KCoreUI itself will never claim.
+public namespace TraitIdentifierRange {
+    let customBase: Number = 64
+}
+
+// Trait identifier order is resolution priority order, highest first. A
+// rendition that pins `appearance` beats one that pins only `contrast`, and the
+// comparison walks identifiers ascending, so priority is a property of the wire
+// numbering rather than a table that could disagree with it.
+
+extend TraitIdentifier {
+    function value() -> Number {
+        match self {
+            UIAppearance -> return 0
+            Contrast -> return 1
+            Gamut -> return 2
+            Scale -> return 3
+            Idiom -> return 4
+            Platform -> return 5
+            LayoutDirection -> return 6
+            HorizontalSizeClass -> return 7
+            VerticalSizeClass -> return 8
+            ReduceTransparency -> return 9
+            ReduceMotion -> return 10
+            InvertColors -> return 11
+            DifferentiateWithoutColor -> return 12
+            Custom(value) -> return value
+            Unknown(value) -> return value
+        }
+    }
+}
+
+public function traitIdentifierFromValue(value: Number) -> TraitIdentifier {
+    if value == 0 { return .UIAppearance }
+    if value == 1 { return .Contrast }
+    if value == 2 { return .Gamut }
+    if value == 3 { return .Scale }
+    if value == 4 { return .Idiom }
+    if value == 5 { return .Platform }
+    if value == 6 { return .LayoutDirection }
+    if value == 7 { return .HorizontalSizeClass }
+    if value == 8 { return .VerticalSizeClass }
+    if value == 9 { return .ReduceTransparency }
+    if value == 10 { return .ReduceMotion }
+    if value == 11 { return .InvertColors }
+    if value == 12 { return .DifferentiateWithoutColor }
+    if value >= TraitIdentifierRange.customBase { return .Custom(value) }
+    return .Unknown(value)
+}
+
+extend TraitIdentifier {
+    // Identifier identity is wire identity: the mapping is bijective, so two
+    // identifiers name the same trait exactly when they share a wire value.
+    function equals(right: borrow TraitIdentifier) -> Bool {
+        return self.value() == right.value()
+    }
+}
+
+// The interface's color scheme.
+public enum UIAppearance {
+    Light
+    Dark
+}
+
+// Whether the person using this asked for increased contrast.
+public enum Contrast {
+    Standard
+    High
+}
+
+// The color volume the display can actually show.
+public enum DisplayGamut {
+    SRGB
+    P3
+}
+
+// Backing-store scale. A rendition authored for one scale is not resized to
+// serve another; it either matches or it is not eligible.
+public enum DisplayScale {
+    X1
+    X2
+    X3
+}
+
+// The shape of the device the interface is running on.
+public enum Idiom {
+    Phone
+    Pad
+    Mac
+    TV
+    Watch
+    Vision
+    CarPlay
+    Desktop
+}
+
+// The operating system underneath. Distinct from `Idiom`: a Mac idiom runs on
+// macOS and a Desktop idiom runs on three different systems that do not agree
+// about what a window looks like.
+public enum Platform {
+    MacOS
+    IOS
+    IPadOS
+    TVOS
+    WatchOS
+    VisionOS
+    Linux
+    Windows
+    Web
+    Android
+}
+
+// Reading order.
+public enum LayoutDirection {
+    LeftToRight
+    RightToLeft
+}
+
+// How much room there is along one axis.
+public enum SizeClass {
+    Compact
+    Regular
+}
+
+// A trait this build of KCoreUI has no name for, carried by identifier.
+public struct CustomTrait {
+    let identifier: TraitIdentifier = .Custom(64)
+    let value: Number = 0
+}
+
+// Everything a lookup is answered against.
+//
+// The fixed traits pack into one integer, which is what the resolution cache is
+// keyed by; custom traits ride in an array and fold into a second integer. A
+// lookup therefore compares two words rather than a struct, which matters
+// because a paint pass performs one per drawn value.
+public struct UIEnvironment {
+    var appearance: UIAppearance = .Light
+    var contrast: Contrast = .Standard
+    var gamut: DisplayGamut = .SRGB
+    var scale: DisplayScale = .X2
+    var idiom: Idiom = .Desktop
+    var platform: Platform = .Linux
+    var layoutDirection: LayoutDirection = .LeftToRight
+    var horizontalSizeClass: SizeClass = .Regular
+    var verticalSizeClass: SizeClass = .Regular
+    var reduceTransparency: Bool = false
+    var reduceMotion: Bool = false
+    var invertColors: Bool = false
+    var differentiateWithoutColor: Bool = false
+    var custom: [CustomTrait] = []
+}
+
+// --- Wire values -----------------------------------------------------------
+//
+// Zero is reserved on every trait and never written: a constraint carrying it
+// would be indistinguishable from an absent constraint, and absence already
+// means "matches anything".
+
+extend UIAppearance {
+    function value() -> Number {
+        match self {
+            Light -> return 1
+            Dark -> return 2
+        }
+    }
+}
+
+extend Contrast {
+    function value() -> Number {
+        match self {
+            Standard -> return 1
+            High -> return 2
+        }
+    }
+}
+
+extend DisplayGamut {
+    function value() -> Number {
+        match self {
+            SRGB -> return 1
+            P3 -> return 2
+        }
+    }
+}
+
+extend DisplayScale {
+    function value() -> Number {
+        match self {
+            X1 -> return 1
+            X2 -> return 2
+            X3 -> return 3
+        }
+    }
+}
+
+extend Idiom {
+    function value() -> Number {
+        match self {
+            Phone -> return 1
+            Pad -> return 2
+            Mac -> return 3
+            TV -> return 4
+            Watch -> return 5
+            Vision -> return 6
+            CarPlay -> return 7
+            Desktop -> return 8
+        }
+    }
+}
+
+extend Platform {
+    function value() -> Number {
+        match self {
+            MacOS -> return 1
+            IOS -> return 2
+            IPadOS -> return 3
+            TVOS -> return 4
+            WatchOS -> return 5
+            VisionOS -> return 6
+            Linux -> return 7
+            Windows -> return 8
+            Web -> return 9
+            Android -> return 10
+        }
+    }
+}
+
+extend LayoutDirection {
+    function value() -> Number {
+        match self {
+            LeftToRight -> return 1
+            RightToLeft -> return 2
+        }
+    }
+}
+
+extend SizeClass {
+    function value() -> Number {
+        match self {
+            Compact -> return 1
+            Regular -> return 2
+        }
+    }
+}
+
+public function flagValue(flag: Bool) -> Number {
+    return flag ? 2 : 1
+}
+
+extend UIEnvironment {
+    // The environment's value for an identifier answered by the custom array,
+    // looked up by wire value. Zero when the environment does not carry it.
+    function customValue(wire: Number) -> Number {
+        for entry in self.custom {
+            if entry.identifier.value() == wire {
+                return entry.value
+            }
+        }
+        return 0
+    }
+
+    // The environment's value for any trait, builtin or not. Zero means the
+    // environment says nothing about it, which makes every constraint on it fail:
+    // a rendition asking for a trait the environment does not carry is not a match
+    // for that environment.
+    function traitValue(identifier: borrow TraitIdentifier) -> Number {
+        match identifier {
+            UIAppearance -> return self.appearance.value()
+            Contrast -> return self.contrast.value()
+            Gamut -> return self.gamut.value()
+            Scale -> return self.scale.value()
+            Idiom -> return self.idiom.value()
+            Platform -> return self.platform.value()
+            LayoutDirection -> return self.layoutDirection.value()
+            HorizontalSizeClass -> return self.horizontalSizeClass.value()
+            VerticalSizeClass -> return self.verticalSizeClass.value()
+            ReduceTransparency -> return flagValue(self.reduceTransparency)
+            ReduceMotion -> return flagValue(self.reduceMotion)
+            InvertColors -> return flagValue(self.invertColors)
+            DifferentiateWithoutColor -> return flagValue(self.differentiateWithoutColor)
+            Custom(wire) -> return self.customValue(wire)
+            Unknown(wire) -> return self.customValue(wire)
+        }
+    }
+}
+
+// --- Cache keys ------------------------------------------------------------
+
+// The two cache keys, each its own type.
+//
+// They are two `Number`s of the same width that must never be swapped: a lookup
+// takes both, in an order nothing but the parameter names records, and passing
+// them the wrong way round finds no entry and silently fills a second one for
+// every value in the catalog. As `distinct` types the swap is a type error at
+// the call, which is where it is written.
+//
+// Neither is ever written to a blob, so widening a field costs nothing beyond a
+// stale cache, and `.raw` appears exactly where the number is genuinely mixed.
+public distinct UIEnvironmentKey = Number
+public distinct UICustomTraitKey = Number
+
+extend UIEnvironment {
+    // The fixed traits as one integer. Field widths are fixed here and nowhere
+    // else.
+    function key() -> UIEnvironmentKey {
+        var key = self.appearance.value()
+        key = key | (self.contrast.value() << 2)
+        key = key | (self.gamut.value() << 4)
+        key = key | (self.scale.value() << 6)
+        key = key | (self.idiom.value() << 9)
+        key = key | (self.platform.value() << 13)
+        key = key | (self.layoutDirection.value() << 17)
+        key = key | (self.horizontalSizeClass.value() << 19)
+        key = key | (self.verticalSizeClass.value() << 21)
+        key = key | (flagValue(self.reduceTransparency) << 23)
+        key = key | (flagValue(self.reduceMotion) << 25)
+        key = key | (flagValue(self.invertColors) << 27)
+        key = key | (flagValue(self.differentiateWithoutColor) << 29)
+        return UIEnvironmentKey(key)
+    }
+
+    // The custom traits folded into one integer, order-independent so two
+    // environments carrying the same set in a different order share a cache line.
+    // Zero when there are none, which is the common case and costs one branch.
+    function customKey() -> UICustomTraitKey {
+        var fold = 0
+        for entry in self.custom {
+            var mixed = wrappingMul(entry.identifier.value(), 2654435761)
+            mixed = mixed ^ wrappingMul(entry.value, 40503)
+            mixed = mixed ^ (mixed >> 17)
+            fold = wrappingAdd(fold, mixed)
+        }
+        return UICustomTraitKey(fold)
+    }
+}

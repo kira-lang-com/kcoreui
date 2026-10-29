@@ -1,0 +1,99 @@
+import Foundation
+import KCoreUI
+
+// Writes the default catalog KCoreUI ships.
+//
+// The blob is the artifact and is checked in; this is what produced the first
+// one, before there was an editor to open it with. Everything it does goes
+// through the same writer, parser and validator any other producer uses — there
+// is no privileged path into the format, and this program proves it by being an
+// ordinary consumer of the public API.
+//
+// It refuses to write a catalog that does not survive its own checks:
+//
+//   1. the records validate — no dangling reference, no cycle, no duplicate
+//   2. the bytes parse back
+//   3. writing the parsed catalog reproduces the bytes exactly
+//   4. every name the surface declares resolves in the result
+//
+// Run from the repository root:
+//
+//     kira run tools/bootstrap
+
+function reportFailure(message: borrow String) -> Number {
+    print("bootstrap: " + message)
+    return 1
+}
+
+function checkRoundTrip(bytes: borrow [UN8], catalog: borrow Catalog) -> Bool {
+    let rewritten = catalog.encoded()
+    if rewritten.count != bytes.count {
+        print(
+            "bootstrap: round trip changed the length: " + String(bytes.count) + " to " + String(
+                rewritten.count
+            )
+        )
+        return false
+    }
+    for index in 0..bytes.count {
+        if bytes[index] != rewritten[index] {
+            print("bootstrap: round trip changed byte " + String(index))
+            return false
+        }
+    }
+    return true
+}
+
+@Main
+function main() -> Number {
+    let record = defaultCatalogRecord()
+
+    let issues = record.validate()
+    if issues.count > 0 {
+        print(validationText(issues))
+        return reportFailure("the default catalog does not validate")
+    }
+
+    let bytes = record.encoded()
+    let parsed = parseCatalog(bytes)
+    attempt {
+        let catalog = try parsed
+        if !checkRoundTrip(bytes, catalog) {
+            return reportFailure("the default catalog does not round trip")
+        }
+
+        let report = catalog.checkIntegrity()
+        if !report.holds() {
+            print(report.text())
+            return reportFailure("the default catalog does not cover the declared name surface")
+        }
+
+        let path = "Resources/Default.kcui"
+        match writeFileBytes(path, bytes) {
+            Ok -> {}
+            Error(failure) -> return reportFailure("could not write " + path)
+        }
+        print("bootstrap: wrote " + path)
+        print(
+            "bootstrap: " + String(catalog.resources.count) + " resources, " + String(
+                catalog.renditions.count
+            ) + " renditions, " + String(bytes.count) + " bytes"
+        )
+        print(report.text())
+        return 0
+    } handle {
+        NotKira { return reportFailure("the bytes just written are not a catalog") }
+        UnsupportedVersion {
+            return reportFailure("the writer produced a version the parser refuses")
+        }
+        TruncatedHeader { return reportFailure("the writer produced a short header") }
+        TruncatedTable { return reportFailure("the writer produced a table running past the end") }
+        OffsetOutOfRange { return reportFailure("the writer produced a non-canonical layout") }
+        NamesUnsorted { return reportFailure("the writer produced an unsorted name table") }
+        ConstraintsUnsorted { return reportFailure("the writer produced unsorted constraints") }
+        DuplicateRendition {
+            return reportFailure("two renditions of one resource pin the same traits")
+        }
+        ReservedTraitValue { return reportFailure("a constraint carries the reserved value zero") }
+    }
+}

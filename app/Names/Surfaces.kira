@@ -1,0 +1,57 @@
+import Foundation
+
+// Apple's material and text-style vocabularies, in SwiftUI's spelling.
+//
+// The material ladder is `ultraThin` through `ultraThick` plus `bar`. Two
+// entries are worth naming because existing Kira code disagrees with them:
+// KiraUIFoundation spells the ladder `Ultrathin, Thin, Regular, Thick, Chrome`,
+// which is `bar` under another name and is missing `ultraThick` entirely. This
+// file is the spelling; a catalog is what fills it in.
+//
+// The text styles are Apple's `Font.TextStyle` set. Apple names no gradients
+// and no effects semantically, so this build declares none: inventing a name
+// Apple does not have would be inventing surface, and a producer that needs one
+// writes it into a blob without asking permission from this file.
+
+// --- Materials -------------------------------------------------------------
+
+public namespace MaterialName {
+    let ultraThin: String = "ultraThin"
+    let thin: String = "thin"
+    let regular: String = "regular"
+    let thick: String = "thick"
+    let ultraThick: String = "ultraThick"
+    let bar: String = "bar"
+
+    // --- Vibrancy --------------------------------------------------------------
+    //
+    // What content set INTO glass is inked with: UIKit's vibrancy effect styles,
+    // each a color together with the way it composites, which is what makes it
+    // vibrant rather than gray. A material because a material is exactly that — a
+    // recipe the compositor applies, color and blend at once.
+
+    let vibrantLabel: String = "vibrantLabel"
+    let vibrantSecondaryLabel: String = "vibrantSecondaryLabel"
+    let vibrantTertiaryLabel: String = "vibrantTertiaryLabel"
+    let vibrantQuaternaryLabel: String = "vibrantQuaternaryLabel"
+
+    let all: [String] = [MaterialName.ultraThin, MaterialName.thin, MaterialName.regular, MaterialName.thick, MaterialName.ultraThick, MaterialName.bar, MaterialName.vibrantLabel, MaterialName.vibrantSecondaryLabel, MaterialName.vibrantTertiaryLabel, MaterialName.vibrantQuaternaryLabel]
+}
+
+// --- Text styles -----------------------------------------------------------
+
+public namespace TextStyleName {
+    let largeTitle: String = "largeTitle"
+    let title: String = "title"
+    let title2: String = "title2"
+    let title3: String = "title3"
+    let headline: String = "headline"
+    let subheadline: String = "subheadline"
+    let body: String = "body"
+    let callout: String = "callout"
+    let footnote: String = "footnote"
+    let caption: String = "caption"
+    let caption2: String = "caption2"
+
+    let all: [String] = [TextStyleName.largeTitle, TextStyleName.title, TextStyleName.title2, TextStyleName.title3, TextStyleName.headline, TextStyleName.subheadline, TextStyleName.body, TextStyleName.callout, TextStyleName.footnote, TextStyleName.caption, TextStyleName.caption2]
+}

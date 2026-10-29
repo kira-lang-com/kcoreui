@@ -1,0 +1,182 @@
+import Foundation
+import KCoreUI
+
+// What the parser refuses, and why.
+//
+// Every case starts from a blob the writer produced and damages it in exactly
+// one way, so a rejection is attributable to the damage rather than to the
+// construction. Strictness here is what buys byte-exact write-back everywhere
+// else: the accepted set is the canonical set, so a catalog that loaded can
+// only have been laid out one way.
+
+function goodBytes() -> [UN8] {
+    var record = CatalogRecord()
+    record.resources.append(adaptive("label", color(0.1, 0.1, 0.1, 1.0), color(0.9, 0.9, 0.9, 1.0)))
+    record.resources.append(flat("separator", color(0.0, 0.0, 0.0, 0.1)))
+    return record.encoded()
+}
+
+function withByte(bytes: borrow [UN8], offset: Number, value: Number) -> [UN8] {
+    var copied: [UN8] = []
+    for index in 0..bytes.count {
+        if index == offset {
+            copied.append(UN8(value & 255))
+        } else {
+            copied.append(bytes[index])
+        }
+    }
+    return copied
+}
+
+function withU32(bytes: borrow [UN8], offset: Number, value: Number) -> [UN8] {
+    var copied = withByte(bytes, offset, value)
+    copied = withByte(copied, offset + 1, value >> 8)
+    copied = withByte(copied, offset + 2, value >> 16)
+    copied = withByte(copied, offset + 3, value >> 24)
+    return copied
+}
+
+function truncated(bytes: borrow [UN8], count: Number) -> [UN8] {
+    return sliceBytes(bytes, 0, count)
+}
+
+// --- Accepted --------------------------------------------------------------
+
+@Test
+function writerBlobParses() {
+    expect!((parses(goodBytes())) == (true))
+}
+
+// What the parser accepts it writes back exactly: the accepted set is the
+// canonical set.
+@Test
+function acceptedBlobWritesBackExactly() {
+    let bytes = goodBytes()
+    expect!((bytesEqual(bytes, parseOrEmpty(bytes).encoded())) == (true))
+}
+
+// --- Header ----------------------------------------------------------------
+
+@Test
+function wrongMagicIsRefused() {
+    expect!((parseFailure(withByte(goodBytes(), 0, 88))) == ("not a KCoreUI catalog: wrong magic"))
+}
+
+@Test
+function newerMajorVersionIsRefused() {
+    let newer = withByte(goodBytes(), BlobHeaderOffset.major, BlobLayout.majorVersion + 1)
+    expect!((parseFailure(newer)) == ("catalog major version is newer than this build"))
+}
+
+@Test
+function headerShorterThanItsSizeIsRefused() {
+    expect!((parseFailure(truncated(goodBytes(), 12))) == ("catalog is shorter than its header"))
+}
+
+// Truncating the body leaves the header claiming a size the buffer does not
+// have, which is a layout the writer could not have produced.
+@Test
+function truncatedBodyIsRefused() {
+    expect!((parses(truncated(goodBytes(), BlobLayout.headerSize + 8))) == (false))
+}
+
+// Slack between sections would write back as a different file, so a header
+// pointing anywhere but the canonical position is refused even though every
+// offset it names is inside the buffer.
+@Test
+function nonCanonicalLayoutIsRefused() {
+    let bytes = goodBytes()
+    let moved = withU32(bytes, BlobHeaderOffset.resourceStart, BlobLayout.headerSize + 4)
+    expect!((parseFailure(moved)) == ("a catalog entry points outside the blob"))
+}
+
+@Test
+function totalSizeThatDisagreesWithTheBufferIsRefused() {
+    let bytes = goodBytes()
+    expect!((parses(withU32(bytes, BlobHeaderOffset.totalSize, bytes.count + 16))) == (false))
+    expect!((parses(withU32(bytes, BlobHeaderOffset.totalSize, bytes.count - 1))) == (false))
+}
+
+@Test
+function emptyBufferIsRefusedRatherThanTrapping() {
+    var empty: [UN8] = []
+    expect!((parses(empty)) == (false))
+}
+
+// --- Tables ----------------------------------------------------------------
+
+// The name table is what a lookup binary-searches, so a table out of order is a
+// catalog whose lookups would silently miss.
+@Test
+function unsortedNameTableIsRefused() {
+    let bytes = goodBytes()
+    // Two resources, `label` then `separator`. Pointing the first entry's name
+    // span at the second name puts the table out of order.
+    let firstEntry = BlobLayout.headerSize
+    let swapped = withU32(withU32(bytes, firstEntry, 5), firstEntry + 4, 9)
+    expect!((parseFailure(swapped)) == ("the name table is not in byte order"))
+}
+
+// Constraints are stored ascending by identifier because the specificity
+// comparison is a merge walk over that order.
+@Test
+function unsortedConstraintsAreRefused() {
+    var record = CatalogRecord()
+    var resource = ResourceRecord()
+    resource.name = "label"
+    resource.kind = .Color
+    var rendition = RenditionRecord()
+    rendition.constraints.append(UIAppearance.Light.constraint())
+    rendition.constraints.append(Contrast.High.constraint())
+    rendition.payload = authored(color(0.0, 0.0, 0.0, 1.0))
+    resource.renditions.append(rendition)
+    record.resources.append(resource)
+
+    let bytes = record.encoded()
+    // One resource, one rendition, two constraints. Reverse them in place.
+    let constraintStart = BlobLayout.headerSize + BlobLayout.resourceEntrySize + BlobLayout.renditionEntrySize
+    var reversed = withU32(bytes, constraintStart, TraitIdentifier.Contrast.value())
+    reversed = withU32(reversed, constraintStart + 4, Contrast.High.value())
+    reversed = withU32(reversed, constraintStart + 8, TraitIdentifier.UIAppearance.value())
+    reversed = withU32(reversed, constraintStart + 12, UIAppearance.Light.value())
+    expect!((parseFailure(reversed)) == ("a rendition's constraints are not in identifier order"))
+}
+
+// --- Values ----------------------------------------------------------------
+
+// Zero is reserved on every trait: a constraint carrying it would be
+// indistinguishable from no constraint at all.
+@Test
+function reservedTraitValueIsRefused() {
+    var record = CatalogRecord()
+    var resource = ResourceRecord()
+    resource.name = "label"
+    resource.kind = .Color
+    var rendition = RenditionRecord()
+    rendition.constraints.append(TraitIdentifier.UIAppearance.constrain(0))
+    rendition.payload = authored(color(0.0, 0.0, 0.0, 1.0))
+    resource.renditions.append(rendition)
+    record.resources.append(resource)
+    expect!((parseFailure(record.encoded())) == ("a constraint carries the reserved value zero"))
+}
+
+// Two renditions pinning the same traits have no defined winner. Refusing at
+// load is what lets the resolver promise one answer rather than an arbitrary
+// one.
+@Test
+function duplicateRenditionIsRefused() {
+    var record = CatalogRecord()
+    var resource = ResourceRecord()
+    resource.name = "label"
+    resource.kind = .Color
+    var first = RenditionRecord()
+    first.constraints.append(UIAppearance.Light.constraint())
+    first.payload = authored(color(0.0, 0.0, 0.0, 1.0))
+    resource.renditions.append(first)
+    var second = RenditionRecord()
+    second.constraints.append(UIAppearance.Light.constraint())
+    second.payload = authored(color(1.0, 1.0, 1.0, 1.0))
+    resource.renditions.append(second)
+    record.resources.append(resource)
+    expect!((parseFailure(record.encoded())) == ("two renditions of one resource pin the same traits"))
+}

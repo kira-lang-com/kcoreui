@@ -1,0 +1,228 @@
+import Foundation
+import KCoreUI
+
+// Layered color, and the color space a catalog is authored in.
+//
+// A color is a stack of layers rather than one RGBA, because that is what a
+// system color is: a separator is ink at a tenth of an opacity over whatever
+// it sits on. Flattening that at author time bakes in the backdrop, and the
+// backdrop is exactly what changes with the appearance.
+//
+// The stack composites in linear light, in Display P3, and the result is handed
+// back in the gamut the environment reports.
+
+function layered(layers: borrow [ColorLayer]) -> [UN8] {
+    var value = ColorValue()
+    for layer in layers {
+        value.layers.append(layer)
+    }
+    return value.encoded()
+}
+
+// A layer holding a literal color written in sRGB, at an opacity.
+function inkLayer(color: borrow RGBAColor, opacity: Number) -> ColorLayer {
+    return colorLayer(literalColor(color.srgbToP3()), opacity)
+}
+
+function layeredResource(name: borrow String, layers: borrow [ColorLayer]) -> ResourceRecord {
+    var resource = ResourceRecord()
+    resource.name = name
+    resource.kind = .Color
+    var rendition = RenditionRecord()
+    rendition.payload = layered(layers)
+    resource.renditions.append(rendition)
+    return resource
+}
+
+function p3Environment() -> UIEnvironment {
+    var environment = light()
+    environment.gamut = .P3
+    return environment
+}
+
+// --- The color space ------------------------------------------------------
+
+// Each channel of an sRGB color comes back unchanged after the trip through
+// Display P3, including the primaries and the neutral ends of the range.
+@Test
+function srgbSurvivesTheTripThroughDisplayP3() {
+    expect!((colorsEqual(((color(0.2, 0.45, 0.96, 1.0)).srgbToP3()).p3ToSrgb(), color(0.2, 0.45, 0.96, 1.0))) == (true))
+    expect!((colorsEqual(((color(0.0, 1.0, 0.0, 1.0)).srgbToP3()).p3ToSrgb(), color(0.0, 1.0, 0.0, 1.0))) == (true))
+    expect!((colorsEqual(((color(1.0, 1.0, 1.0, 1.0)).srgbToP3()).p3ToSrgb(), color(1.0, 1.0, 1.0, 1.0))) == (true))
+    expect!((colorsEqual(((color(0.0, 0.0, 0.0, 1.0)).srgbToP3()).p3ToSrgb(), color(0.0, 0.0, 0.0, 1.0))) == (true))
+}
+
+// Display P3 is the wider space, so a saturated sRGB color sits inside it with
+// room to spare: its P3 spelling is less saturated than its sRGB one.
+@Test
+function displayP3IsWiderThanSrgb() {
+    let stored = (color(0.0, 1.0, 0.0, 1.0)).srgbToP3()
+    expect!((stored.r > 0.0) == (true))
+    expect!((stored.b > 0.0) == (true))
+    expect!((stored.g < 1.0) == (true))
+}
+
+// Alpha is coverage, not light, so it never travels through a transfer curve.
+@Test
+function alphaIsNotTransferEncoded() {
+    let stored = (color(0.5, 0.5, 0.5, 0.25)).srgbToP3()
+    expect!((near(stored.a, 0.25)) == (true))
+    expect!((near(stored.p3ToSrgb().a, 0.25)) == (true))
+}
+
+// The environment's gamut decides what a caller receives. A P3 display gets the
+// stored value; an sRGB one gets it converted.
+@Test
+function theEnvironmentGamutDecidesWhatIsHandedBack() {
+    var record = CatalogRecord()
+    record.resources.append(flat("tint", color(0.0, 1.0, 0.0, 1.0)))
+    let stack = stackOf(record)
+    let asSrgb = stack.resolveColor("tint", light())
+    let asP3 = stack.resolveColor("tint", p3Environment())
+    expect!((colorsEqual(asSrgb, color(0.0, 1.0, 0.0, 1.0))) == (true))
+    expect!((colorsEqual(asP3, asSrgb)) == (false))
+    expect!((asP3.r > 0.0) == (true))
+}
+
+// --- Layers ----------------------------------------------------------------
+
+@Test
+function oneLayerColorIsTheColor() {
+    var layers: [ColorLayer] = []
+    layers.append(inkLayer(color(0.2, 0.45, 0.96, 1.0), 1.0))
+    var record = CatalogRecord()
+    record.resources.append(layeredResource("tint", layers))
+    expect!((colorsEqual((stackOf(record)).resolveColor("tint", light()), color(0.2, 0.45, 0.96, 1.0))) == (true))
+}
+
+// A layer's opacity multiplies its source's alpha, so an ink written at a tenth
+// stays the named ink rather than becoming a second, fainter color.
+@Test
+function layerOpacityMultipliesTheSourceAlpha() {
+    var layers: [ColorLayer] = []
+    layers.append(inkLayer(color(0.0, 0.0, 0.0, 1.0), 0.1))
+    var record = CatalogRecord()
+    record.resources.append(layeredResource("separator", layers))
+    let resolved = (stackOf(record)).resolveColor("separator", light())
+    expect!((near(resolved.a, 0.1)) == (true))
+}
+
+// The case the whole design turns on: compositing happens in **linear light**.
+//
+// Half-covering white with black gives half the *light*, which encodes to about
+// 0.735, not to 0.5. Compositing on the encoded channels would give 0.5, and
+// that is the classic wrong answer that darkens every midtone.
+@Test
+function layersCompositeInLinearLight() {
+    var layers: [ColorLayer] = []
+    layers.append(inkLayer(color(1.0, 1.0, 1.0, 1.0), 1.0))
+    layers.append(inkLayer(color(0.0, 0.0, 0.0, 1.0), 0.5))
+    var record = CatalogRecord()
+    record.resources.append(layeredResource("wash", layers))
+    let resolved = (stackOf(record)).resolveColor("wash", light())
+    expect!((near(resolved.r, 0.7354)) == (true))
+    expect!((near(resolved.a, 1.0)) == (true))
+    expect!((near(resolved.r, 0.5)) == (false))
+}
+
+// Bottom to top: the last layer is the one nearest the viewer.
+@Test
+function theLastLayerIsOnTop() {
+    var layers: [ColorLayer] = []
+    layers.append(inkLayer(color(0.0, 0.0, 0.0, 1.0), 1.0))
+    layers.append(inkLayer(color(1.0, 1.0, 1.0, 1.0), 1.0))
+    var record = CatalogRecord()
+    record.resources.append(layeredResource("stack", layers))
+    expect!((colorsEqual((stackOf(record)).resolveColor("stack", light()), color(1.0, 1.0, 1.0, 1.0))) == (true))
+}
+
+// A layer may name another resource, so a wash over a named ink follows that
+// ink into dark appearance without a second recipe.
+@Test
+function layerReferenceFollowsTheAppearance() {
+    var record = CatalogRecord()
+    record.resources.append(adaptive("label", color(0.0, 0.0, 0.0, 1.0), color(1.0, 1.0, 1.0, 1.0)))
+    var layers: [ColorLayer] = []
+    layers.append(colorLayer(referenceColor("label"), 1.0))
+    record.resources.append(layeredResource("separator", layers))
+
+    let stack = stackOf(record)
+    expect!((colorsEqual(stack.resolveColor("separator", light()), color(0.0, 0.0, 0.0, 1.0))) == (true))
+    expect!((colorsEqual(stack.resolveColor("separator", dark()), color(1.0, 1.0, 1.0, 1.0))) == (true))
+}
+
+// A referenced color is composited, not just read: a wash over a named ink is
+// the ink at that opacity, and it still tracks the appearance.
+@Test
+function referencedInkCompositesAtItsLayerOpacity() {
+    var record = CatalogRecord()
+    record.resources.append(adaptive("label", color(0.0, 0.0, 0.0, 1.0), color(1.0, 1.0, 1.0, 1.0)))
+    var layers: [ColorLayer] = []
+    layers.append(inkLayer(color(1.0, 1.0, 1.0, 1.0), 1.0))
+    layers.append(colorLayer(referenceColor("label"), 0.5))
+    record.resources.append(layeredResource("wash", layers))
+
+    let stack = stackOf(record)
+    expect!((near((stack.resolveColor("wash", light())).r, 0.7354)) == (true))
+    expect!((near((stack.resolveColor("wash", dark())).r, 1.0)) == (true))
+}
+
+// A stack with no layers covers nothing. A token meaning "draw nothing here"
+// says so with no layers rather than with an alpha nobody can see.
+@Test
+function emptyLayerStackIsTransparent() {
+    var layers: [ColorLayer] = []
+    var record = CatalogRecord()
+    record.resources.append(layeredResource("clear", layers))
+    let resolved = (stackOf(record)).resolveColor("clear", light())
+    expect!((near(resolved.a, 0.0)) == (true))
+}
+
+// Layers survive the container the way everything else does.
+@Test
+function layeredColorRoundTrips() {
+    var layers: [ColorLayer] = []
+    layers.append(inkLayer(color(1.0, 1.0, 1.0, 1.0), 1.0))
+    layers.append(colorLayer(referenceColor("label"), 0.25))
+    layers.append(inkLayer(color(0.2, 0.45, 0.96, 1.0), 0.5))
+
+    var record = CatalogRecord()
+    record.resources.append(adaptive("label", color(0.0, 0.0, 0.0, 1.0), color(1.0, 1.0, 1.0, 1.0)))
+    record.resources.append(layeredResource("wash", layers))
+    expect!((roundTrips(record)) == (true))
+}
+
+// A layer stack decodes to the layers it was written with.
+@Test
+function layeredPayloadDecodesToItsLayers() {
+    var layers: [ColorLayer] = []
+    layers.append(inkLayer(color(1.0, 1.0, 1.0, 1.0), 1.0))
+    layers.append(colorLayer(referenceColor("label"), 0.25))
+    let read = decodeColorPayload(layered(layers))
+    expect!((read.ok) == (true))
+    expect!((read.value.layers.count) == (2))
+    expect!((read.value.layers[0].source.isReference) == (false))
+    expect!((read.value.layers[1].source.isReference) == (true))
+    expect!((compareStrings(read.value.layers[1].source.reference, "label")) == (0))
+    expect!((near(read.value.layers[1].opacity, 0.25)) == (true))
+}
+
+// The validator sees through a layer stack: a layer naming nothing is a
+// dangling reference, and a stack that names its own resource is a cycle.
+@Test
+function theValidatorSeesReferencesInsideLayers() {
+    var layers: [ColorLayer] = []
+    layers.append(colorLayer(referenceColor("nothingDefinesThis"), 1.0))
+    var record = CatalogRecord()
+    record.resources.append(layeredResource("wash", layers))
+    expect!((issueCount(record, ValidationKind.MissingReference)) == (1))
+}
+
+@Test
+function layerCycleIsReported() {
+    var layers: [ColorLayer] = []
+    layers.append(colorLayer(referenceColor("wash"), 0.5))
+    var record = CatalogRecord()
+    record.resources.append(layeredResource("wash", layers))
+    expect!((issueCount(record, ValidationKind.ReferenceCycle)) == (1))
+}

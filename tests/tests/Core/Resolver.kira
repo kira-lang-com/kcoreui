@@ -1,0 +1,277 @@
+import Foundation
+import KCoreUI
+
+// The matching rules.
+//
+// Eligibility and specificity are the whole resolver, and both have to be total
+// and deterministic or a catalog resolves one way on the VM and another under
+// LLVM. Each case here pins one clause of those two rules.
+
+function rendition(color: borrow RGBAColor) -> RenditionRecord {
+    var rendition = RenditionRecord()
+    rendition.payload = authored(color)
+    return rendition
+}
+
+function constrained(color: borrow RGBAColor, constraints: borrow [CatalogConstraint]) -> RenditionRecord {
+    var rendition = rendition(color)
+    for entry in constraints {
+        rendition.constraints.append(entry)
+    }
+    return rendition
+}
+
+function one(entry: borrow CatalogConstraint) -> [CatalogConstraint] {
+    var list: [CatalogConstraint] = []
+    list.append(entry)
+    return list
+}
+
+function two(first: borrow CatalogConstraint, second: borrow CatalogConstraint) -> [CatalogConstraint] {
+    var list = one(first)
+    list.append(second)
+    return list
+}
+
+function floorRecord() -> CatalogRecord {
+    var record = CatalogRecord()
+    record.resources.append(adaptive("label", TestColor.red, TestColor.blue))
+    record.resources.append(flat("separator", TestColor.green))
+    return record
+}
+
+// --- Eligibility -----------------------------------------------------------
+
+@Test
+function theAppearanceSelectsTheRendition() {
+    var record = CatalogRecord()
+    record.resources.append(adaptive("label", TestColor.red, TestColor.blue))
+    let stack = stackOf(record)
+    expect!((colorsEqual(stack.resolveColor("label", light()), TestColor.red)) == (true))
+    expect!((colorsEqual(stack.resolveColor("label", dark()), TestColor.blue)) == (true))
+}
+
+// A rendition that pins nothing matches every environment, which is what makes
+// a single-value resource possible.
+@Test
+function unconstrainedRenditionServesEveryEnvironment() {
+    var record = CatalogRecord()
+    record.resources.append(flat("separator", TestColor.green))
+    let stack = stackOf(record)
+    expect!((colorsEqual(stack.resolveColor("separator", light()), TestColor.green)) == (true))
+    expect!((colorsEqual(stack.resolveColor("separator", dark()), TestColor.green)) == (true))
+    expect!((colorsEqual(stack.resolveColor("separator", lightHighContrast()), TestColor.green)) == (true))
+}
+
+// --- Specificity -----------------------------------------------------------
+
+// A rendition pinning two traits beats one pinning a subset of them, whenever
+// both are eligible, and falls back to the subset when only it is eligible.
+@Test
+function moreConstraintsWinWhenBothAreEligible() {
+    var resource = ResourceRecord()
+    resource.name = "label"
+    resource.kind = .Color
+    resource.renditions.append(constrained(TestColor.red, one(UIAppearance.Light.constraint())))
+    resource.renditions.append(
+        constrained(TestColor.green, two(UIAppearance.Light.constraint(), Contrast.High.constraint()))
+    )
+    var record = CatalogRecord()
+    record.resources.append(resource)
+
+    let stack = stackOf(record)
+    expect!((colorsEqual(stack.resolveColor("label", lightHighContrast()), TestColor.green)) == (true))
+    expect!((colorsEqual(stack.resolveColor("label", light()), TestColor.red)) == (true))
+}
+
+// Priority is the trait numbering. UIAppearance is identifier zero, so a
+// rendition pinning it beats one pinning only contrast even though both pin
+// exactly one trait and both are eligible.
+@Test
+function theLowerTraitIdentifierWinsAtEqualCount() {
+    var resource = ResourceRecord()
+    resource.name = "label"
+    resource.kind = .Color
+    resource.renditions.append(constrained(TestColor.red, one(UIAppearance.Light.constraint())))
+    resource.renditions.append(constrained(TestColor.blue, one(Contrast.Standard.constraint())))
+    var record = CatalogRecord()
+    record.resources.append(resource)
+
+    let stack = stackOf(record)
+    expect!((colorsEqual(stack.resolveColor("label", light()), TestColor.red)) == (true))
+}
+
+// The order renditions were authored in cannot change the answer, because the
+// writer sorts them into one canonical arrangement.
+@Test
+function theAuthoringOrderDoesNotChangeTheWinner() {
+    var forward = ResourceRecord()
+    forward.name = "label"
+    forward.kind = .Color
+    forward.renditions.append(constrained(TestColor.red, one(UIAppearance.Light.constraint())))
+    forward.renditions.append(
+        constrained(TestColor.green, two(UIAppearance.Light.constraint(), Contrast.High.constraint()))
+    )
+
+    var backward = ResourceRecord()
+    backward.name = "label"
+    backward.kind = .Color
+    backward.renditions.append(
+        constrained(TestColor.green, two(UIAppearance.Light.constraint(), Contrast.High.constraint()))
+    )
+    backward.renditions.append(constrained(TestColor.red, one(UIAppearance.Light.constraint())))
+
+    var first = CatalogRecord()
+    first.resources.append(forward)
+    var second = CatalogRecord()
+    second.resources.append(backward)
+
+    let left = (stackOf(first)).resolveColor("label", lightHighContrast())
+    let right = (stackOf(second)).resolveColor("label", lightHighContrast())
+    expect!((colorsEqual(left, right)) == (true))
+    expect!((colorsEqual(left, TestColor.green)) == (true))
+}
+
+// --- Custom traits ---------------------------------------------------------
+
+namespace TestTrait {
+    let brand: TraitIdentifier = .Custom(TraitIdentifierRange.customBase + 3)
+}
+
+function brandedEnvironment(value: Number) -> UIEnvironment {
+    var environment = light()
+    environment.custom.append(CustomTrait(identifier: TestTrait.brand, value: value))
+    return environment
+}
+
+function brandedRecord() -> CatalogRecord {
+    var resource = ResourceRecord()
+    resource.name = "tint"
+    resource.kind = .Color
+    resource.renditions.append(rendition(TestColor.blue))
+    resource.renditions.append(constrained(TestColor.red, one((TestTrait.brand).constrain(2))))
+    var record = CatalogRecord()
+    record.resources.append(resource)
+    return record
+}
+
+// A rendition pinning a trait the environment does not carry is not a match.
+// That is what keeps a producer's own traits from leaking into an environment
+// that never heard of them.
+@Test
+function customTraitIsInvisibleToAnEnvironmentWithoutIt() {
+    let stack = stackOf(brandedRecord())
+    expect!((colorsEqual(stack.resolveColor("tint", light()), TestColor.blue)) == (true))
+}
+
+@Test
+function customTraitSelectsWhenTheEnvironmentCarriesIt() {
+    let stack = stackOf(brandedRecord())
+    expect!((colorsEqual(stack.resolveColor("tint", brandedEnvironment(2)), TestColor.red)) == (true))
+    expect!((colorsEqual(stack.resolveColor("tint", brandedEnvironment(9)), TestColor.blue)) == (true))
+}
+
+// Custom traits are part of the cache key, so two environments differing only
+// in one do not share an answer; an environment without any has the empty key.
+@Test
+function customTraitsChangeTheEnvironmentKey() {
+    expect!(((brandedEnvironment(2)).customKey() != (brandedEnvironment(9)).customKey()) == (true))
+    expect!(((light()).customKey() == UICustomTraitKey(0)) == (true))
+}
+
+// --- Stacks ----------------------------------------------------------------
+
+@Test
+function overlayOverridesTheFloor() {
+    var overlay = CatalogRecord()
+    overlay.resources.append(flat("label", TestColor.white))
+    let stack = (stackOf(floorRecord())).overlaid(catalogOf(overlay))
+    expect!((colorsEqual(stack.resolveColor("label", light()), TestColor.white)) == (true))
+    expect!((colorsEqual(stack.resolveColor("separator", light()), TestColor.green)) == (true))
+}
+
+// A partial blob names one color and changes one color. Nothing else in the
+// catalog moves, and the stack records the one extra catalog it sits on.
+@Test
+function partialOverlayLeavesEverythingElseAlone() {
+    var overlay = CatalogRecord()
+    overlay.resources.append(flat("separator", TestColor.white))
+    let stack = (stackOf(floorRecord())).overlaid(catalogOf(overlay))
+    expect!((colorsEqual(stack.resolveColor("separator", dark()), TestColor.white)) == (true))
+    expect!((colorsEqual(stack.resolveColor("label", dark()), TestColor.blue)) == (true))
+    expect!((stack.depth()) == (2))
+}
+
+// An overlay that names a resource but has no rendition eligible for this
+// environment does not stop the search. Overriding dark alone is safe.
+@Test
+function overlayThatCannotAnswerFallsThroughToTheFloor() {
+    var resource = ResourceRecord()
+    resource.name = "label"
+    resource.kind = .Color
+    resource.renditions.append(constrained(TestColor.white, one(UIAppearance.Dark.constraint())))
+    var overlay = CatalogRecord()
+    overlay.resources.append(resource)
+
+    let stack = (stackOf(floorRecord())).overlaid(catalogOf(overlay))
+    expect!((colorsEqual(stack.resolveColor("label", dark()), TestColor.white)) == (true))
+    expect!((colorsEqual(stack.resolveColor("label", light()), TestColor.red)) == (true))
+}
+
+// A resource of another kind under the same name does not shadow, because a
+// resource is keyed by name and kind together.
+@Test
+function anotherKindUnderTheSameNameDoesNotShadow() {
+    var material = ResourceRecord()
+    material.name = "label"
+    material.kind = .Material
+    var recipe = MaterialValue()
+    recipe.layers.append(backdropBlurLayer(10.0))
+    var rendition = RenditionRecord()
+    rendition.payload = recipe.encoded()
+    material.renditions.append(rendition)
+
+    var overlay = CatalogRecord()
+    overlay.resources.append(material)
+    let stack = (stackOf(floorRecord())).overlaid(catalogOf(overlay))
+    expect!((colorsEqual(stack.resolveColor("label", light()), TestColor.red)) == (true))
+    expect!(((makeResources(catalogOf(overlay), light())).material("label").found) == (true))
+}
+
+// --- Absence ---------------------------------------------------------------
+
+@Test
+function unknownNameResolvesToTheDebugColor() {
+    let stack = stackOf(floorRecord())
+    let resolution = stack.resolveColorChecked("noSuchThing", light())
+    expect!((resolution.found) == (false))
+    expect!((colorsEqual(resolution.color, ResolverFallback.color)) == (true))
+}
+
+// --- Tracing ---------------------------------------------------------------
+
+@Test
+function traceReportsWhichRenditionWon() {
+    var resource = ResourceRecord()
+    resource.name = "label"
+    resource.kind = .Color
+    resource.renditions.append(constrained(TestColor.red, one(UIAppearance.Light.constraint())))
+    resource.renditions.append(
+        constrained(TestColor.green, two(UIAppearance.Light.constraint(), Contrast.High.constraint()))
+    )
+    var record = CatalogRecord()
+    record.resources.append(resource)
+
+    let trace = (stackOf(record)).traceResolution("label", .Color, lightHighContrast())
+    expect!((trace.found) == (true))
+    expect!((trace.candidatesConsidered) == (2))
+    expect!((trace.candidatesEligible) == (2))
+    expect!((trace.matchedConstraints.count) == (2))
+}
+
+@Test
+function traceOfAnAbsentNameReportsNothingMatched() {
+    let trace = (stackOf(floorRecord())).traceResolution("noSuchThing", .Color, light())
+    expect!((trace.found) == (false))
+    expect!((trace.catalogsSearched) == (1))
+}

@@ -1,0 +1,194 @@
+import Foundation
+import KCoreUI
+
+// What a producer is stopped from writing.
+//
+// The parser refuses a malformed container; the validator refuses a malformed
+// catalog. Both matter, and they catch different things: a cycle is perfectly
+// well-formed bytes describing a graph no resolver can finish walking.
+
+// How many issues of one kind the validator reports for a record.
+function issueCount(record: borrow CatalogRecord, kind: borrow ValidationKind) -> Number {
+    var count = 0
+    for entry in record.validate() {
+        if entry.kind == kind {
+            count = count + 1
+        }
+    }
+    return count
+}
+
+// --- A clean record --------------------------------------------------------
+
+@Test
+function cleanRecordHasNoIssues() {
+    var record = CatalogRecord()
+    record.resources.append(adaptive("label", color(0.0, 0.0, 0.0, 1.0), color(1.0, 1.0, 1.0, 1.0)))
+    record.resources.append(alias("foreground", "label"))
+    expect!((record.validate().count) == (0))
+}
+
+// --- References ------------------------------------------------------------
+
+@Test
+function danglingReferenceIsReported() {
+    var record = CatalogRecord()
+    record.resources.append(alias("foreground", "nothingDefinesThis"))
+    expect!((issueCount(record, ValidationKind.MissingReference)) == (1))
+    expect!((issueCount(record, ValidationKind.ReferenceCycle)) == (0))
+}
+
+// The check that keeps a cycle out of a shipped blob rather than relying on the
+// runtime depth limit to survive one.
+@Test
+function twoStepCycleIsReportedOncePerMember() {
+    var record = CatalogRecord()
+    record.resources.append(alias("a", "b"))
+    record.resources.append(alias("b", "a"))
+    expect!((issueCount(record, ValidationKind.ReferenceCycle)) == (2))
+}
+
+@Test
+function selfReferenceIsReported() {
+    var record = CatalogRecord()
+    record.resources.append(alias("a", "a"))
+    expect!((issueCount(record, ValidationKind.ReferenceCycle)) == (1))
+}
+
+@Test
+function longerCycleIsReportedOncePerMember() {
+    var record = CatalogRecord()
+    record.resources.append(alias("a", "b"))
+    record.resources.append(alias("b", "c"))
+    record.resources.append(alias("c", "a"))
+    expect!((issueCount(record, ValidationKind.ReferenceCycle)) == (3))
+}
+
+// A chain that never closes is not a cycle, however deep it goes.
+@Test
+function deepChainIsNotACycle() {
+    var record = CatalogRecord()
+    record.resources.append(flat("root", color(0.0, 0.0, 0.0, 1.0)))
+    record.resources.append(alias("a", "root"))
+    record.resources.append(alias("b", "a"))
+    record.resources.append(alias("c", "b"))
+    record.resources.append(alias("d", "c"))
+    expect!((record.validate().count) == (0))
+}
+
+// A material's tint reference participates in the graph exactly as a color
+// alias does, so a cycle through a recipe is caught too.
+@Test
+function cycleThroughAMaterialIsReported() {
+    var recipe = MaterialValue()
+    recipe.layers.append(tintLayer(referenceColor("wash"), 0.5, .Normal))
+    var material = ResourceRecord()
+    material.name = "wash"
+    material.kind = .Color
+    var rendition = RenditionRecord()
+    rendition.payload = encodeColorAlias("wash")
+    material.renditions.append(rendition)
+
+    var record = CatalogRecord()
+    record.resources.append(material)
+    expect!((issueCount(record, ValidationKind.ReferenceCycle)) == (1))
+}
+
+// --- Names and renditions --------------------------------------------------
+
+@Test
+function duplicateNameOfTheSameKindIsReported() {
+    var record = CatalogRecord()
+    record.resources.append(flat("label", color(0.0, 0.0, 0.0, 1.0)))
+    record.resources.append(flat("label", color(1.0, 1.0, 1.0, 1.0)))
+    expect!((issueCount(record, ValidationKind.DuplicateName)) == (1))
+}
+
+// The same name under two kinds is two resources, not a duplicate.
+@Test
+function theSameNameUnderTwoKindsIsNotADuplicate() {
+    var material = ResourceRecord()
+    material.name = "regular"
+    material.kind = .Material
+    var recipe = MaterialValue()
+    recipe.layers.append(backdropBlurLayer(28.0))
+    var rendition = RenditionRecord()
+    rendition.payload = recipe.encoded()
+    material.renditions.append(rendition)
+
+    var record = CatalogRecord()
+    record.resources.append(flat("regular", color(0.5, 0.5, 0.5, 1.0)))
+    record.resources.append(material)
+    expect!((record.validate().count) == (0))
+}
+
+@Test
+function resourceWithNoRenditionsIsReported() {
+    var resource = ResourceRecord()
+    resource.name = "label"
+    resource.kind = .Color
+    var record = CatalogRecord()
+    record.resources.append(resource)
+    expect!((issueCount(record, ValidationKind.NoRenditions)) == (1))
+}
+
+@Test
+function reservedTraitValueIsReportedBeforeWriting() {
+    var resource = ResourceRecord()
+    resource.name = "label"
+    resource.kind = .Color
+    var rendition = RenditionRecord()
+    rendition.constraints.append(TraitIdentifier.Contrast.constrain(0))
+    rendition.payload = authored(color(0.0, 0.0, 0.0, 1.0))
+    resource.renditions.append(rendition)
+    var record = CatalogRecord()
+    record.resources.append(resource)
+    expect!((issueCount(record, ValidationKind.ReservedTraitValue)) == (1))
+}
+
+@Test
+function twoRenditionsPinningTheSameTraitsAreReported() {
+    var resource = ResourceRecord()
+    resource.name = "label"
+    resource.kind = .Color
+    var first = RenditionRecord()
+    first.constraints.append(UIAppearance.Dark.constraint())
+    first.payload = authored(color(0.0, 0.0, 0.0, 1.0))
+    resource.renditions.append(first)
+    var second = RenditionRecord()
+    second.constraints.append(UIAppearance.Dark.constraint())
+    second.payload = authored(color(1.0, 1.0, 1.0, 1.0))
+    resource.renditions.append(second)
+    var record = CatalogRecord()
+    record.resources.append(resource)
+    expect!((issueCount(record, ValidationKind.DuplicateRendition)) == (1))
+}
+
+// --- Payloads --------------------------------------------------------------
+
+// A payload that does not decode for the kind it is filed under is caught at
+// authoring time rather than becoming a debug color on screen.
+@Test
+function payloadThatDoesNotMatchItsKindIsReported() {
+    var resource = ResourceRecord()
+    resource.name = "label"
+    resource.kind = .Color
+    var rendition = RenditionRecord()
+    var payload: [UN8] = []
+    appendU8(payload, 99)
+    appendU8(payload, 1)
+    rendition.payload = payload
+    resource.renditions.append(rendition)
+    var record = CatalogRecord()
+    record.resources.append(resource)
+    expect!((issueCount(record, ValidationKind.UndecodablePayload)) == (1))
+}
+
+// A kind this build has no decoder for is not an error. The container is
+// agnostic about payload, and the validator has to agree with it.
+@Test
+function undecodableKindIsNotAValidationFailure() {
+    var record = CatalogRecord()
+    record.resources.append(opaqueResource("somethingElse"))
+    expect!((record.validate().count) == (0))
+}

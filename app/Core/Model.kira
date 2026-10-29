@@ -1,0 +1,280 @@
+import Foundation
+
+// The catalog's in-memory shape, and the records an author hands the writer.
+//
+// A parsed catalog keeps its names, its constraints and its payloads in flat
+// arrays with the same index space the blob used. Nothing is rebuilt into
+// strings or trees on load: a name is compared as bytes where it sits, and a
+// payload is decoded only when a resolved value is actually asked for.
+
+// --- Resource kinds --------------------------------------------------------
+//
+// The wire values are u32, assigned in `resourceKindValue`, and never
+// renumbered. The mapping is total in both directions: `Custom` carries an
+// identifier in the producer-owned range at or above `ResourceKindRange.customBase`,
+// and `Unknown` carries any other identifier this build has no name for, so a
+// kind KCoreUI does not know is carried through load, resolution and
+// write-back unchanged. That is what lets a blob hold resources this build has
+// no decoder for.
+
+public enum ResourceKind {
+    Color
+    Gradient
+    Material
+    Effect
+    Typography
+    Metric
+    Glass
+    Custom(Number)
+    Unknown(Number)
+}
+
+// The first kind identifier KCoreUI itself will never claim.
+public namespace ResourceKindRange {
+    let customBase: Number = 1024
+}
+
+extend ResourceKind {
+    function value() -> Number {
+        match self {
+            Color -> return 1
+            Gradient -> return 2
+            Material -> return 3
+            Effect -> return 4
+            Typography -> return 5
+            Metric -> return 6
+            Glass -> return 7
+            Custom(value) -> return value
+            Unknown(value) -> return value
+        }
+    }
+}
+
+public function resourceKindFromValue(value: Number) -> ResourceKind {
+    if value == 1 { return .Color }
+    if value == 2 { return .Gradient }
+    if value == 3 { return .Material }
+    if value == 4 { return .Effect }
+    if value == 5 { return .Typography }
+    if value == 6 { return .Metric }
+    if value == 7 { return .Glass }
+    if value >= ResourceKindRange.customBase { return .Custom(value) }
+    return .Unknown(value)
+}
+
+extend ResourceKind {
+    // Kind identity is wire identity: the mapping is bijective, so two kinds are
+    // the same resource kind exactly when they share a wire value.
+    function equals(right: borrow ResourceKind) -> Bool {
+        return self.value() == right.value()
+    }
+
+    // Whether this build carries a decoder for a kind. A resolver answers for any
+    // kind; only the typed accessors care.
+    function isKnown() -> Bool {
+        match self {
+            Color -> return true
+            Gradient -> return true
+            Material -> return true
+            Effect -> return true
+            Typography -> return true
+            Metric -> return true
+            Glass -> return true
+            Custom(value) -> return false
+            Unknown(value) -> return false
+        }
+    }
+}
+
+// --- Parsed catalog --------------------------------------------------------
+
+// One trait a rendition pins. A rendition's constraints are sorted ascending by
+// identifier, which is what makes the specificity comparison a single merge
+// walk rather than a search.
+public struct CatalogConstraint {
+    var identifier: TraitIdentifier = .UIAppearance
+    var value: Number = 0
+}
+
+// One authored variant of a resource. Offsets index the catalog's own arrays.
+public struct CatalogRendition {
+    var firstConstraint: Number = 0
+    var constraintCount: Number = 0
+    var payloadOffset: Number = 0
+    var payloadCount: Number = 0
+}
+
+// One semantic resource. `nameOffset`/`nameCount` index the catalog's name
+// bytes; resources are sorted by those bytes so a lookup binary-searches.
+public struct CatalogResource {
+    var nameOffset: Number = 0
+    var nameCount: Number = 0
+    var kind: ResourceKind = .Color
+    var firstRendition: Number = 0
+    var renditionCount: Number = 0
+}
+
+// One compiled resource database.
+public struct Catalog {
+    var majorVersion: Number = 0
+    var minorVersion: Number = 0
+    var flags: Number = 0
+    var nameBytes: [UN8] = []
+    var resources: [CatalogResource] = []
+    var renditions: [CatalogRendition] = []
+    var constraints: [CatalogConstraint] = []
+    var payload: [UN8] = []
+}
+
+// The catalogs a lookup consults, highest precedence first.
+//
+// This is the whole override mechanism. A partial catalog placed above a
+// complete one overrides the resources it names and nothing else, so a theme is
+// a blob rather than an API. The lowest catalog is expected to be complete,
+// which is what makes resolution total.
+public struct CatalogStack {
+    var catalogs: [Catalog] = []
+}
+
+// --- Authoring records -----------------------------------------------------
+//
+// What a producer hands the writer. A payload is bytes the writer never
+// inspects: an editor, a generator, or a program using the typed builders in
+// `Payload.kira` all arrive here the same way.
+
+public struct RenditionRecord {
+    var constraints: [CatalogConstraint] = []
+    var payload: [UN8] = []
+}
+
+public struct ResourceRecord {
+    var name: String = ""
+    var kind: ResourceKind = .Color
+    var renditions: [RenditionRecord] = []
+}
+
+public struct CatalogRecord {
+    var resources: [ResourceRecord] = []
+    var flags: Number = 0
+}
+
+// --- Resolution results ----------------------------------------------------
+
+// Where a lookup landed. `found` is false only when no catalog on the stack
+// names the resource, or none of the ones that do has a rendition eligible for
+// the environment.
+public struct ResolvedRendition {
+    var found: Bool = false
+    var catalogIndex: Number = 0
+    var resourceIndex: Number = 0
+    var renditionIndex: Number = 0
+    var kind: ResourceKind = .Color
+    var payloadOffset: Number = 0
+    var payloadCount: Number = 0
+}
+
+// --- Failures --------------------------------------------------------------
+
+// Why a blob would not load. Every one of these is a property of the bytes, so
+// a caller can report which blob is wrong rather than that something is.
+public enum CatalogError {
+    NotKira
+    UnsupportedVersion
+    TruncatedHeader
+    TruncatedTable
+    OffsetOutOfRange
+    NamesUnsorted
+    ConstraintsUnsorted
+    DuplicateRendition
+    ReservedTraitValue
+}
+
+extend CatalogError {
+    function text() -> String {
+        match self {
+            NotKira -> return "not a KCoreUI catalog: wrong magic"
+            UnsupportedVersion -> return "catalog major version is newer than this build"
+            TruncatedHeader -> return "catalog is shorter than its header"
+            TruncatedTable -> return "a catalog table runs past the end of the blob"
+            OffsetOutOfRange -> return "a catalog entry points outside the blob"
+            NamesUnsorted -> return "the name table is not in byte order"
+            ConstraintsUnsorted -> return "a rendition's constraints are not in identifier order"
+            DuplicateRendition -> return "two renditions of one resource pin the same traits"
+            ReservedTraitValue -> return "a constraint carries the reserved value zero"
+        }
+    }
+}
+
+// --- Small helpers ---------------------------------------------------------
+
+// A constraint list in the canonical order the format requires.
+public function sortedConstraints(input: borrow [CatalogConstraint]) -> [CatalogConstraint] {
+    var sorted: [CatalogConstraint] = []
+    for entry in input {
+        sorted.append(entry)
+    }
+    for index in 1..sorted.count {
+        var position = index
+        while position > 0 && sorted[position - 1].identifier.value() > sorted[position].identifier.value() {
+            let held = sorted[position - 1]
+            sorted[position - 1] = sorted[position]
+            sorted[position] = held
+            position--
+        }
+    }
+    return sorted
+}
+
+extend RenditionRecord {
+    // A rendition record with its constraints put in canonical order. Every path
+    // into the writer goes through this, so a producer never has to know the order
+    // exists.
+    function canonical() -> RenditionRecord {
+        var record = RenditionRecord()
+        record.constraints = sortedConstraints(self.constraints)
+        var bytes: [UN8] = []
+        for byte in self.payload {
+            bytes.append(byte)
+        }
+        record.payload = bytes
+        return record
+    }
+}
+
+extend TraitIdentifier {
+    // A constraint, spelled the way a producer writes one.
+    function constrain(value: Number) -> CatalogConstraint {
+        return CatalogConstraint(identifier: self, value: value)
+    }
+}
+
+extend UIAppearance {
+    // The builtin constraints an author reaches for most.
+    function constraint() -> CatalogConstraint {
+        return TraitIdentifier.UIAppearance.constrain(self.value())
+    }
+}
+
+extend Contrast {
+    function constraint() -> CatalogConstraint {
+        return TraitIdentifier.Contrast.constrain(self.value())
+    }
+}
+
+extend DisplayGamut {
+    function constraint() -> CatalogConstraint {
+        return TraitIdentifier.Gamut.constrain(self.value())
+    }
+}
+
+extend Idiom {
+    function constraint() -> CatalogConstraint {
+        return TraitIdentifier.Idiom.constrain(self.value())
+    }
+}
+
+extend Platform {
+    function constraint() -> CatalogConstraint {
+        return TraitIdentifier.Platform.constrain(self.value())
+    }
+}

@@ -1,0 +1,49 @@
+import Foundation
+import KCoreUI
+
+// A table's colors and metrics, as AppKit draws an `NSTableView` and SwiftUI
+// its `Table` on macOS 27, and UIKit a table on iPadOS 27.
+//
+// The band every other row carries is AppKit's second
+// `alternatingContentBackgroundColors` entry laid over the content: black at
+// 4 percent in light, white at 5 in dark, so it reads the same over a window
+// as over a panel. A selected row is `selectedContentBackgroundColor` for the
+// blue accent, and `unemphasizedSelectedContentBackgroundColor` while its
+// table is not the one taking keys.
+//
+// On a Mac a row is 24 points tall under a 28-point header, a cell holds its
+// content 6 points off its sides, an inset table's rows stand 10 points in from
+// its edges with a selection rounded 6, and a sorted header's chevron is drawn
+// 9 points. A phone or a tablet uses its list's row height, 44, and its margin.
+
+function tableResources() -> [ResourceRecord] {
+    var records: [ResourceRecord] = []
+    records.append(
+        adaptiveColor(
+            ColorName.alternatingContentBackground,
+            rgba255(0.0, 0.0, 0.0, 0.04),
+            rgba255(255.0, 255.0, 255.0, 0.05)
+        )
+    )
+    records.append(
+        adaptiveColor(
+            ColorName.selectedContentBackground,
+            rgba255(0.0, 99.0, 225.0, 1.0),
+            rgba255(0.0, 89.0, 209.0, 1.0)
+        )
+    )
+    records.append(
+        adaptiveColor(
+            ColorName.unemphasizedSelectedContentBackground,
+            rgba255(220.0, 220.0, 220.0, 1.0),
+            rgba255(70.0, 70.0, 70.0, 1.0)
+        )
+    )
+    records.append(sizedMetricResource(MetricName.tableRowHeight, 44.0, 24.0))
+    records.append(sizedMetricResource(MetricName.tableHeaderHeight, 44.0, 28.0))
+    records.append(sizedMetricResource(MetricName.tableCellInset, 16.0, 6.0))
+    records.append(sizedMetricResource(MetricName.tableInsetMargin, 16.0, 10.0))
+    records.append(sizedMetricResource(MetricName.tableSelectionRadius, 10.0, 6.0))
+    records.append(sizedMetricResource(MetricName.tableSortIndicatorSize, 12.0, 9.0))
+    return records
+}

@@ -1,0 +1,280 @@
+import Foundation
+import KCoreUI
+
+// Builders the cases share across the suite. Not tests: nothing here is @Test.
+
+// Parsing answers a `Result`, and a case that wants the catalog rather than the
+// failure unwraps it here so the nine-armed handler is written once.
+function parseOrEmpty(bytes: borrow [UN8]) -> Catalog {
+    attempt {
+        let catalog = try parseCatalog(bytes)
+        return catalog
+    } handle {
+        NotKira { return Catalog() }
+        UnsupportedVersion { return Catalog() }
+        TruncatedHeader { return Catalog() }
+        TruncatedTable { return Catalog() }
+        OffsetOutOfRange { return Catalog() }
+        NamesUnsorted { return Catalog() }
+        ConstraintsUnsorted { return Catalog() }
+        DuplicateRendition { return Catalog() }
+        ReservedTraitValue { return Catalog() }
+    }
+}
+
+// Whether a blob parses at all. The rejection cases ask only this.
+function parses(bytes: borrow [UN8]) -> Bool {
+    attempt {
+        let catalog = try parseCatalog(bytes)
+        return catalog.majorVersion > 0
+    } handle {
+        NotKira { return false }
+        UnsupportedVersion { return false }
+        TruncatedHeader { return false }
+        TruncatedTable { return false }
+        OffsetOutOfRange { return false }
+        NamesUnsorted { return false }
+        ConstraintsUnsorted { return false }
+        DuplicateRendition { return false }
+        ReservedTraitValue { return false }
+    }
+}
+
+// The failure a blob is refused with, as its text. A case that cares *why* a
+// blob was refused compares this.
+function parseFailure(bytes: borrow [UN8]) -> String {
+    attempt {
+        let catalog = try parseCatalog(bytes)
+        return "accepted " + String(catalog.resources.count)
+    } handle {
+        NotKira { return CatalogError.NotKira.text() }
+        UnsupportedVersion { return CatalogError.UnsupportedVersion.text() }
+        TruncatedHeader { return CatalogError.TruncatedHeader.text() }
+        TruncatedTable { return CatalogError.TruncatedTable.text() }
+        OffsetOutOfRange { return CatalogError.OffsetOutOfRange.text() }
+        NamesUnsorted { return CatalogError.NamesUnsorted.text() }
+        ConstraintsUnsorted { return CatalogError.ConstraintsUnsorted.text() }
+        DuplicateRendition { return CatalogError.DuplicateRendition.text() }
+        ReservedTraitValue { return CatalogError.ReservedTraitValue.text() }
+    }
+}
+
+function bytesEqual(left: borrow [UN8], right: borrow [UN8]) -> Bool {
+    if left.count != right.count {
+        return false
+    }
+    for index in 0..left.count {
+        let a: Number = left[index]
+        let b: Number = right[index]
+        if a != b {
+            return false
+        }
+    }
+    return true
+}
+
+// Writing a record, parsing it back and writing it again must reproduce the
+// first bytes exactly. Every format case ends up asking this.
+function roundTrips(record: borrow CatalogRecord) -> Bool {
+    let bytes = record.encoded()
+    let catalog = parseOrEmpty(bytes)
+    if catalog.resources.count == 0 && record.resources.count > 0 {
+        return false
+    }
+    return bytesEqual(bytes, catalog.encoded())
+}
+
+// A color written the way a case reads it: sRGB, which is what a design tool
+// quotes and what an environment reporting the sRGB gamut resolves back to.
+function color(r: Number, g: Number, b: Number, a: Number) -> RGBAColor {
+    return RGBAColor(r: r, g: g, b: b, a: a)
+}
+
+// The same color as a catalog stores one.
+//
+// A catalog is Display P3, so authoring converts. Every case that writes a
+// color and then expects it back goes through this, which is what makes
+// "author this, resolve this" true rather than accidentally true for the
+// primaries and false for everything between them.
+function authored(color: borrow RGBAColor) -> [UN8] {
+    return encodeColor(color.srgbToP3())
+}
+
+// How close two channels have to be to count as the same color.
+//
+// A channel is stored to one part in 65536, and a color that crosses gamuts
+// also passes through two transfer curves and a matrix. The curve is steep near
+// black, so a channel landing near zero carries the largest error: sRGB green
+// round-trips through Display P3 with about 6.5e-5 on its red channel and under
+// 1e-5 everywhere else.
+//
+// An eighth of an 8-bit step is the bar. That is 4.9e-4, seven times the worst
+// observed error and far below anything a display can show, so it catches a
+// wrong color without asserting that a gamut conversion is lossless.
+function near(left: Number, right: Number) -> Bool {
+    return abs(left - right) < 1.0 / 2048.0
+}
+
+function colorsEqual(left: borrow RGBAColor, right: borrow RGBAColor) -> Bool {
+    return near(left.r, right.r) && near(left.g, right.g)
+        && near(left.b, right.b) && near(left.a, right.a)
+}
+
+// A color resource with one rendition per appearance.
+function adaptive(
+    name: borrow String,
+    light: borrow RGBAColor,
+    dark: borrow RGBAColor
+) -> ResourceRecord {
+    var resource = ResourceRecord()
+    resource.name = name
+    resource.kind = .Color
+
+    var lightRendition = RenditionRecord()
+    lightRendition.constraints.append(UIAppearance.Light.constraint())
+    lightRendition.payload = authored(light)
+    resource.renditions.append(lightRendition)
+
+    var darkRendition = RenditionRecord()
+    darkRendition.constraints.append(UIAppearance.Dark.constraint())
+    darkRendition.payload = authored(dark)
+    resource.renditions.append(darkRendition)
+    return resource
+}
+
+// A color resource with a single unconstrained rendition.
+function flat(name: borrow String, value: borrow RGBAColor) -> ResourceRecord {
+    var resource = ResourceRecord()
+    resource.name = name
+    resource.kind = .Color
+    var rendition = RenditionRecord()
+    rendition.payload = authored(value)
+    resource.renditions.append(rendition)
+    return resource
+}
+
+// A color resource that is a reference to another name.
+function alias(name: borrow String, target: borrow String) -> ResourceRecord {
+    var resource = ResourceRecord()
+    resource.name = name
+    resource.kind = .Color
+    var rendition = RenditionRecord()
+    rendition.payload = encodeColorAlias(target)
+    resource.renditions.append(rendition)
+    return resource
+}
+
+// A resource of a kind this build has no decoder for, carrying arbitrary bytes.
+// The round-trip cases use it to prove the container is agnostic about payload.
+function unknownKind() -> ResourceKind {
+    return .Custom(ResourceKindRange.customBase + 7)
+}
+
+function opaqueResource(name: borrow String) -> ResourceRecord {
+    var resource = ResourceRecord()
+    resource.name = name
+    resource.kind = unknownKind()
+    var rendition = RenditionRecord()
+    var payload: [UN8] = []
+    for index in 0..32 {
+        payload.append(UN8((index * 7 + 3) & 255))
+    }
+    rendition.payload = payload
+    resource.renditions.append(rendition)
+    return resource
+}
+
+// --- Environments ----------------------------------------------------------
+
+function light() -> UIEnvironment {
+    var environment = UIEnvironment()
+    environment.appearance = .Light
+    return environment
+}
+
+function dark() -> UIEnvironment {
+    var environment = UIEnvironment()
+    environment.appearance = .Dark
+    return environment
+}
+
+// The two interfaces the default catalog sizes: a tablet's, which is its
+// floor, and a desktop's, pinned over it.
+function tablet() -> UIEnvironment {
+    var environment = light()
+    environment.idiom = .Pad
+    return environment
+}
+
+function desktop() -> UIEnvironment {
+    var environment = light()
+    environment.idiom = .Desktop
+    return environment
+}
+
+function lightHighContrast() -> UIEnvironment {
+    var environment = light()
+    environment.contrast = .High
+    return environment
+}
+
+function reducedTransparency() -> UIEnvironment {
+    var environment = dark()
+    environment.reduceTransparency = true
+    return environment
+}
+
+// --- Stacks ----------------------------------------------------------------
+
+function catalogOf(record: borrow CatalogRecord) -> Catalog {
+    return parseOrEmpty(record.encoded())
+}
+
+function stackOf(record: borrow CatalogRecord) -> CatalogStack {
+    return (catalogOf(record)).asStack()
+}
+
+// The catalog this repository ships, read from disk. The cases that assert what
+// the default catalog contains read it through the same path an application
+// would.
+//
+// A relative path resolves against the directory `kira` was invoked from, which
+// is the repository root for `kira test tests` and the package directory for a
+// run started inside `tests`. Both are tried so a case reports what
+// is wrong with the catalog rather than that it could not find one.
+function defaultCatalogPath() -> String {
+    if fileExists("Resources/Default.kcui") {
+        return "Resources/Default.kcui"
+    }
+    return "../Resources/Default.kcui"
+}
+
+// The default catalog's bytes, or why they could not be read.
+function defaultCatalogBytes() -> Result<[UN8], FileFailure> {
+    let path = defaultCatalogPath()
+    let size = try fileSize(path)
+    let raw = try readFileRange(path, 0, size)
+    return .Ok(raw)
+}
+
+// An unreadable catalog is logged and read as empty, so the case using it
+// fails on its first expectation.
+function defaultCatalog() -> Catalog {
+    match defaultCatalogBytes() {
+        Ok(bytes) -> return parseOrEmpty(bytes)
+        Error(failure) -> {
+            log fault("could not read the default catalog", failure)
+            return Catalog()
+        }
+    }
+}
+
+// The colors the resolution cases compare against, named once for the suite.
+namespace TestColor {
+    let ink: RGBAColor = color(0.1, 0.1, 0.1, 1.0)
+    let paper: RGBAColor = color(0.95, 0.95, 0.95, 1.0)
+    let red: RGBAColor = color(1.0, 0.0, 0.0, 1.0)
+    let green: RGBAColor = color(0.0, 1.0, 0.0, 1.0)
+    let blue: RGBAColor = color(0.0, 0.0, 1.0, 1.0)
+    let white: RGBAColor = color(1.0, 1.0, 1.0, 1.0)
+}

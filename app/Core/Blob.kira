@@ -1,0 +1,57 @@
+import Foundation
+
+// The `.kcui` container.
+//
+// Six sections, each a flat array of fixed-width little-endian entries, laid
+// out in one order and never another. The layout is canonical: for any blob the
+// parser accepts, writing the parsed catalog back reproduces the original bytes
+// exactly. That is not a nicety — an editor that opens a catalog, changes one
+// color and saves must not perturb anything else in it, including resources it
+// has no decoder for.
+//
+//   header
+//   resources     sorted ascending by name bytes
+//   renditions    grouped by resource, sorted by constraint list
+//   constraints   grouped by rendition, sorted ascending by identifier
+//   names         concatenated in resource order, so the table is sorted
+//   payloads      concatenated in rendition order, bytes the format never reads
+//
+// Payload bytes are opaque here. A resource kind this build does not know
+// survives load and write-back untouched, because nothing between the two ever
+// looks inside.
+
+public namespace BlobLayout {
+    let magic0: Number = 75
+    let magic1: Number = 67
+    let magic2: Number = 85
+    let magic3: Number = 73
+
+    // A major bump means a reader of the old version must refuse the blob. A minor
+    // bump means new information a reader may ignore, so an old reader loads it.
+    let majorVersion: Number = 1
+    let minorVersion: Number = 0
+
+    let headerSize: Number = 56
+    let resourceEntrySize: Number = 20
+    let renditionEntrySize: Number = 16
+    let constraintEntrySize: Number = 8
+}
+
+// Header field offsets.
+public namespace BlobHeaderOffset {
+    let magic: Number = 0
+    let major: Number = 4
+    let minor: Number = 6
+    let flags: Number = 8
+    let resourceCount: Number = 12
+    let resourceStart: Number = 16
+    let renditionCount: Number = 20
+    let renditionStart: Number = 24
+    let constraintCount: Number = 28
+    let constraintStart: Number = 32
+    let nameStart: Number = 36
+    let nameCount: Number = 40
+    let payloadStart: Number = 44
+    let payloadCount: Number = 48
+    let totalSize: Number = 52
+}

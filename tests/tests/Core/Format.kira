@@ -1,0 +1,184 @@
+import Foundation
+import KCoreUI
+
+// The container: byte helpers, fixed point, text, and the round-trip property
+// the whole design rests on.
+
+function mixedRecord() -> CatalogRecord {
+    var record = CatalogRecord()
+    record.resources.append(adaptive("label", color(0.1, 0.1, 0.1, 1.0), color(0.9, 0.9, 0.9, 1.0)))
+    record.resources.append(flat("separator", color(0.0, 0.0, 0.0, 0.1)))
+    record.resources.append(alias("foreground", "label"))
+    return record
+}
+
+// --- Byte helpers ----------------------------------------------------------
+
+@Test
+function littleEndianWordsReadBack() {
+    let bytes: [UN8] = [0xEF, 0xBE, 0x78, 0x56, 0x34, 0x12]
+    expect!((readU16(bytes, 0)) == (0xBEEF))
+    expect!((readU32(bytes, 2)) == (0x12345678))
+    expect!((readU8(bytes, 5)) == (0x12))
+}
+
+@Test
+function signedWordsSignExtend() {
+    let bytes: [UN8] = [0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x80]
+    expect!((readI32(bytes, 0)) == (-1))
+    expect!((readI32(bytes, 4)) == (-2147483648))
+}
+
+// A read that runs off the end answers zero; it does not trap.
+@Test
+function readingPastTheEndAnswersZeroRatherThanTrapping() {
+    let bytes: [UN8] = [9]
+    expect!((readU32(bytes, 40)) == (0))
+    expect!((readU8(bytes, -3)) == (0))
+    expect!((readU16(bytes, 0)) == (9))
+}
+
+// --- Fixed point -----------------------------------------------------------
+
+@Test
+function fixedPointRoundTripsValuesItCanRepresent() {
+    expect!((floatFromFixed(fixedFromNumber(0.5))) == (0.5))
+    expect!((floatFromFixed(fixedFromNumber(-0.25))) == (-0.25))
+    expect!((floatFromFixed(fixedFromNumber(28.0))) == (28.0))
+    expect!((floatFromFixed(fixedFromNumber(0.0))) == (0.0))
+}
+
+// A channel is stored to 1/65536, so a value authored in thousandths comes back
+// within a fraction of a unit of the scale rather than exactly.
+@Test
+function fixedPointKeepsAuthoredChannelsWithinOneUnit() {
+    let authored = 0.231
+    let recovered = floatFromFixed(fixedFromNumber(authored))
+    expect!((abs(recovered - authored) < 0.00002) == (true))
+}
+
+@Test
+function fixedPointRoundsAwayFromZeroOnBothSigns() {
+    let positive = fixedFromNumber(1.5 / Number(FixedPoint.scale))
+    let negative = fixedFromNumber((-1.5) / Number(FixedPoint.scale))
+    expect!((positive) == (2))
+    expect!((negative) == (-2))
+}
+
+// --- Text ------------------------------------------------------------------
+
+@Test
+function textSurvivesTheByteRoundTrip() {
+    let plain = "systemGroupedBackground"
+    expect!((compareStrings(stringFromBytes(stringBytes(plain)), plain)) == (0))
+    let multiByte = "café 中文 😀"
+    expect!((compareStrings(stringFromBytes(stringBytes(multiByte)), multiByte)) == (0))
+    // café is five bytes, a space one, the two CJK characters six, a space one, the emoji four.
+    expect!((stringBytes(multiByte).count) == (17))
+}
+
+// A name is compared as bytes against a slice, so a prefix sorts before and a
+// longer name sorts after, without building either as a string.
+@Test
+function namesCompareAsBytesWithoutBeingRebuilt() {
+    let bytes = stringBytes("separator")
+    expect!((compareSliceToString(bytes, 0, bytes.count, "separator")) == (0))
+    expect!((compareSliceToString(bytes, 0, bytes.count, "separatorX") < 0) == (true))
+    expect!((compareSliceToString(bytes, 0, bytes.count, "sepa") > 0) == (true))
+}
+
+// --- Round trip ------------------------------------------------------------
+
+@Test
+function writingAndReadingBackReproducesTheBytes() {
+    expect!((roundTrips(mixedRecord())) == (true))
+}
+
+@Test
+function emptyCatalogRoundTrips() {
+    expect!((roundTrips(CatalogRecord())) == (true))
+    expect!((CatalogRecord().encoded().count) > 0)
+}
+
+// The property that makes an editor safe: a resource whose kind this build has
+// no decoder for is carried through load and write-back untouched.
+@Test
+function undecodableKindSurvivesTheRoundTrip() {
+    var record = mixedRecord()
+    record.resources.append(opaqueResource("somethingElse"))
+    expect!((roundTrips(record)) == (true))
+}
+
+@Test
+function undecodableKindKeepsItsPayloadBytes() {
+    var record = CatalogRecord()
+    record.resources.append(opaqueResource("somethingElse"))
+    let catalog = catalogOf(record)
+    let index = catalog.findResource("somethingElse", unknownKind())
+    expect!((index >= 0) == (true))
+    let stored = catalog.renditionPayload(catalog.resources[index].firstRendition)
+    expect!((bytesEqual(stored, opaqueResource("x").renditions[0].payload)) == (true))
+}
+
+// Canonical output: the same resources given in a different order produce the
+// same file, so two producers cannot disagree about the bytes.
+@Test
+function resourceOrderDoesNotChangeTheBytes() {
+    var forward = CatalogRecord()
+    forward.resources.append(flat("alpha", color(1.0, 0.0, 0.0, 1.0)))
+    forward.resources.append(flat("beta", color(0.0, 1.0, 0.0, 1.0)))
+    forward.resources.append(flat("gamma", color(0.0, 0.0, 1.0, 1.0)))
+
+    var backward = CatalogRecord()
+    backward.resources.append(flat("gamma", color(0.0, 0.0, 1.0, 1.0)))
+    backward.resources.append(flat("beta", color(0.0, 1.0, 0.0, 1.0)))
+    backward.resources.append(flat("alpha", color(1.0, 0.0, 0.0, 1.0)))
+
+    expect!((bytesEqual(forward.encoded(), backward.encoded())) == (true))
+}
+
+@Test
+function renditionOrderDoesNotChangeTheBytes() {
+    var forward = CatalogRecord()
+    forward.resources.append(
+        adaptive("label", color(0.1, 0.1, 0.1, 1.0), color(0.9, 0.9, 0.9, 1.0))
+    )
+
+    var swapped = ResourceRecord()
+    swapped.name = "label"
+    swapped.kind = .Color
+    var darkFirst = RenditionRecord()
+    darkFirst.constraints.append(UIAppearance.Dark.constraint())
+    darkFirst.payload = authored(color(0.9, 0.9, 0.9, 1.0))
+    swapped.renditions.append(darkFirst)
+    var lightSecond = RenditionRecord()
+    lightSecond.constraints.append(UIAppearance.Light.constraint())
+    lightSecond.payload = authored(color(0.1, 0.1, 0.1, 1.0))
+    swapped.renditions.append(lightSecond)
+
+    var backward = CatalogRecord()
+    backward.resources.append(swapped)
+    expect!((bytesEqual(forward.encoded(), backward.encoded())) == (true))
+}
+
+// One name may carry several kinds, because a resource is keyed by both.
+@Test
+function oneNameCarriesSeveralKinds() {
+    var record = CatalogRecord()
+    record.resources.append(flat("regular", color(0.5, 0.5, 0.5, 1.0)))
+
+    var material = ResourceRecord()
+    material.name = "regular"
+    material.kind = .Material
+    var recipe = MaterialValue()
+    recipe.layers.append(backdropBlurLayer(28.0))
+    var rendition = RenditionRecord()
+    rendition.payload = recipe.encoded()
+    material.renditions.append(rendition)
+    record.resources.append(material)
+
+    let catalog = catalogOf(record)
+    expect!((catalog.findResource("regular", .Color) >= 0) == (true))
+    expect!((catalog.findResource("regular", .Material) >= 0) == (true))
+    expect!((roundTrips(record)) == (true))
+}

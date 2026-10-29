@@ -1,0 +1,135 @@
+import Foundation
+import KCoreUI
+
+// The wire mappings of the closed vocabularies.
+//
+// A kind, a trait identifier and a blend mode live on the wire as bare integers
+// and in the program as enums. These cases pin the two facts that make that
+// safe: every named variant sits on the wire value the format assigned it and
+// no other, and the integer-to-enum direction is total, so a value this build
+// has no name for survives a round trip unchanged.
+
+// How many values in a range do not survive integer to enum and back.
+function resourceKindMismatches(upTo: Number) -> Number {
+    var mismatches = 0
+    for value in 0..upTo {
+        if (resourceKindFromValue(value)).value() != value {
+            mismatches = mismatches + 1
+        }
+    }
+    return mismatches
+}
+
+function traitIdentifierMismatches(upTo: Number) -> Number {
+    var mismatches = 0
+    for value in 0..upTo {
+        if (traitIdentifierFromValue(value)).value() != value {
+            mismatches = mismatches + 1
+        }
+    }
+    return mismatches
+}
+
+function blendModeMismatches(upTo: Number) -> Number {
+    var mismatches = 0
+    for value in 0..upTo {
+        if (blendModeFromValue(value)).value() != value {
+            mismatches = mismatches + 1
+        }
+    }
+    return mismatches
+}
+
+// --- Resource kinds --------------------------------------------------------
+
+@Test
+function theNamedResourceKindsSitOnTheirAssignedWireValues() {
+    expect!((ResourceKind.Color.value()) == (1))
+    expect!((ResourceKind.Gradient.value()) == (2))
+    expect!((ResourceKind.Material.value()) == (3))
+    expect!((ResourceKind.Effect.value()) == (4))
+    expect!((ResourceKind.Typography.value()) == (5))
+    expect!((ResourceKind.Custom(ResourceKindRange.customBase).value()) == (ResourceKindRange.customBase))
+    expect!((ResourceKind.Unknown(9).value()) == (9))
+}
+
+// Integer to kind and back is the identity for every wire value, named or not.
+@Test
+function resourceKindMappingIsTotal() {
+    expect!((resourceKindMismatches(1100)) == (0))
+}
+
+@Test
+function resourceKindIntegersMapToTheirNamedKinds() {
+    expect!((resourceKindFromValue(3).equals(.Material)) == (true))
+    expect!((resourceKindFromValue(0).equals(.Unknown(0))) == (true))
+    expect!((resourceKindFromValue(0).isKnown()) == (false))
+    expect!((ResourceKind.Typography.isKnown()) == (true))
+}
+
+// The custom range starts exactly at the base the format reserves: the value
+// just below it is unknown, the base itself is the first custom kind.
+@Test
+function theCustomResourceKindRangeStartsAtItsReservedBase() {
+    expect!((resourceKindFromValue(ResourceKindRange.customBase).equals(.Custom(ResourceKindRange.customBase))) == (true))
+    expect!((resourceKindFromValue(ResourceKindRange.customBase - 1).equals(.Unknown(ResourceKindRange.customBase - 1))) == (true))
+}
+
+// --- Trait identifiers -----------------------------------------------------
+
+// The named trait identifiers sit on their assigned wire values, ascending in
+// priority order, and the custom range starts at the reserved base.
+@Test
+function theNamedTraitIdentifiersSitOnTheirAssignedWireValues() {
+    expect!((TraitIdentifier.UIAppearance.value()) == (0))
+    expect!((TraitIdentifier.Contrast.value()) == (1))
+    expect!((TraitIdentifier.Gamut.value()) == (2))
+    expect!((TraitIdentifier.Scale.value()) == (3))
+    expect!((TraitIdentifier.Idiom.value()) == (4))
+    expect!((TraitIdentifier.Platform.value()) == (5))
+    expect!((TraitIdentifier.LayoutDirection.value()) == (6))
+    expect!((TraitIdentifier.HorizontalSizeClass.value()) == (7))
+    expect!((TraitIdentifier.VerticalSizeClass.value()) == (8))
+    expect!((TraitIdentifier.ReduceTransparency.value()) == (9))
+    expect!((TraitIdentifier.ReduceMotion.value()) == (10))
+    expect!((TraitIdentifier.InvertColors.value()) == (11))
+    expect!((TraitIdentifier.DifferentiateWithoutColor.value()) == (12))
+    expect!((TraitIdentifierRange.customBase) == (64))
+}
+
+// Integer to trait identifier and back is the identity across the built-in
+// range, the reserved gap and the custom range.
+@Test
+function traitIdentifierMappingIsTotal() {
+    expect!((traitIdentifierMismatches(200)) == (0))
+}
+
+@Test
+function reservedTraitIdentifiersAreUnknownAndCustomOnesAreCustom() {
+    expect!((traitIdentifierFromValue(12).equals(.DifferentiateWithoutColor)) == (true))
+    expect!((traitIdentifierFromValue(13).equals(.Unknown(13))) == (true))
+    expect!((traitIdentifierFromValue(63).equals(.Unknown(63))) == (true))
+    expect!((traitIdentifierFromValue(64).equals(.Custom(64))) == (true))
+}
+
+// --- Blend modes -----------------------------------------------------------
+
+// The named blend modes sit on their assigned wire values and every other u8
+// value survives the round trip as itself.
+@Test
+function theNamedBlendModesSitOnTheirAssignedWireValues() {
+    expect!((BlendMode.Normal.value()) == (0))
+    expect!((BlendMode.LinearDodge.value()) == (1))
+    expect!((BlendMode.ColorDodge.value()) == (2))
+    expect!((BlendMode.HardLight.value()) == (3))
+    expect!((BlendMode.Overlay.value()) == (4))
+    expect!((BlendMode.Lighten.value()) == (5))
+    expect!((BlendMode.Darken.value()) == (6))
+    expect!((BlendMode.Multiply.value()) == (7))
+    expect!((BlendMode.Luminosity.value()) == (8))
+}
+
+@Test
+function blendModeMappingIsTotalOverEveryByte() {
+    expect!((blendModeMismatches(256)) == (0))
+}

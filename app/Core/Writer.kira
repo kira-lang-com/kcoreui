@@ -1,0 +1,265 @@
+import Foundation
+
+// Records in, `.kcui` bytes out.
+//
+// This is one half of the framework's only entry point. An editor, a generator,
+// or a program building records by hand all reach the format through here, and
+// none of them has to know the section order, the canonical sort, or the header
+// layout. What a producer supplies is names, kinds, constraints and payload
+// bytes; everything else is this file's business.
+
+// --- Canonical order -------------------------------------------------------
+
+// Total order over two constraint lists, so a resource's renditions have one
+// correct arrangement rather than the arrangement they happened to arrive in.
+// Compares pairs in identifier order, then value, then length.
+public function compareConstraintLists(
+    left: borrow [CatalogConstraint],
+    right: borrow [CatalogConstraint]
+) -> Number {
+    let shorter = left.count < right.count ? left.count : right.count
+    for index in 0..shorter {
+        let leftId = left[index].identifier.value()
+        let rightId = right[index].identifier.value()
+        if leftId != rightId {
+            return leftId - rightId
+        }
+        if left[index].value != right[index].value {
+            return left[index].value - right[index].value
+        }
+    }
+    return left.count - right.count
+}
+
+// Renditions in canonical order.
+public function sortedRenditions(input: borrow [RenditionRecord]) -> [RenditionRecord] {
+    var sorted: [RenditionRecord] = []
+    for entry in input {
+        sorted.append(entry.canonical())
+    }
+    for index in 1..sorted.count {
+        var position = index
+        while position > 0 && compareConstraintLists(
+            sorted[position - 1].constraints,
+            sorted[position].constraints
+        ) > 0 {
+            let held = sorted[position - 1]
+            sorted[position - 1] = sorted[position]
+            sorted[position] = held
+            position--
+        }
+    }
+    return sorted
+}
+
+extend ResourceRecord {
+    // Total order over two resources: name bytes first, then kind.
+    //
+    // A resource is keyed by both, because the surface KCoreUI ships spells a
+    // material `regular` and would one day spell a color the same. Keying by name
+    // alone makes that a collision rather than two resources, and the collision
+    // would surface as a lookup that finds the wrong kind at paint time.
+    function compareKeys(right: borrow ResourceRecord) -> Number {
+        let order = compareStrings(self.name, right.name)
+        if order != 0 {
+            return order
+        }
+        return self.kind.value() - right.kind.value()
+    }
+}
+
+// Resources in canonical order: ascending by name bytes. Insertion sort keeps
+// this file free of a comparator-taking sort the language does not have, and a
+// catalog's resource count is in the hundreds.
+public function sortedResources(input: borrow [ResourceRecord]) -> [ResourceRecord] {
+    var sorted: [ResourceRecord] = []
+    for entry in input {
+        var canonical = ResourceRecord()
+        canonical.name = entry.name
+        canonical.kind = entry.kind
+        canonical.renditions = sortedRenditions(entry.renditions)
+        sorted.append(canonical)
+    }
+    for index in 1..sorted.count {
+        var position = index
+        while position > 0 && sorted[position - 1].compareKeys(sorted[position]) > 0 {
+            let held = sorted[position - 1]
+            sorted[position - 1] = sorted[position]
+            sorted[position] = held
+            position--
+        }
+    }
+    return sorted
+}
+
+// --- Writing ---------------------------------------------------------------
+
+// The counts a header needs, gathered before any section is written because
+// each section's start depends on the sizes of the ones before it.
+public struct WriterLayout {
+    var resourceCount: Number = 0
+    var renditionCount: Number = 0
+    var constraintCount: Number = 0
+    var nameCount: Number = 0
+    var payloadCount: Number = 0
+}
+
+public function measureRecords(resources: borrow [ResourceRecord]) -> WriterLayout {
+    var layout = WriterLayout()
+    layout.resourceCount = resources.count
+    for resource in resources {
+        layout.nameCount = layout.nameCount + resource.name.count
+        layout.renditionCount = layout.renditionCount + resource.renditions.count
+        for rendition in resource.renditions {
+            layout.constraintCount = layout.constraintCount + rendition.constraints.count
+            layout.payloadCount = layout.payloadCount + rendition.payload.count
+        }
+    }
+    return layout
+}
+
+extend CatalogRecord {
+    // A whole catalog as bytes. The result is canonical, so two producers that
+    // supply the same resources in different orders write the same file.
+    function encoded() -> [UN8] {
+        let resources = sortedResources(self.resources)
+        let layout = measureRecords(resources)
+
+        let resourceStart = BlobLayout.headerSize
+        let renditionStart = resourceStart + layout.resourceCount * BlobLayout.resourceEntrySize
+        let constraintStart = renditionStart + layout.renditionCount * BlobLayout.renditionEntrySize
+        let nameStart = constraintStart + layout.constraintCount * BlobLayout.constraintEntrySize
+        let payloadStart = nameStart + layout.nameCount
+        let totalSize = payloadStart + layout.payloadCount
+
+        var bytes: [UN8] = []
+        appendU8(bytes, BlobLayout.magic0)
+        appendU8(bytes, BlobLayout.magic1)
+        appendU8(bytes, BlobLayout.magic2)
+        appendU8(bytes, BlobLayout.magic3)
+        appendU16(bytes, BlobLayout.majorVersion)
+        appendU16(bytes, BlobLayout.minorVersion)
+        appendU32(bytes, self.flags)
+        appendU32(bytes, layout.resourceCount)
+        appendU32(bytes, resourceStart)
+        appendU32(bytes, layout.renditionCount)
+        appendU32(bytes, renditionStart)
+        appendU32(bytes, layout.constraintCount)
+        appendU32(bytes, constraintStart)
+        appendU32(bytes, nameStart)
+        appendU32(bytes, layout.nameCount)
+        appendU32(bytes, payloadStart)
+        appendU32(bytes, layout.payloadCount)
+        appendU32(bytes, totalSize)
+
+        var nameCursor = 0
+        var renditionCursor = 0
+        for resource in resources {
+            appendU32(bytes, nameCursor)
+            appendU32(bytes, resource.name.count)
+            appendU32(bytes, resource.kind.value())
+            appendU32(bytes, renditionCursor)
+            appendU32(bytes, resource.renditions.count)
+            nameCursor = nameCursor + resource.name.count
+            renditionCursor = renditionCursor + resource.renditions.count
+        }
+
+        var constraintCursor = 0
+        var payloadCursor = 0
+        for resource in resources {
+            for rendition in resource.renditions {
+                appendU32(bytes, constraintCursor)
+                appendU32(bytes, rendition.constraints.count)
+                appendU32(bytes, payloadCursor)
+                appendU32(bytes, rendition.payload.count)
+                constraintCursor = constraintCursor + rendition.constraints.count
+                payloadCursor = payloadCursor + rendition.payload.count
+            }
+        }
+
+        for resource in resources {
+            for rendition in resource.renditions {
+                for entry in rendition.constraints {
+                    appendU32(bytes, entry.identifier.value())
+                    appendU32(bytes, entry.value)
+                }
+            }
+        }
+
+        for resource in resources {
+            appendStringBytes(bytes, resource.name)
+        }
+
+        for resource in resources {
+            for rendition in resource.renditions {
+                appendBytes(bytes, rendition.payload)
+            }
+        }
+
+        return bytes
+    }
+}
+
+// --- Write-back ------------------------------------------------------------
+
+extend Catalog {
+    // A parsed catalog back to bytes.
+    //
+    // This is the path an editor saves through, and it is byte-exact: the catalog
+    // carries its own name bytes, constraints and payloads verbatim, so a resource
+    // whose kind this build cannot decode is written back exactly as it was read.
+    // The sections are already canonical, because the parser refuses a blob whose
+    // sections are not.
+    function encoded() -> [UN8] {
+        let resourceStart = BlobLayout.headerSize
+        let renditionStart = resourceStart + self.resources.count * BlobLayout.resourceEntrySize
+        let constraintStart = renditionStart + self.renditions.count * BlobLayout.renditionEntrySize
+        let nameStart = constraintStart + self.constraints.count * BlobLayout.constraintEntrySize
+        let payloadStart = nameStart + self.nameBytes.count
+        let totalSize = payloadStart + self.payload.count
+
+        var bytes: [UN8] = []
+        appendU8(bytes, BlobLayout.magic0)
+        appendU8(bytes, BlobLayout.magic1)
+        appendU8(bytes, BlobLayout.magic2)
+        appendU8(bytes, BlobLayout.magic3)
+        appendU16(bytes, self.majorVersion)
+        appendU16(bytes, self.minorVersion)
+        appendU32(bytes, self.flags)
+        appendU32(bytes, self.resources.count)
+        appendU32(bytes, resourceStart)
+        appendU32(bytes, self.renditions.count)
+        appendU32(bytes, renditionStart)
+        appendU32(bytes, self.constraints.count)
+        appendU32(bytes, constraintStart)
+        appendU32(bytes, nameStart)
+        appendU32(bytes, self.nameBytes.count)
+        appendU32(bytes, payloadStart)
+        appendU32(bytes, self.payload.count)
+        appendU32(bytes, totalSize)
+
+        for resource in self.resources {
+            appendU32(bytes, resource.nameOffset)
+            appendU32(bytes, resource.nameCount)
+            appendU32(bytes, resource.kind.value())
+            appendU32(bytes, resource.firstRendition)
+            appendU32(bytes, resource.renditionCount)
+        }
+
+        for rendition in self.renditions {
+            appendU32(bytes, rendition.firstConstraint)
+            appendU32(bytes, rendition.constraintCount)
+            appendU32(bytes, rendition.payloadOffset)
+            appendU32(bytes, rendition.payloadCount)
+        }
+
+        for entry in self.constraints {
+            appendU32(bytes, entry.identifier.value())
+            appendU32(bytes, entry.value)
+        }
+
+        appendBytes(bytes, self.nameBytes)
+        appendBytes(bytes, self.payload)
+        return bytes
+    }
+}

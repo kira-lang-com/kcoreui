@@ -1,0 +1,255 @@
+import Foundation
+
+// Byte-level primitives for the catalog format.
+//
+// Every scalar on the wire is a little-endian unsigned integer, and every
+// fractional quantity is a 16.16 fixed-point integer. The format carries no
+// IEEE floats at all: an encoding decision about NaN, negative zero, or
+// rounding would be a decision three backends could disagree about, and a
+// resource database that resolves differently on the VM and on LLVM is not a
+// resource database.
+
+public namespace FixedPoint {
+    // The scale of a 16.16 fixed-point value. One unit is 1/65536.
+    let scale: Number = 65536
+}
+
+// A fractional value as it is written to the wire. Rounds half away from zero
+// so the sign of a value never decides which way it rounds.
+public function fixedFromNumber(value: Number) -> Number {
+    let scaled = value * Number(FixedPoint.scale)
+    if scaled < 0.0 {
+        return trunc(scaled - 0.5)
+    }
+    return trunc(scaled + 0.5)
+}
+
+// The inverse, exact for every value `fixedFromFloat` can produce.
+public function floatFromFixed(value: Number) -> Number {
+    return Number(value) / Number(FixedPoint.scale)
+}
+
+// --- Writing ---------------------------------------------------------------
+
+function appendU8(bytes: borrow mut [UN8], value: Number) {
+    bytes.append(UN8(value & 255))
+}
+
+function appendU16(bytes: borrow mut [UN8], value: Number) {
+    bytes.append(UN8(value & 255))
+    bytes.append(UN8((value >> 8) & 255))
+}
+
+function appendU32(bytes: borrow mut [UN8], value: Number) {
+    bytes.append(UN8(value & 255))
+    bytes.append(UN8((value >> 8) & 255))
+    bytes.append(UN8((value >> 16) & 255))
+    bytes.append(UN8((value >> 24) & 255))
+}
+
+// A signed 32-bit value, two's complement. Sign-extension on the way back out
+// is what `readI32` undoes.
+function appendI32(bytes: borrow mut [UN8], value: Number) {
+    appendU32(bytes, value)
+}
+
+function appendBytes(bytes: borrow mut [UN8], extra: borrow [UN8]) {
+    for byte in extra {
+        bytes.append(byte)
+    }
+}
+
+// A string as its own bytes, with no length and no terminator. Length is the
+// caller's to record, because every string in the format sits in a table whose
+// entries already carry offsets.
+function appendStringBytes(bytes: borrow mut [UN8], text: borrow String) {
+    for index in 0..text.count {
+        bytes.append(UN8(text.charAt(index) & 255))
+    }
+}
+
+// --- Reading ---------------------------------------------------------------
+//
+// Every read is bounds-checked and answers zero past the end rather than
+// trapping. A parser that trapped on a short buffer would turn a malformed blob
+// into a stopped program; the parser above these validates offsets and reports
+// a typed failure instead.
+
+public function readU8(bytes: borrow [UN8], offset: Number) -> Number {
+    return byteAt(bytes, offset)
+}
+
+// The byte at `offset`, zero past the end.
+function byteAt(bytes: borrow [UN8], offset: Number) -> Number {
+    if offset < 0 || offset >= bytes.count {
+        return 0
+    }
+    return Number(bytes[offset])
+}
+
+public function readU16(bytes: borrow [UN8], offset: Number) -> Number {
+    return byteAt(bytes, offset) | (byteAt(bytes, offset + 1) << 8)
+}
+
+public function readU32(bytes: borrow [UN8], offset: Number) -> Number {
+    var value = byteAt(bytes, offset)
+    value = value | (byteAt(bytes, offset + 1) << 8)
+    value = value | (byteAt(bytes, offset + 2) << 16)
+    value = value | (byteAt(bytes, offset + 3) << 24)
+    return value
+}
+
+// The signed reading of the same four bytes.
+public function readI32(bytes: borrow [UN8], offset: Number) -> Number {
+    let raw = readU32(bytes, offset)
+    if raw >= 2147483648 {
+        return raw - 4294967296
+    }
+    return raw
+}
+
+// A slice, clamped to what is there.
+public function sliceBytes(bytes: borrow [UN8], offset: Number, count: Number) -> [UN8] {
+    var slice: [UN8] = []
+    if count <= 0 {
+        return slice
+    }
+    let end = offset + count
+    for index in offset..end {
+        if index >= 0 && index < bytes.count {
+            slice.append(bytes[index])
+        }
+    }
+    return slice
+}
+
+// --- Text ------------------------------------------------------------------
+
+// A string as bytes. `charAt` is already a byte read, so this is a copy rather
+// than an encoding.
+public function stringBytes(text: borrow String) -> [UN8] {
+    var bytes: [UN8] = []
+    appendStringBytes(bytes, text)
+    return bytes
+}
+
+// How many bytes the scalar starting at `offset` occupies, by its lead byte.
+// A continuation byte or an invalid lead answers one, so a malformed sequence
+// advances rather than looping.
+public function utf8SequenceLength(lead: Number) -> Number {
+    if lead < 128 { return 1 }
+    if lead >= 240 { return 4 }
+    if lead >= 224 { return 3 }
+    if lead >= 192 { return 2 }
+    return 1
+}
+
+// UTF-8 bytes back to a string.
+//
+// The format stores text as bytes and compares it as bytes, so this is needed
+// only where a payload hands text back to a caller — a typeface family name.
+// A byte that begins no valid sequence is replaced rather than dropped, so the
+// result's length still tracks the input's shape.
+// The text of one scalar, or the replacement character for a number that names
+// none. `scalarText` answers nothing for a number that is not a scalar; the
+// decoder below never asks for one — a malformed run is replaced with U+FFFD
+// before it gets here — so the absent case falls back to the same character
+// rather than dropping a byte from a result whose length tracks its input.
+function scalarTextOrReplacement(codepoint: Number) -> String {
+    return scalarText(codepoint).or(scalarText(65533).or(""))
+}
+
+public function stringFromBytes(bytes: borrow [UN8]) -> String {
+    var text = ""
+    var cursor = 0
+    while cursor < bytes.count {
+        let lead = readU8(bytes, cursor)
+        let length = utf8SequenceLength(lead)
+        // How far this scalar advances the cursor. A byte that begins no valid
+        // sequence advances one, so a malformed run cannot stall the walk.
+        var stride = 1
+        if lead < 128 {
+            text = text + scalarTextOrReplacement(lead)
+        } else if length == 1 || cursor + length > bytes.count {
+            text = text + scalarTextOrReplacement(65533)
+        } else {
+            var code = 0
+            if length == 2 { code = lead & 31 }
+            if length == 3 { code = lead & 15 }
+            if length == 4 { code = lead & 7 }
+            var valid = true
+            for step in 1..length {
+                let continuation = readU8(bytes, cursor + step)
+                if continuation < 128 || continuation >= 192 {
+                    valid = false
+                }
+                code = (code << 6) | (continuation & 63)
+            }
+            text = valid ? text + scalarTextOrReplacement(code) : text + scalarTextOrReplacement(
+                65533
+            )
+            stride = length
+        }
+        cursor = cursor + stride
+    }
+    return text
+}
+
+// --- Comparison ------------------------------------------------------------
+
+// Lexicographic byte order over a slice of `bytes` and a whole string. This is
+// what the name table is sorted by and what a lookup binary-searches with, so
+// a name never has to be rebuilt into a `String` to be found.
+//
+// Answers a negative number when the slice sorts first, zero when they are
+// equal, and a positive number otherwise.
+public function compareSliceToString(
+    bytes: borrow [UN8],
+    offset: Number,
+    count: Number,
+    text: borrow String
+) -> Number {
+    let shorter = count < text.count ? count : text.count
+    for index in 0..shorter {
+        let left = readU8(bytes, offset + index)
+        let right = Number(text.byteAt(index))
+        if left != right {
+            return left - right
+        }
+    }
+    return count - text.count
+}
+
+// The same order over two slices of the same buffer, which is what the writer
+// sorts the name table with.
+public function compareSlices(
+    bytes: borrow [UN8],
+    leftOffset: Number,
+    leftCount: Number,
+    rightOffset: Number,
+    rightCount: Number
+) -> Number {
+    let shorter = leftCount < rightCount ? leftCount : rightCount
+    for index in 0..shorter {
+        let left = readU8(bytes, leftOffset + index)
+        let right = readU8(bytes, rightOffset + index)
+        if left != right {
+            return left - right
+        }
+    }
+    return leftCount - rightCount
+}
+
+// Byte order over two strings, for the writer's own sort.
+public function compareStrings(left: borrow String, right: borrow String) -> Number {
+    let shorter = left.count < right.count ? left.count : right.count
+    for index in 0..shorter {
+        // `charAt` answers a byte, and a difference of two bytes is signed.
+        let a = Number(left.charAt(index))
+        let b = Number(right.charAt(index))
+        if a != b {
+            return a - b
+        }
+    }
+    return left.count - right.count
+}

@@ -1,0 +1,187 @@
+import Foundation
+
+// The color space a catalog is authored in, and the arithmetic to leave it.
+//
+// **Every color in a catalog is Display P3.** One space, stated once, rather
+// than a per-color tag nobody fills in correctly: a value with no declared
+// space is a value that means something different on each display it reaches,
+// and a resource system whose whole job is answering "what does this mean here"
+// cannot be vague about the one thing a color *is*.
+//
+// Display P3 rather than sRGB because it is the wider of the two and the
+// conversion only loses what the narrower space could not have shown anyway.
+// An sRGB value embeds in P3 exactly, so authoring in P3 costs an sRGB-sourced
+// palette nothing.
+//
+// A resolved color is converted to the gamut the environment reports. That is
+// what the `gamut` trait is for, and it is why a catalog authored once is
+// correct on a display that can show P3 and on one that cannot.
+//
+// Compositing happens in **linear light**. Layer alpha over a transfer-encoded
+// channel is the classic wrong answer — it darkens midtones and muddies every
+// blend — so a layer stack is decoded, composited, and encoded again.
+
+// --- Transfer curves -------------------------------------------------------
+//
+// Display P3 and sRGB share the sRGB transfer function; only their primaries
+// differ. So one pair of curves serves both, and moving between the spaces is
+// the matrix in the middle.
+
+// An encoded channel to linear light. The power is taken in binary floats:
+// in decimal it is a call into the runtime's arbitrary-precision service.
+public function transferDecode(channel: Number) -> Number {
+    if channel <= 0.04045 {
+        return channel / 12.92
+    }
+    return Number(pow((Float(channel) + 0.055) / 1.055, 2.4))
+}
+
+// Linear light back to an encoded channel.
+public function transferEncode(channel: Number) -> Number {
+    if channel <= 0.0031308 {
+        return channel * 12.92
+    }
+    return Number(1.055 * pow(Float(channel), 1.0 / 2.4) - 0.055)
+}
+
+// --- Primaries -------------------------------------------------------------
+//
+// Both spaces are D65, so no chromatic adaptation stands between them and the
+// conversion is one 3x3 matrix each way. The coefficients are the product of
+// the two RGB-to-XYZ matrices, written out rather than multiplied at run time.
+
+extend RGBAColor {
+    // Linear Display P3 to linear sRGB.
+    function p3ToSrgbLinear() -> RGBAColor {
+        return RGBAColor {
+            r: 1.2249401 * self.r - 0.2249404 * self.g + 0.0 * self.b,
+            g: -0.0420569 * self.r + 1.0420571 * self.g + 0.0 * self.b,
+            b: -0.0196376 * self.r - 0.0786361 * self.g + 1.0982735 * self.b,
+            a: self.a
+        }
+    }
+
+    // Linear sRGB to linear Display P3, for authoring a value quoted in sRGB.
+    function srgbToP3Linear() -> RGBAColor {
+        return RGBAColor {
+            r: 0.8224621 * self.r + 0.1775380 * self.g + 0.0 * self.b,
+            g: 0.0331941 * self.r + 0.9668058 * self.g + 0.0 * self.b,
+            b: 0.0170827 * self.r + 0.0723974 * self.g + 0.9105199 * self.b,
+            a: self.a
+        }
+    }
+}
+
+// --- Whole-color conversions ----------------------------------------------
+
+extend RGBAColor {
+    // An encoded color to linear light, alpha untouched.
+    //
+    // Alpha is a coverage fraction rather than a light measurement, so it never
+    // travels through a transfer curve.
+    function decoded() -> RGBAColor {
+        return RGBAColor {
+            r: transferDecode(self.r),
+            g: transferDecode(self.g),
+            b: transferDecode(self.b),
+            a: self.a
+        }
+    }
+
+    function encodedChannels() -> RGBAColor {
+        return RGBAColor {
+            r: transferEncode(self.r),
+            g: transferEncode(self.g),
+            b: transferEncode(self.b),
+            a: self.a
+        }
+    }
+
+    // An encoded Display P3 color as an encoded sRGB one.
+    //
+    // Out-of-gamut channels are clamped after the matrix: a saturated P3 green has
+    // no sRGB spelling, and the nearest one it does have is the edge of the space.
+    function p3ToSrgb() -> RGBAColor {
+        let converted = (self.decoded()).p3ToSrgbLinear()
+        let clamped = RGBAColor {
+            r: clampChannel(converted.r),
+            g: clampChannel(converted.g),
+            b: clampChannel(converted.b),
+            a: converted.a
+        }
+        return clamped.encodedChannels()
+    }
+
+    // The inverse, which is what authors a P3 catalog from values quoted in sRGB.
+    // Nothing is clamped: every sRGB color is inside P3.
+    function srgbToP3() -> RGBAColor {
+        return ((self.decoded()).srgbToP3Linear()).encodedChannels()
+    }
+}
+
+// A color held to [0, 1] on every channel.
+public function clampChannel(value: Number) -> Number {
+    if value < 0.0 {
+        return 0.0
+    }
+    if value > 1.0 {
+        return 1.0
+    }
+    return value
+}
+
+extend RGBAColor {
+    // The catalog's color, in the gamut this environment reports.
+    //
+    // The one place a resolved color leaves Display P3. A renderer that is not
+    // color managed is an sRGB one as far as this is concerned, which is what the
+    // environment's default says.
+    function forGamut(gamut: borrow DisplayGamut) -> RGBAColor {
+        match gamut {
+            SRGB -> return self.p3ToSrgb()
+            P3 -> return self
+        }
+    }
+
+    // A linear Display P3 color encoded in `gamut`: what `forGamut` gives
+    // the encoded color, without encoding it only to decode it again.
+    function encodedForGamut(gamut: borrow DisplayGamut) -> RGBAColor {
+        match gamut {
+            SRGB -> {
+                let converted = self.p3ToSrgbLinear()
+                let clamped = RGBAColor {
+                    r: clampChannel(converted.r),
+                    g: clampChannel(converted.g),
+                    b: clampChannel(converted.b),
+                    a: converted.a
+                }
+                return clamped.encodedChannels()
+            }
+            P3 -> return self.encodedChannels()
+        }
+    }
+}
+
+// --- Compositing -----------------------------------------------------------
+
+extend RGBAColor {
+    // One layer over what is beneath it, source-over, in linear light.
+    //
+    // The standard Porter-Duff composite: the result's alpha is what the two cover
+    // together, and each channel is weighted by how much of the result each layer
+    // accounts for. A fully transparent result has no color to speak of and
+    // answers black rather than dividing by zero.
+    function compositeOver(backdrop: borrow RGBAColor) -> RGBAColor {
+        let outAlpha = self.a + backdrop.a * (1.0 - self.a)
+        if outAlpha <= 0.0 {
+            return RGBAColor(r: 0.0, g: 0.0, b: 0.0, a: 0.0)
+        }
+        let backdropWeight = backdrop.a * (1.0 - self.a)
+        return RGBAColor {
+            r: (self.r * self.a + backdrop.r * backdropWeight) / outAlpha,
+            g: (self.g * self.a + backdrop.g * backdropWeight) / outAlpha,
+            b: (self.b * self.a + backdrop.b * backdropWeight) / outAlpha,
+            a: outAlpha
+        }
+    }
+}

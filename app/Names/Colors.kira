@@ -1,0 +1,124 @@
+import Foundation
+
+// Apple's color vocabulary, in SwiftUI's spelling.
+//
+// These are names, not values. Nothing here says what `label` looks like; a
+// catalog does, and a different catalog says something else. Swapping the whole
+// vocabulary is a different blob and no code change, which is what keeps this
+// file a cheap decision rather than a permanent one.
+//
+// Nothing in `app/Core` may import this. The format, the parser and the
+// resolver never learn a single name, which is what lets them carry a
+// vocabulary they have never heard of.
+//
+// AppKit's spelling is not carried alongside UIKit's. Apple ships the same
+// concept twice — `labelColor` against `label`, `controlBackgroundColor`
+// against `systemBackground` — and two names for one resource is two chances
+// for a catalog to define only one of them.
+//
+// The Kira identifiers are prefixed; the resource names they answer are flat,
+// exactly as Apple writes them.
+
+// --- Hierarchical styles ---------------------------------------------------
+
+public namespace ColorName {
+    let primary: String = "primary"
+    let secondary: String = "secondary"
+    let tertiary: String = "tertiary"
+    let quaternary: String = "quaternary"
+    let quinary: String = "quinary"
+
+    // --- Labels ----------------------------------------------------------------
+
+    let label: String = "label"
+    let secondaryLabel: String = "secondaryLabel"
+    let tertiaryLabel: String = "tertiaryLabel"
+    let quaternaryLabel: String = "quaternaryLabel"
+    let placeholderText: String = "placeholderText"
+    let placeholder: String = "placeholder"
+
+    // --- Fills -----------------------------------------------------------------
+
+    let systemFill: String = "systemFill"
+    let secondarySystemFill: String = "secondarySystemFill"
+    let tertiarySystemFill: String = "tertiarySystemFill"
+    let quaternarySystemFill: String = "quaternarySystemFill"
+    let fill: String = "fill"
+
+    // --- Backgrounds -----------------------------------------------------------
+
+    let systemBackground: String = "systemBackground"
+    let secondarySystemBackground: String = "secondarySystemBackground"
+    let tertiarySystemBackground: String = "tertiarySystemBackground"
+    let systemGroupedBackground: String = "systemGroupedBackground"
+    let secondarySystemGroupedBackground: String = "secondarySystemGroupedBackground"
+    let tertiarySystemGroupedBackground: String = "tertiarySystemGroupedBackground"
+    let background: String = "background"
+    let windowBackground: String = "windowBackground"
+
+    // --- Separators and links --------------------------------------------------
+
+    let separator: String = "separator"
+    let opaqueSeparator: String = "opaqueSeparator"
+    let link: String = "link"
+
+    // --- Scroll indicators -------------------------------------------------------
+
+    let scrollIndicator: String = "scrollIndicator"
+    let scrollEdgeFill: String = "scrollEdgeFill"
+    let scrollEdgeBorder: String = "scrollEdgeBorder"
+    let sidebarShadow: String = "sidebarShadow"
+
+    // --- Workspaces ----------------------------------------------------------------
+
+    // The card a workspace's panels sit on.
+    let workspacePanel: String = "workspacePanel"
+
+    // --- Tables ----------------------------------------------------------------
+
+    // AppKit's content colors for rows: the band every other row of a table
+    // carries, the fill of a selected row while its table has the focus, and
+    // the fill of one while it does not.
+    let alternatingContentBackground: String = "alternatingContentBackground"
+    let selectedContentBackground: String = "selectedContentBackground"
+    let unemphasizedSelectedContentBackground: String = "unemphasizedSelectedContentBackground"
+
+    // --- Shape styles ----------------------------------------------------------
+
+    let foreground: String = "foreground"
+    let selection: String = "selection"
+    let tint: String = "tint"
+    let accentColor: String = "accentColor"
+
+    // --- The system palette ----------------------------------------------------
+
+    let systemRed: String = "systemRed"
+    let systemOrange: String = "systemOrange"
+    let systemYellow: String = "systemYellow"
+    let systemGreen: String = "systemGreen"
+    let systemMint: String = "systemMint"
+    let systemTeal: String = "systemTeal"
+    let systemCyan: String = "systemCyan"
+    let systemBlue: String = "systemBlue"
+    let systemIndigo: String = "systemIndigo"
+    let systemPurple: String = "systemPurple"
+    let systemPink: String = "systemPink"
+    let systemBrown: String = "systemBrown"
+
+    let systemGray: String = "systemGray"
+    let systemGray2: String = "systemGray2"
+    let systemGray3: String = "systemGray3"
+    let systemGray4: String = "systemGray4"
+    let systemGray5: String = "systemGray5"
+    let systemGray6: String = "systemGray6"
+
+    // --- The whole surface -----------------------------------------------------
+
+    // Every color name this build declares.
+    //
+    // The integrity check walks this list against the default catalog, which is
+    // what stops the hardcoded surface and the shipped blob from drifting: a name
+    // here with no resource behind it is a lookup that would fall through the floor,
+    // and the floor is what makes resolution total.
+    let all: [String] = [ColorName.primary, ColorName.secondary, ColorName.tertiary, ColorName.quaternary, ColorName.quinary, ColorName.label, ColorName.secondaryLabel, ColorName.tertiaryLabel, ColorName.quaternaryLabel, ColorName.placeholderText, ColorName.placeholder, ColorName.systemFill, ColorName.secondarySystemFill, ColorName.tertiarySystemFill, ColorName.quaternarySystemFill, ColorName.fill, ColorName.systemBackground, ColorName.secondarySystemBackground, ColorName.tertiarySystemBackground, ColorName.systemGroupedBackground, ColorName.secondarySystemGroupedBackground, ColorName.tertiarySystemGroupedBackground, ColorName.background, ColorName.windowBackground, ColorName.separator, ColorName.opaqueSeparator, ColorName.link, ColorName.scrollIndicator, ColorName.scrollEdgeFill, ColorName.scrollEdgeBorder, ColorName.sidebarShadow, ColorName.workspacePanel, ColorName.alternatingContentBackground, ColorName.selectedContentBackground, ColorName.unemphasizedSelectedContentBackground, ColorName.foreground, ColorName.selection, ColorName.tint, ColorName.accentColor, ColorName.systemRed, ColorName.systemOrange, ColorName.systemYellow, ColorName.systemGreen, ColorName.systemMint, ColorName.systemTeal, ColorName.systemCyan, ColorName.systemBlue, ColorName.systemIndigo, ColorName.systemPurple, ColorName.systemPink, ColorName.systemBrown, ColorName.systemGray, ColorName.systemGray2, ColorName.systemGray3, ColorName.systemGray4, ColorName.systemGray5, ColorName.systemGray6]
+}

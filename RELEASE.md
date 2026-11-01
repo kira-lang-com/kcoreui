@@ -1,5 +1,10 @@
 # 26.10.4
 
+**Project:** KCoreUI  
+**Release week:** 2026-10-26 – 2026-11-01
+
+## Highlights
+
 The first source release of KCoreUI includes:
 
 - A writer and parser for compiled `.kcui` visual resource catalogs.
